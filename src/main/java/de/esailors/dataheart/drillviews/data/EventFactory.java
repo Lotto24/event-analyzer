@@ -1,4 +1,4 @@
-package de.esailors.dataheart.drillviews.processor;
+package de.esailors.dataheart.drillviews.data;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.logging.log4j.LogManager;
@@ -6,6 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 
 import de.esailors.dataheart.drillviews.conf.Config;
+import de.esailors.dataheart.drillviews.kafka.MessageParser;
 
 public class EventFactory {
 	
@@ -24,10 +25,9 @@ public class EventFactory {
 		this.messageParser = new MessageParser(config);
 	}
 
-	public Event buildEvent(ConsumerRecord<byte[], byte[]> record) {
+	public Event buildEvent(Topic topic, ConsumerRecord<byte[], byte[]> record) {
 		
 		byte[] message = record.value();
-		String topic = record.topic();
 		
 		JsonNode eventJson = messageParser.parseMessage(message);
 		log.debug("Parsed eventJson: " + eventJson.toString());

@@ -1,4 +1,4 @@
-package de.esailors.dataheart.drillviews.generator;
+package de.esailors.dataheart.drillviews.drill;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,11 +8,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import de.esailors.dataheart.drillviews.conf.Config;
-import de.esailors.dataheart.drillviews.drill.DrillConnection;
 
-public class DrillViewGenerator {
+public class DrillViews {
 
-	private static final Logger log = LogManager.getLogger(DrillViewGenerator.class.getName());
+	private static final Logger log = LogManager.getLogger(DrillViews.class.getName());
 
 	private Config config;
 	private DrillConnection drillConnection;
@@ -22,16 +21,22 @@ public class DrillViewGenerator {
 	private Map<String, Set<String>> existingTables;
 	
 
-	public DrillViewGenerator(Config config) {
+	public DrillViews(Config config) {
 		log.debug("Initializing DrillViewGenerator");
 		this.config = config;
 		this.drillConnection = new DrillConnection(config);
 
 		fetchDatabases();
-
 		initTargetDatabases();
-
 		fetchViewsInTargetDatabses();
+	}
+	
+	private void fetchDatabases() {
+		log.debug("Fetching databases from Drill");
+		databases = drillConnection.listDatabases();
+		for (String database : databases) {
+			log.debug("Found Database: " + database);
+		}
 	}
 
 	private void fetchViewsInTargetDatabses() {
@@ -50,14 +55,6 @@ public class DrillViewGenerator {
 		}
 		
 		return tables;
-	}
-
-	private void fetchDatabases() {
-		log.info("Fetching databases from Drill");
-		databases = drillConnection.listDatabases();
-		for (String database : databases) {
-			log.debug("Found Database: " + database);
-		}
 	}
 
 	private void initTargetDatabases() {

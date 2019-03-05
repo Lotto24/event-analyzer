@@ -97,7 +97,7 @@ public class DrillConnection {
 			return;
 		}
 		
-		log.info("Closing connection to drill");
+		log.debug("Closing connection to drill");
 		
 		try {
 			connection.close();
@@ -109,7 +109,7 @@ public class DrillConnection {
 	private void initShutdownHook() {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
-				log.info("Shutdown Hook triggered");
+				log.debug("Shutdown Hook triggered");
 				close();
 			}
 		});

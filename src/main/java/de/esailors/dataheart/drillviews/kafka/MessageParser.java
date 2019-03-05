@@ -1,4 +1,4 @@
-package de.esailors.dataheart.drillviews.processor;
+package de.esailors.dataheart.drillviews.kafka;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -124,7 +124,7 @@ public class MessageParser {
 
 	private Optional<Schema> fetchSchemaFromConsul(String schemaHash) {
 		String consulUrl = "http://" + config.CONSUL_HOST + ":" + config.CONSUL_PORT + "/v1/kv/avro-schemas/" + schemaHash;
-		log.info("Fetching schema from Consul at: " + consulUrl);
+		log.debug("Fetching schema from Consul at: " + consulUrl);
 		try {
 			Content response = Request.Get(consulUrl).execute().returnContent();
 			String jsonString = response.asString();

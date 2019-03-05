@@ -27,7 +27,7 @@
 		<Logger name="de.esailors.dataheart" level="debug"
 			additivity="falst">
 			<appender-ref ref="fileLogger" level="debug" />
-			<appender-ref ref="console" level="debug" />
+			<appender-ref ref="console" level="info" />
 		</Logger>
 		<Root level="error">
 			<AppenderRef ref="console" />
