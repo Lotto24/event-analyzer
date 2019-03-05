@@ -21,10 +21,10 @@ public class DrillViews {
 	private Map<String, Set<String>> existingTables;
 	
 
-	public DrillViews(Config config) {
+	public DrillViews(Config config, DrillConnection drillConnection) {
 		log.debug("Initializing DrillViewGenerator");
 		this.config = config;
-		this.drillConnection = new DrillConnection(config);
+		this.drillConnection = drillConnection;
 
 		fetchDatabases();
 		initTargetDatabases();

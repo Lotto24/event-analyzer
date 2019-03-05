@@ -29,6 +29,16 @@ public class DrillConnection {
 		initShutdownHook();
 	}
 	
+	public void executeSqlStatements(String sql) throws SQLException {
+		for(String singleStatement : sql.split(";")) {
+			if(singleStatement.trim().isEmpty()) {
+				continue;
+			}
+			log.info("Executing statement: " + singleStatement);
+			connection.createStatement().execute(singleStatement);
+		}
+	}
+	
 	public ResultSet query(String query) {
 		log.debug("Running query: " + query);
 		try {

@@ -28,16 +28,8 @@ public class Config {
 	public static final String CONSUL_HOST_KEY = "consul.host";
 	public static final String CONSUL_PORT_KEY = "consul.port";
 
-	public static final String PROCESSOR_IGNORE_BROKEN_MESSAGES_KEY = "processor.ignore_broken_messages";
-	public static final String PROCESSOR_ANALYZE_MESSAGES_KEY = "processor.anaylze_messages";
-
-	public static final String PROCESSOR_SAMPLE_EVENTS_ENABLED_KEY = "processor.sample_events.enabled";
-	public static final String PROCESSOR_SAMPLE_EVENTS_FOLDER_KEY = "processor.sample_events.folder";
-
-	public static final String PROCESSOR_DRILL_VIEWS_ENABLED_KEY = "processor.drill_views.enabled";
-	public static final String PROCESSOR_DRILL_VIEWS_FOLDER_KEY = "processor.drill_views.folder";
-
-	public static final String PROCESSOR_SCHEMA_HASH_LENGTH_KEY = "processor.schema_hash_length";
+	public static final String EVENT_FIELD_EVENT_TYPE_KEY = "events.event_type_field";
+	public static final String PROCESSOR_SCHEMA_HASH_LENGTH_KEY = "events.schema_hash_length";
 
 	/* kafka config keys */
 
@@ -75,18 +67,8 @@ public class Config {
 	public String CONSUL_HOST = "app-01-dwh.test.t24.eu-west-1.sg-cloud.co.uk";
 	public int CONSUL_PORT = 8500;
 
-	public boolean PROCESSOR_IGNORE_BROKEN_MESSAGES = true;
-	public boolean PROCESSOR_ANALYZE_MESSAGES = false;
-
-	public boolean PROCESSOR_SAMPLE_EVENTS_ENABLED = true;
-	public String PROCESSOR_SAMPLE_EVENTS_FOLDER = "samples/";
-
-	public boolean PROCESSOR_DRILL_VIEWS_ENABLED = false;
-	public String PROCESSOR_DRILL_VIEWS_FOLDER = "drillviews/";
-
 	public int PROCESSOR_SCHEMA_HASH_LENGTH = 32;
-
-	public boolean HBASE_ENABLED = true;
+	public String EVENT_FIELD_EVENT_TYPE = "eventType";
 
 	// kafka connection settings
 
@@ -138,6 +120,12 @@ public class Config {
 		loadConsulSettings();
 		loadDrillSettings();
 		loadKafkaSettings();
+		loadProcessorSettings();
+	}
+
+	private void loadProcessorSettings() {
+		PROCESSOR_SCHEMA_HASH_LENGTH = loadConfigInteger(PROCESSOR_SCHEMA_HASH_LENGTH_KEY);
+		EVENT_FIELD_EVENT_TYPE = loadConfigString(EVENT_FIELD_EVENT_TYPE_KEY);
 	}
 
 	private void loadConsulSettings() {

@@ -2,11 +2,18 @@ package de.esailors.dataheart.drillviews.generator;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import de.esailors.dataheart.drillviews.data.Event;
+
 public class CreateViewSQLBuilder {
 
+	private static final Logger log = LogManager.getLogger(CreateViewSQLBuilder.class.getName());
+	
+	// TODO move these to Config
 	
 	private static final String HBASE_TABLE = "json_events";
 	private static final String HBASE_COLUMN_FAMILY = "cf";
@@ -26,10 +33,15 @@ public class CreateViewSQLBuilder {
 	
 	private static final int IDENTATION = 4;
 
-	public static String generateDrillViewForJson(JsonNode json, String viewName) {
-		if (json == null) {
+	public static String generateDrillViewsFor(Event event) {
+		if (event == null) {
 			throw new IllegalArgumentException("null given");
 		}
+		
+		// TODO generate drill views from avro schema if possible
+		
+		JsonNode json = event.getEventJson();
+		String viewName = event.getTopic().getTopicName();
 
 
 		StringBuilder viewBuilder = new StringBuilder();
@@ -185,7 +197,7 @@ public class CreateViewSQLBuilder {
 	        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json);
 	    } catch (Exception e) {
 	    	e.printStackTrace();
-	    	System.out.println("Unable to pretty print JSON: " + jsonNode.toString());
+	    	log.warn("Unable to pretty print JSON: " + jsonNode.toString());
 	        return jsonNode.toString();
 	    }
 	}

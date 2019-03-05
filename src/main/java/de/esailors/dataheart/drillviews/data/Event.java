@@ -10,14 +10,14 @@ public class Event {
 	private byte[] message;
 	private Topic topic;
 	private JsonNode eventJson;
-	private boolean messageIsAvro;
+	private boolean avroMessage;
 	private Schema schema;
 
-	public Event(byte[] message, Topic topic, JsonNode eventJson, boolean messageIsAvro, Schema schema) {
+	public Event(byte[] message, Topic topic, JsonNode eventJson, boolean avroMessage, Schema schema) {
 		this.message = message; 
 		this.topic = topic;
 		this.eventJson = eventJson;
-		this.messageIsAvro = messageIsAvro;
+		this.avroMessage = avroMessage;
 		this.schema = schema;
 	}
 
@@ -33,8 +33,8 @@ public class Event {
 		return eventJson;
 	}
 
-	public boolean isMessageIsAvro() {
-		return messageIsAvro;
+	public boolean isAvroMessage() {
+		return avroMessage;
 	}
 
 	public Schema getSchema() {
