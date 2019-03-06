@@ -1,6 +1,5 @@
 package de.esailors.dataheart.drillviews.kafka;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -34,7 +33,7 @@ public class KafkaEventFetcher {
 	private Consumer<byte[], byte[]> consumer;
 	private Set<Topic> topics = new HashSet<>();
 	
-	public KafkaEventFetcher(Config config) throws IOException {
+	public KafkaEventFetcher(Config config) {
 		this.config = config;
 
 		initConsumer();

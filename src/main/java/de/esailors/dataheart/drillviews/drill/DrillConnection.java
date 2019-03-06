@@ -34,7 +34,7 @@ public class DrillConnection {
 			if(singleStatement.trim().isEmpty()) {
 				continue;
 			}
-			log.info("Executing statement: " + singleStatement);
+			log.debug("Executing statement: " + singleStatement);
 			connection.createStatement().execute(singleStatement);
 		}
 	}

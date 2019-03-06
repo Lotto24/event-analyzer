@@ -1,26 +1,26 @@
-package de.esailors.dataheart.drillviews.generator;
+package de.esailors.dataheart.drillviews.processor;
+
 import java.util.Iterator;
 import java.util.Map.Entry;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
 
 import de.esailors.dataheart.drillviews.data.Event;
 
 public class CreateViewSQLBuilder {
 
 	private static final Logger log = LogManager.getLogger(CreateViewSQLBuilder.class.getName());
-	
+
 	// TODO move these to Config
-	
+
 	private static final String HBASE_TABLE = "json_events";
 	private static final String HBASE_COLUMN_FAMILY = "cf";
 	private static final String HBASE_JSON_FIELD = "json";
 
 	private static final String DRILL_HBASE_STORAGE_PLUGIN_NAME = "hbase";
-	
+
 	private static final String DRILL_VIEW_WORKSPACE = "drill.views";
 	private static final String DRILL_VIEW_SUBFOLDER = "json_events";
 
@@ -30,41 +30,42 @@ public class CreateViewSQLBuilder {
 	private static final String JSON_FIELD_ALIAS = "json";
 
 	private static final String EVENT_TYPE_FIELD = "eventType";
-	
+
 	private static final int IDENTATION = 4;
 
 	public static String generateDrillViewsFor(Event event) {
 		if (event == null) {
 			throw new IllegalArgumentException("null given");
 		}
-		
+
+		log.info("Generating create view statement for Event from " + event.getTopic().getTopicName());
 		// TODO generate drill views from avro schema if possible
-		
+
 		JsonNode json = event.getEventJson();
 		String viewName = event.getTopic().getTopicName();
-
 
 		StringBuilder viewBuilder = new StringBuilder();
 
 		generateCommentBlock(viewBuilder, viewName, json);
-		
+
 		generateView(json, viewName, viewBuilder, null, null);
 		generateView(json, viewName, viewBuilder, "'-1' day", "last_day");
 		generateView(json, viewName, viewBuilder, "'-7' day", "last_week");
-		
+
 		return viewBuilder.toString();
 
 	}
 
-	private static void generateView(JsonNode json, String viewName, StringBuilder viewBuilder, String timeLimit, String subfolder) {
+	private static void generateView(JsonNode json, String viewName, StringBuilder viewBuilder, String timeLimit,
+			String subfolder) {
 		generateViewStart(viewBuilder, viewName, subfolder);
 
 		String fieldPrefix = SUBSELECT_ALIAS + "." + JSON_FIELD_ALIAS + ".";
-		
+
 		generateSelectColumns(json, viewBuilder, fieldPrefix, "");
-		
+
 		String eventType = json.get(EVENT_TYPE_FIELD).asText().toUpperCase();
-		
+
 		generateViewEnd(viewBuilder, eventType, timeLimit);
 	}
 
@@ -73,16 +74,17 @@ public class CreateViewSQLBuilder {
 		viewBuilder.append("Auto-generated view for ");
 		viewBuilder.append(viewName);
 		viewBuilder.append("\nSample event used for view generation:\n");
-		viewBuilder.append(prettyPrintJsonString(json));
+		viewBuilder.append(JsonPrettyPrinter.prettyPrintJsonString(json));
 		viewBuilder.append("\n*/\n\n");
 	}
 
-	private static void generateSelectColumns(JsonNode json, StringBuilder viewBuilder, String fieldPrefix, String keyPrefix) {
-		
+	private static void generateSelectColumns(JsonNode json, StringBuilder viewBuilder, String fieldPrefix,
+			String keyPrefix) {
+
 		Iterator<Entry<String, JsonNode>> fields = json.getFields();
 		while (fields.hasNext()) {
 			Entry<String, JsonNode> entry = fields.next();
-			
+
 			if (entry.getValue().isObject()) {
 				// recursive call
 				String newKeyPrefix = keyPrefix + entry.getKey() + "_";
@@ -109,7 +111,7 @@ public class CreateViewSQLBuilder {
 		viewBuilder.append(".`");
 		viewBuilder.append(DRILL_VIEW_SUBFOLDER);
 		viewBuilder.append("/");
-		if(subFolder != null) {
+		if (subFolder != null) {
 			viewBuilder.append(subFolder);
 			viewBuilder.append("/");
 		}
@@ -128,7 +130,7 @@ public class CreateViewSQLBuilder {
 		viewBuilder.append(".row_key, 'UTF8'), '-') + 1, 10) AS BIGINT)) as ");
 		viewBuilder.append(ROW_TIMESTAMP_ALIAS);
 	}
-	
+
 	private static void generateViewEnd(StringBuilder viewBuilder, String eventType, String timeLimit) {
 		viewBuilder.append("\nFROM (\n");
 		viewBuilder.append(ident());
@@ -173,12 +175,13 @@ public class CreateViewSQLBuilder {
 
 	private static void generateRowKeyStart(StringBuilder viewBuilder, String timeLimit) {
 		String rowKeyStart;
-		if(timeLimit == null) {
+		if (timeLimit == null) {
 			rowKeyStart = "0'";
 		} else {
-			rowKeyStart = "' || UNIX_TIMESTAMP(TO_CHAR(DATE_ADD(now(), interval " + timeLimit + "),'yyyy-MM-dd HH:mm:ss'))";
+			rowKeyStart = "' || UNIX_TIMESTAMP(TO_CHAR(DATE_ADD(now(), interval " + timeLimit
+					+ "),'yyyy-MM-dd HH:mm:ss'))";
 		}
-		
+
 		viewBuilder.append(rowKeyStart);
 	}
 
@@ -189,16 +192,5 @@ public class CreateViewSQLBuilder {
 		}
 		return r.toString();
 	}
-	
-	public static String prettyPrintJsonString(JsonNode jsonNode) {
-	    try {
-	        ObjectMapper mapper = new ObjectMapper();
-	        Object json = mapper.readValue(jsonNode.toString(), Object.class);
-	        return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json);
-	    } catch (Exception e) {
-	    	e.printStackTrace();
-	    	log.warn("Unable to pretty print JSON: " + jsonNode.toString());
-	        return jsonNode.toString();
-	    }
-	}
+
 }

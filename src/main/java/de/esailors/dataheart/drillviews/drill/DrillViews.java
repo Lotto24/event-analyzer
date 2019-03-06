@@ -31,6 +31,18 @@ public class DrillViews {
 		fetchViewsInTargetDatabses();
 	}
 	
+	public boolean doesViewExist(String viewName) {
+		log.debug("Checking if view exists already in Drill: " + viewName);
+		for(String database : existingTables.keySet()) {
+			if(existingTables.get(database).contains(viewName)) {
+				log.debug("Found view " + viewName + "in database: " + database);
+				return true;
+			}
+		}
+		log.info("View does not exist yet: " + viewName);
+		return false;
+	}
+	
 	private void fetchDatabases() {
 		log.debug("Fetching databases from Drill");
 		databases = drillConnection.listDatabases();

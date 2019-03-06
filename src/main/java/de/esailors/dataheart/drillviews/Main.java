@@ -1,7 +1,5 @@
 package de.esailors.dataheart.drillviews;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -18,23 +16,25 @@ public class Main {
 
 	private static final String DEFAULT_CONFIG_PATH = "conf/config.properties";
 
-	public static void main(String[] args) throws FileNotFoundException, IOException {
+	public static void main(String[] args) {
 
 		log.info("Starting DrillViewGenerator");
 
+		// load configuration
 		String configPath = DEFAULT_CONFIG_PATH;
 		if (args.length > 0) {
 			configPath = args[0];
 			log.debug("Using config path from command line argument: " + configPath);
 		}
-
-		// load config
 		Config config = new Config(configPath);
 
 		// fetch messages from all Topics and parse to Event
 		Set<Topic> topics = new KafkaEventFetcher(config).fetchEvents();
 
+		// process the fetched messages
 		// align existing Drill views with fetched events
+		// write report, views and sample data 
+		// publish to git for others to see
 		new Processor(config).process(topics);
 
 		log.info("DrillViewGenerator finished successfully");

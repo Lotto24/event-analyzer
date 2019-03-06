@@ -30,6 +30,12 @@ public class Config {
 
 	public static final String EVENT_FIELD_EVENT_TYPE_KEY = "events.event_type_field";
 	public static final String PROCESSOR_SCHEMA_HASH_LENGTH_KEY = "events.schema_hash_length";
+	
+	// persister config
+	
+//	public static final String OUTPUT_DIRECTORY_KEY = "persister.out.directory";
+	public static final String OUTPUT_DRILL_DIRECTORY_KEY = "persister.out.drill.directory";
+	public static final String OUTPUT_SAMPLES_DIRECTORY_KEY = "persister.out.samples.directory";
 
 	/* kafka config keys */
 
@@ -69,6 +75,11 @@ public class Config {
 
 	public int PROCESSOR_SCHEMA_HASH_LENGTH = 32;
 	public String EVENT_FIELD_EVENT_TYPE = "eventType";
+	
+	// persister settings
+	
+	public String OUTPUT_DRILL_DIRECTORY = "out/drill_views/";
+	public String OUTPUT_SAMPLES_DIRECTORY = "out/event_samples/";
 
 	// kafka connection settings
 
@@ -121,6 +132,11 @@ public class Config {
 		loadDrillSettings();
 		loadKafkaSettings();
 		loadProcessorSettings();
+		loadPersisterSettings();
+	}
+
+	private void loadPersisterSettings() {
+		OUTPUT_DRILL_DIRECTORY = loadConfigString(OUTPUT_DRILL_DIRECTORY_KEY);
 	}
 
 	private void loadProcessorSettings() {

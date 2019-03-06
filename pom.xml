@@ -25,7 +25,7 @@
 			<artifactId>log4j-core</artifactId>
 			<version>2.11.2</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-1.2-api</artifactId>
@@ -78,6 +78,7 @@
 			<version>1.4.4</version>
 		</dependency>
 
+		<!-- inhouse avro registry client -->
 		<dependency>
 			<groupId>de.esailors</groupId>
 			<artifactId>avro-registry-client</artifactId>
@@ -88,6 +89,15 @@
 			<artifactId>fluent-hc</artifactId>
 			<version>4.5.1</version>
 		</dependency>
+
+
+		<!-- https://mvnrepository.com/artifact/org.eclipse.jgit/org.eclipse.jgit -->
+		<dependency>
+			<groupId>org.eclipse.jgit</groupId>
+			<artifactId>org.eclipse.jgit</artifactId>
+			<version>5.2.1.201812262042-r</version>
+		</dependency>
+
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>

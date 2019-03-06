@@ -15,7 +15,7 @@ import de.esailors.dataheart.drillviews.data.Event;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.drill.DrillConnection;
 import de.esailors.dataheart.drillviews.drill.DrillViews;
-import de.esailors.dataheart.drillviews.generator.CreateViewSQLBuilder;
+import de.esailors.dataheart.drillviews.git.GitUtil;
 
 public class Processor {
 
@@ -25,11 +25,15 @@ public class Processor {
 
 	private DrillConnection drillConnection;
 	private DrillViews drillViews;
+	private Persister persister;
+	private GitUtil gitUtil;
 
 	public Processor(Config config) {
 		this.config = config;
 		this.drillConnection = new DrillConnection(config);
 		this.drillViews = new DrillViews(config, drillConnection);
+		this.persister = new Persister(config);
+		this.gitUtil = new GitUtil(config);
 	}
 
 	public void process(Set<Topic> topics) {
@@ -37,7 +41,13 @@ public class Processor {
 		for (Topic topic : topics) {
 			process(topic);
 		}
-
+		
+		// TODO output any kind of statistics / report? to git / readme + changelog
+		
+		// push everything that is written to disk also to git
+		gitUtil.addToRepository(config.OUTPUT_DRILL_DIRECTORY);
+		gitUtil.addToRepository(config.OUTPUT_SAMPLES_DIRECTORY);
+		gitUtil.commitAndPush();
 	}
 
 	public void process(Topic topic) {
@@ -47,28 +57,32 @@ public class Processor {
 		markTopicInconsistencies(topic);
 
 		createDrillViews(topic);
+		writeEventSamples(topic);
+		writeTopicReport(topic);
 
-		// TODO output any kind of statistics / report? (either to disk or mail /
-		// whatever)
+	}
 
-		// TODO write drill views to disk
-		// TODO write topic info to disk?
-		// TODO write event samples to disk
-//		writeSamplesToDisk();
+	private void writeTopicReport(Topic topic) {
+		// TODO STOPPED HERE
+	}
 
-		// TODO push everything that is written to disk also to git?
-
+	private void writeEventSamples(Topic topic) {
+		persister.persistEventSamples(topic);
 	}
 
 	private void createDrillViews(Topic topic) {
 		// TODO compare and align generated views with those from drill
 
+		drillViews.doesViewExist(topic.getTopicName());
+
 		// TODO generate drill views and execute them
 		if (topic.getExampleEvent() == null) {
 			log.warn("Did not find an event to create a Drill view for " + topic);
 		} else {
-			String createStatement = CreateViewSQLBuilder.generateDrillViewsFor(topic.getExampleEvent());
 			log.info("Creating Drill views for " + topic);
+			String createStatement = CreateViewSQLBuilder.generateDrillViewsFor(topic.getExampleEvent());
+			// write drill views to disk
+			persister.persistDrillView(topic, createStatement);
 			try {
 				drillConnection.executeSqlStatements(createStatement);
 			} catch (SQLException e) {
