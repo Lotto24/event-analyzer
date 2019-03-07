@@ -15,8 +15,8 @@ public class CreateViewSQLBuilder {
 
 	// TODO move these to Config
 
-	private static final String HBASE_TABLE = "json_events";
-	private static final String HBASE_COLUMN_FAMILY = "cf";
+	private static final String HBASE_TABLE = "kafka_events";
+	private static final String HBASE_COLUMN_FAMILY = "d";
 	private static final String HBASE_JSON_FIELD = "json";
 
 	private static final String DRILL_HBASE_STORAGE_PLUGIN_NAME = "hbase";
@@ -73,8 +73,8 @@ public class CreateViewSQLBuilder {
 		viewBuilder.append("/*\n");
 		viewBuilder.append("Auto-generated view for ");
 		viewBuilder.append(viewName);
-		viewBuilder.append("\nSample event used for view generation:\n");
-		viewBuilder.append(JsonPrettyPrinter.prettyPrintJsonString(json));
+//		viewBuilder.append("\nSample event used for view generation:\n");
+//		viewBuilder.append(JsonPrettyPrinter.prettyPrintJsonString(json));
 		viewBuilder.append("\n*/\n\n");
 	}
 

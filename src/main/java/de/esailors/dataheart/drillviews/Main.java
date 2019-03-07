@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Topic;
+import de.esailors.dataheart.drillviews.git.GitUtil;
 import de.esailors.dataheart.drillviews.kafka.KafkaEventFetcher;
 import de.esailors.dataheart.drillviews.processor.Processor;
 
@@ -29,13 +30,15 @@ public class Main {
 		Config config = new Config(configPath);
 
 		// fetch messages from all Topics and parse to Event
-		Set<Topic> topics = new KafkaEventFetcher(config).fetchEvents();
+//		Set<Topic> topics = new KafkaEventFetcher(config).fetchEvents();
 
 		// process the fetched messages
 		// align existing Drill views with fetched events
 		// write report, views and sample data 
 		// publish to git for others to see
-		new Processor(config).process(topics);
+//		new Processor(config).process(topics);
+		
+		new GitUtil(config);
 
 		log.info("DrillViewGenerator finished successfully");
 

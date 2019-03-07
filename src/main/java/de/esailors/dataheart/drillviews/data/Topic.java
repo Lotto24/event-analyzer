@@ -15,6 +15,7 @@ public class Topic {
 	private Set<Boolean> messagesAreAvro;
 	private Set<Schema> messageSchemas;
 	private Set<String> eventTypes;
+	private Set<String> schemaVersions;
 
 	public Topic(String topicName) {
 		this.topicName = topicName;
@@ -32,7 +33,7 @@ public class Topic {
 	}
 	
 	public boolean isConsistent() {
-		return messagesAreAvro.size() == 1 && messageSchemas.size() == 1 && eventTypes.size() == 1;
+		return messagesAreAvro.size() == 1 && messageSchemas.size() == 1 && eventTypes.size() == 1 && schemaVersions.size() == 1;
 	}
 	
 	public void setMessagesAreAvro(Set<Boolean> messagesAreAvro) {
@@ -45,6 +46,10 @@ public class Topic {
 
 	public void setEventTypes(Set<String> eventTypes) {
 		this.eventTypes = eventTypes;
+	}
+	
+	public void setSchemaVersions(Set<String> schemaVersions) {
+		this.schemaVersions = schemaVersions;
 	}
 
 	public Event getExampleEvent() {

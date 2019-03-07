@@ -27,6 +27,7 @@ public class Processor {
 	private DrillViews drillViews;
 	private Persister persister;
 	private GitUtil gitUtil;
+	private ChangeLog changeLog;
 
 	public Processor(Config config) {
 		this.config = config;
@@ -34,6 +35,7 @@ public class Processor {
 		this.drillViews = new DrillViews(config, drillConnection);
 		this.persister = new Persister(config);
 		this.gitUtil = new GitUtil(config);
+		this.changeLog = new ChangeLog(config);
 	}
 
 	public void process(Set<Topic> topics) {
@@ -41,25 +43,43 @@ public class Processor {
 		for (Topic topic : topics) {
 			process(topic);
 		}
-		
-		// TODO output any kind of statistics / report? to git / readme + changelog
-		
+
 		// push everything that is written to disk also to git
 		gitUtil.addToRepository(config.OUTPUT_DRILL_DIRECTORY);
 		gitUtil.addToRepository(config.OUTPUT_SAMPLES_DIRECTORY);
+
+		// TODO output any kind of statistics / report? to git / readme + changelog
+		if (writeChangeLog()) {
+			gitUtil.addToRepository(config.OUTPUT_CHANGELOGS_DIRECTORY);
+		}
+
 		gitUtil.commitAndPush();
+	}
+
+	private boolean writeChangeLog() {
+		if (!changeLog.hasEntries()) {
+			log.info("No major changes detected, not writing a changelog for this run");
+			return false;
+		}
+		persister.persistChangeLog(changeLog);
+		return true;
 	}
 
 	public void process(Topic topic) {
 
-		log.info("Processing " + topic.getEvents().size() + " events for " + topic);
+		// TODO write entries to changeSet for "major" events like a new topic / view
+		// being detected
 
-		markTopicInconsistencies(topic);
+		log.info("Processing " + topic.getEvents().size() + " events for " + topic);
+		if (topic.getEvents().size() == 0) {
+			changeLog.addMessage("No events received for " + topic);
+		} else {
+			markTopicInconsistencies(topic);
+		}
 
 		createDrillViews(topic);
 		writeEventSamples(topic);
 		writeTopicReport(topic);
-
 	}
 
 	private void writeTopicReport(Topic topic) {
@@ -73,12 +93,19 @@ public class Processor {
 	private void createDrillViews(Topic topic) {
 		// TODO compare and align generated views with those from drill
 
-		drillViews.doesViewExist(topic.getTopicName());
-
-		// TODO generate drill views and execute them
+		// generate drill views and execute them
 		if (topic.getExampleEvent() == null) {
 			log.warn("Did not find an event to create a Drill view for " + topic);
 		} else {
+
+			if (drillViews.doesViewExist(topic.getTopicName())) {
+				log.debug("Drill view for " + topic + " already exists");
+				// TODO check if it's the same view and don't execute if it is
+			} else {
+				log.info("No Drill view exists yet for " + topic);
+				changeLog.addMessage("Genearting new Drill view for: " + topic);
+			}
+
 			log.info("Creating Drill views for " + topic);
 			String createStatement = CreateViewSQLBuilder.generateDrillViewsFor(topic.getExampleEvent());
 			// write drill views to disk
@@ -109,6 +136,7 @@ public class Processor {
 		Set<Boolean> messagesAreAvro = new HashSet<>();
 		Set<Schema> messageSchemas = new HashSet<>();
 		Set<String> eventTypes = new HashSet<>();
+		Set<String> schemaVersions = new HashSet<>();
 
 		Event firstEvent = null;
 		Iterator<Event> iterator = topic.getEvents().iterator();
@@ -118,6 +146,7 @@ public class Processor {
 			messagesAreAvro.add(event.isAvroMessage());
 			messageSchemas.add(event.getSchema());
 			eventTypes.add(getEventTypeFromEvent(event));
+			schemaVersions.add(getSchemaVersionFromEvent(event));
 
 			if (firstEvent == null) {
 				// first one we see, use this to compare to all others
@@ -141,26 +170,41 @@ public class Processor {
 		if (eventTypes.size() > 1) {
 			log.warn("Mixed EventTypes within the same topic: " + topic);
 		}
+		if (schemaVersions.size() > 1) {
+			log.warn("Mixed Versions within the same topic: " + topic);
+		}
 
 		topic.setMessagesAreAvro(messagesAreAvro);
 		topic.setMessageSchemas(messageSchemas);
 		topic.setEventTypes(eventTypes);
+		topic.setSchemaVersions(schemaVersions);
 
 		if (topic.isConsistent()) {
 			log.info("Consistency checks passed: " + topic);
 		} else {
-			log.warn("Inconsistencies detected in " + topic);
+			String message = "Inconsistencies detected in " + topic;
+			log.warn(message);
+			changeLog.addMessage(message);
 		}
 	}
 
 	private String getEventTypeFromEvent(Event event) {
 		// TODO doesn't really belong here, move somewhere else
-		JsonNode jsonNode = event.getEventJson().get(config.EVENT_FIELD_EVENT_TYPE);
-		if (jsonNode == null || !jsonNode.isTextual()) {
-			log.warn("No field for event type '" + config.EVENT_FIELD_EVENT_TYPE + "' found in: " + event);
+		return getFieldFromEvent(event, config.EVENT_FIELD_EVENT_TYPE);
+	}
+
+	private String getSchemaVersionFromEvent(Event event) {
+		// TODO doesn't really belong here, move somewhere else
+		return getFieldFromEvent(event, config.EVENT_FIELD_VERSION);
+	}
+
+	private String getFieldFromEvent(Event event, String field) {
+		JsonNode jsonNode = event.getEventJson().get(field);
+		if (jsonNode == null) {
+			log.warn("Field not found for '" + field + "' in: " + event);
 			return null;
 		}
-		return jsonNode.getTextValue();
+		return jsonNode.asText();
 	}
 
 }

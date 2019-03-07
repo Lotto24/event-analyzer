@@ -28,7 +28,11 @@ public class Config {
 	public static final String CONSUL_HOST_KEY = "consul.host";
 	public static final String CONSUL_PORT_KEY = "consul.port";
 
-	public static final String EVENT_FIELD_EVENT_TYPE_KEY = "events.event_type_field";
+	public static final String EVENT_FIELD_ID_KEY = "events.field.id";
+	public static final String EVENT_FIELD_TIMESTAMP_KEY = "events.field.timestamp";
+	public static final String EVENT_FIELD_EVENT_TYPE_KEY = "events.field.event_type";
+	public static final String EVENT_FIELD_VERSION_KEY = "events.field.version";
+	
 	public static final String PROCESSOR_SCHEMA_HASH_LENGTH_KEY = "events.schema_hash_length";
 	
 	// persister config
@@ -36,6 +40,7 @@ public class Config {
 //	public static final String OUTPUT_DIRECTORY_KEY = "persister.out.directory";
 	public static final String OUTPUT_DRILL_DIRECTORY_KEY = "persister.out.drill.directory";
 	public static final String OUTPUT_SAMPLES_DIRECTORY_KEY = "persister.out.samples.directory";
+	public static final String OUTPUT_CHANGELOGS_DIRECTORY_KEY = "persister.out.changelogs.directory";
 
 	/* kafka config keys */
 
@@ -74,12 +79,18 @@ public class Config {
 	public int CONSUL_PORT = 8500;
 
 	public int PROCESSOR_SCHEMA_HASH_LENGTH = 32;
+	
+	public String EVENT_FIELD_ID = "id";
+	public String EVENT_FIELD_TIMESTAMP = "timestamp";
 	public String EVENT_FIELD_EVENT_TYPE = "eventType";
+	public String EVENT_FIELD_VERSION = "version";
+	
 	
 	// persister settings
 	
 	public String OUTPUT_DRILL_DIRECTORY = "out/drill_views/";
 	public String OUTPUT_SAMPLES_DIRECTORY = "out/event_samples/";
+	public String OUTPUT_CHANGELOGS_DIRECTORY = "out/change_logs/";
 
 	// kafka connection settings
 
@@ -92,7 +103,7 @@ public class Config {
 
 	public String KAFKA_CONSUMER_AUTO_OFFSET_RESET = "earliest";
 	public boolean KAFKA_CONSUMER_ENABLE_AUTO_COMMIT = false;
-	public int KAFKA_CONSUMER_MAX_POLL_RECORDS = 1;
+	public int KAFKA_CONSUMER_MAX_POLL_RECORDS = 10;
 
 	public boolean KAFKA_RESET_CONSUMER_OFFSETS = false;
 
@@ -137,11 +148,16 @@ public class Config {
 
 	private void loadPersisterSettings() {
 		OUTPUT_DRILL_DIRECTORY = loadConfigString(OUTPUT_DRILL_DIRECTORY_KEY);
+		OUTPUT_SAMPLES_DIRECTORY = loadConfigString(OUTPUT_SAMPLES_DIRECTORY_KEY);
+		OUTPUT_CHANGELOGS_DIRECTORY = loadConfigString(OUTPUT_CHANGELOGS_DIRECTORY_KEY);
 	}
 
 	private void loadProcessorSettings() {
 		PROCESSOR_SCHEMA_HASH_LENGTH = loadConfigInteger(PROCESSOR_SCHEMA_HASH_LENGTH_KEY);
+		EVENT_FIELD_ID = loadConfigString(EVENT_FIELD_ID_KEY);
+		EVENT_FIELD_TIMESTAMP = loadConfigString(EVENT_FIELD_TIMESTAMP_KEY);
 		EVENT_FIELD_EVENT_TYPE = loadConfigString(EVENT_FIELD_EVENT_TYPE_KEY);
+		EVENT_FIELD_VERSION = loadConfigString(EVENT_FIELD_VERSION_KEY);
 	}
 
 	private void loadConsulSettings() {
