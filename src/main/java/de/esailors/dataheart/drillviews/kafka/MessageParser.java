@@ -181,6 +181,10 @@ public class MessageParser {
 		return schemaHash != null && !schemaHash.trim().startsWith("{");
 	}
 	
+	public String getAvroSchemaHashForMessage(byte[] message) {
+		return extractSchemaHashFromMessage(message);
+	}
+	
 	public Schema getSchemaForMessage(byte[] message) {
 		return schemaCache.get(extractSchemaHashFromMessage(message));
 	}

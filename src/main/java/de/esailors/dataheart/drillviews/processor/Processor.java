@@ -42,16 +42,18 @@ public class Processor {
 		}
 
 		log.info("Adding process output to local git repository");
-		
+
 		// push everything that is written to disk also to git
 		gitUtil.addToRepository(config.OUTPUT_DRILL_DIRECTORY);
 		gitUtil.addToRepository(config.OUTPUT_SAMPLES_DIRECTORY);
+		gitUtil.addToRepository(config.OUTPUT_TOPIC_DIRECTORY);
 
 		// TODO output any kind of statistics / report? to git / readme + changelog
 		if (writeChangeLog()) {
+			// write entries to changeSet for "major" events like a new topic / view
 			gitUtil.addToRepository(config.OUTPUT_CHANGELOGS_DIRECTORY);
 		}
-
+		
 		gitUtil.commitAndPush();
 	}
 
@@ -67,23 +69,17 @@ public class Processor {
 
 	public void process(Topic topic) {
 
-		// TODO write entries to changeSet for "major" events like a new topic / view
-		// being detected
-
 		log.info("Processing " + topic.getEvents().size() + " events for " + topic);
-		if (topic.getEvents().size() == 0) {
-			changeLog.addMessage("No events received for " + topic);
-		} else {
-			markTopicInconsistencies(topic);
-		}
 
+		markTopicInconsistencies(topic);
 		createDrillViews(topic);
 		writeEventSamples(topic);
 		writeTopicReport(topic);
 	}
 
 	private void writeTopicReport(Topic topic) {
-		// TODO STOPPED HERE
+		// TODO check local git repository if report even changed
+		persister.persistTopicReport(topic);
 	}
 
 	private void writeEventSamples(Topic topic) {
@@ -100,7 +96,7 @@ public class Processor {
 			log.warn("Did not find an event to create a Drill view for " + topic);
 		} else {
 
-			if (drillViews.doesViewExist(topic.getTopicName())) {
+			if (drillViews.doesViewExist(topic.getName())) {
 				log.debug("Drill view for " + topic + " already exists");
 				// TODO check if it's the same view and don't execute if it is
 				// TODO fetch view from local git repository and compare

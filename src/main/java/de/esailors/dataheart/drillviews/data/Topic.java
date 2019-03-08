@@ -1,7 +1,9 @@
 package de.esailors.dataheart.drillviews.data;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.avro.Schema;
@@ -17,11 +19,15 @@ public class Topic {
 
 	private Set<Event> events = new HashSet<>();
 	private Event exampleEvent;
+	
 	private Set<Boolean> messagesAreAvro;
 	private Set<Schema> messageSchemas;
 	private Set<String> eventTypes;
 	private Set<String> schemaVersions;
+	private Set<String> avroSchemaHashes;
 
+	private List<String> reportMessages;
+	
 	public Topic(String topicName) {
 		this.topicName = topicName;
 	}
@@ -32,16 +38,23 @@ public class Topic {
 		// - JSON structure doesnt change (always the same fields?)
 		// - always the same event Type in each topic
 
+		reportMessages = new ArrayList<>();
+		
+		if(getEvents().size() == 0) {
+			addMessageToReport("No events received for " + this);
+		}
+		
 		if (getEvents().size() < 2) {
-			log.warn("Can't properly check event consistency because I did not get enough events for: " + this);
+			addMessageToReport("Can't properly check event consistency because I did not get enough events for: " + this);
 		}
 
 		// idea: gather values in Sets, if they have more than 1 entry afterwards
 		// something is fishy
-		messagesAreAvro = new HashSet<>();
-		messageSchemas = new HashSet<>();
 		eventTypes = new HashSet<>();
 		schemaVersions = new HashSet<>();
+		messagesAreAvro = new HashSet<>();
+		messageSchemas = new HashSet<>();
+		avroSchemaHashes = new HashSet<>();
 
 		Event firstEvent = null;
 		Iterator<Event> iterator = getEvents().iterator();
@@ -49,9 +62,10 @@ public class Topic {
 			Event event = iterator.next();
 
 			messagesAreAvro.add(event.isAvroMessage());
-			messageSchemas.add(event.getSchema());
+			messageSchemas.add(event.getAvroSchema());
 			eventTypes.add(event.readEventType());
 			schemaVersions.add(event.readSchemaVersion());
+			avroSchemaHashes.add(event.getAvroSchemaHash());
 
 			if (firstEvent == null) {
 				// first one we see, use this as example event
@@ -61,27 +75,35 @@ public class Topic {
 
 		}
 
-		if (messagesAreAvro.size() > 1) {
-			log.warn("Mixed Avro and plain JSON within the same topic: " + this);
-		}
-		if (messageSchemas.size() > 1) {
-			log.warn("Mixed Avro schemas within the same topic: " + this);
-		}
 		if (eventTypes.size() > 1) {
-			log.warn("Mixed EventTypes within the same topic: " + this);
+			addMessageToReport("Mixed EventTypes within the same topic: " + this);
 		}
 		if (schemaVersions.size() > 1) {
-			log.warn("Mixed Versions within the same topic: " + this);
+			addMessageToReport("Mixed Schema Versions within the same topic: " + this);
+		}
+		if (messagesAreAvro.size() > 1) {
+			addMessageToReport("Mixed Avro and plain JSON within the same topic: " + this);
+		}
+		if (messageSchemas.size() > 1) {
+			addMessageToReport("Mixed Avro schemas within the same topic: " + this);
+		}
+		if (avroSchemaHashes.size() > 1) {
+			addMessageToReport("Mixed Avro Schema Hashes within the same topic: " + this);
 		}
 
 	}
 
+	private void addMessageToReport(String message) {
+		log.warn("Topic report message: " + message);
+		reportMessages.add(message);
+	}
+
 	public boolean isConsistent() {
-		if (messagesAreAvro == null || messageSchemas == null || eventTypes == null || schemaVersions == null) {
+		if (messagesAreAvro == null || messageSchemas == null || eventTypes == null || schemaVersions == null || avroSchemaHashes == null) {
 			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
 		}
 		return messagesAreAvro.size() == 1 && messageSchemas.size() == 1 && eventTypes.size() == 1
-				&& schemaVersions.size() == 1;
+				&& schemaVersions.size() == 1 && avroSchemaHashes.size() == 1;
 	}
 
 	public void addEvent(Event event) {
@@ -103,7 +125,7 @@ public class Topic {
 		return events;
 	}
 
-	public String getTopicName() {
+	public String getName() {
 		return topicName;
 	}
 
@@ -122,9 +144,21 @@ public class Topic {
 	public Set<String> getEventTypes() {
 		return eventTypes;
 	}
+	
+	public Set<String> getSchemaVersions() {
+		return schemaVersions;
+	}
+	
+	public Set<String> getAvroSchemaHashes() {
+		return avroSchemaHashes;
+	}
 
 	public void setPartitionCount(int partitionCount) {
 		this.partitionCount = partitionCount;
+	}
+	
+	public List<String> getReportMessages() {
+		return reportMessages;
 	}
 
 	@Override

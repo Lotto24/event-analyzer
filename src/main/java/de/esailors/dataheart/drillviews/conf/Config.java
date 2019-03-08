@@ -41,6 +41,7 @@ public class Config {
 	public static final String OUTPUT_DRILL_DIRECTORY_KEY = "persister.out.drill.directory";
 	public static final String OUTPUT_SAMPLES_DIRECTORY_KEY = "persister.out.samples.directory";
 	public static final String OUTPUT_CHANGELOGS_DIRECTORY_KEY = "persister.out.changelogs.directory";
+	public static final String OUTPUT_TOPIC_DIRECTORY_KEY = "persister.out.topics.directory";
 
 	/* kafka config keys */
 
@@ -91,6 +92,7 @@ public class Config {
 	public String OUTPUT_DRILL_DIRECTORY = "out/drill_views/";
 	public String OUTPUT_SAMPLES_DIRECTORY = "out/event_samples/";
 	public String OUTPUT_CHANGELOGS_DIRECTORY = "out/change_logs/";
+	public String OUTPUT_TOPIC_DIRECTORY = "out/topic_reports/";
 
 	// kafka connection settings
 
@@ -150,6 +152,7 @@ public class Config {
 		OUTPUT_DRILL_DIRECTORY = loadConfigString(OUTPUT_DRILL_DIRECTORY_KEY);
 		OUTPUT_SAMPLES_DIRECTORY = loadConfigString(OUTPUT_SAMPLES_DIRECTORY_KEY);
 		OUTPUT_CHANGELOGS_DIRECTORY = loadConfigString(OUTPUT_CHANGELOGS_DIRECTORY_KEY);
+		OUTPUT_TOPIC_DIRECTORY = loadConfigString(OUTPUT_TOPIC_DIRECTORY_KEY);
 	}
 
 	private void loadProcessorSettings() {

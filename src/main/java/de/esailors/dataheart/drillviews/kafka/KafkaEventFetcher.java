@@ -70,7 +70,7 @@ public class KafkaEventFetcher {
 		}
 
 		Collection<TopicPartition> partitions = new ArrayList<>();
-		List<PartitionInfo> partitionInfos = consumer.partitionsFor(topic.getTopicName());
+		List<PartitionInfo> partitionInfos = consumer.partitionsFor(topic.getName());
 		for (PartitionInfo partitionInfo : partitionInfos) {
 			TopicPartition partition = new TopicPartition(partitionInfo.topic(), partitionInfo.partition());
 			partitions.add(partition);

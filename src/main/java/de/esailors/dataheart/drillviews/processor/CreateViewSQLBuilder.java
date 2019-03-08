@@ -38,11 +38,11 @@ public class CreateViewSQLBuilder {
 			throw new IllegalArgumentException("null given");
 		}
 
-		log.info("Generating create view statement for Event from " + event.getTopic().getTopicName());
+		log.info("Generating create view statement for Event from " + event.getTopic().getName());
 		// TODO generate drill views from avro schema if possible
 
 		JsonNode json = event.getEventJson();
-		String viewName = event.getTopic().getTopicName();
+		String viewName = event.getTopic().getName();
 
 		StringBuilder viewBuilder = new StringBuilder();
 
