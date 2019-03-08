@@ -10,8 +10,11 @@ import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jgit.api.CloneCommand;
+import org.eclipse.jgit.api.FetchCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LsRemoteCommand;
+import org.eclipse.jgit.api.PullCommand;
+import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.PushCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.TransportCommand;
@@ -25,6 +28,7 @@ import org.eclipse.jgit.lib.ReflogEntry;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.transport.FetchResult;
 import org.eclipse.jgit.transport.JschConfigSessionFactory;
 import org.eclipse.jgit.transport.OpenSshConfig.Host;
 import org.eclipse.jgit.transport.SshSessionFactory;
@@ -67,80 +71,110 @@ public class GitUtil {
 
 		File gitDirectory = new File(gitDirectoryPath);
 		log.info("Initializing git repository at " + gitDirectory.getAbsolutePath());
-		if (gitDirectory.exists()) {
-			// TODO if the repository already exists locally do not delete it and clone new
-			// (unless it has local modifications) instead just pull update and reuse it
-
-			log.info("Git directroy path already exists, trying to reuse repository");
-			// check if directory already is a repository
-			File existingDirectoryRepository = new File(gitDirectory.getAbsolutePath() + File.separator + ".git/");
-
-			if (existingDirectoryRepository.exists() && existingDirectoryRepository.isDirectory()) {
-
-				// see if there are local changes
-				try {
-					git = Git.open(existingDirectoryRepository);
-					checkStatusIsUnmodified();
-					checkNoUnpushedCommits();
-					
-				} catch (IOException | NoWorkTreeException | GitAPIException e) {
-					throw new IllegalStateException(
-							"Git directory is not empty and already contains a git repository but I can't open it: "
-									+ existingDirectoryRepository.getAbsolutePath(),
-							e);
-				}
-				
-				// local repository is in sync with remote, we can proceed
-
-
-				// fuck you
-				// https://www.codeaffine.com/2014/09/22/access-git-repository-with-jgit/ for
-				// writing the easy way so late
-//				try {
-//					Repository existingRepository = new FileRepositoryBuilder().setMustExist(true).setGitDir(existingDirectoryRepository).build();
-//					log.warn("Reusing existing git repository at " + existingDirectoryRepository.getAbsolutePath());
-//					if(existingRepository.getRefDatabase().getRef("HEAD") == null) {
-//						throw new IllegalStateException("Unable to find HEAD revision of existing git directory");
-//					}
-//					// TODO check if there are local modifications, if yes fail otherwise pull latest changes
-//				} catch (IOException e) {
-//					throw new IllegalStateException("Git directory is not empty and already contains a git repository but I can't open it: " + existingDirectoryRepository.getAbsolutePath(), e);
-//				}
-
-			} else {
-				throw new IllegalStateException(
-						"Git directoy is not empty but also not a repository: " + gitDirectoryPath);
-			}
-		} else
-
-		{
+		if (!gitDirectory.exists()) {
 			log.info("Git directory path is empty, cloning repository to: " + gitDirectory.getAbsolutePath());
 			cloneRepositoryToDirectory(gitDirectory);
+			return;
 		}
 
+		// if the repository already exists locally do not delete it and clone new
+		// (unless it has local modifications) instead just pull update and reuse it
+
+		log.info("Git directroy path already exists, trying to reuse repository");
+		// check if directory already is a repository
+		File existingDirectoryRepository = new File(gitDirectory.getAbsolutePath() + File.separator + ".git/");
+
+		if (existingDirectoryRepository.exists() && existingDirectoryRepository.isDirectory()) {
+
+			// see if there are local changes, if yes fail, if not pull remote changes if
+			// necessary
+			try {
+				git = Git.open(existingDirectoryRepository);
+				checkStatusIsUnmodified();
+				if (!checkNoUnpushedCommits()) {
+					pullFromRemote();
+				}
+
+			} catch (IOException | NoWorkTreeException | GitAPIException e) {
+				throw new IllegalStateException(
+						"Git directory is not empty and already contains a git repository but I can't open it: "
+								+ existingDirectoryRepository.getAbsolutePath(),
+						e);
+			}
+
+		} else {
+			throw new IllegalStateException("Git directoy is not empty but also not a repository: " + gitDirectoryPath);
+		}
 	}
 
-	private void checkNoUnpushedCommits() {
+	private void pullFromRemote() {
+		log.info("Pulling changes from remote");
+		PullCommand pullCommand = git.pull();
+		configureAuthentication(pullCommand);
+		try {
+			PullResult pullResult = pullCommand.call();
+			log.info("Fetched from: " + pullResult.getFetchedFrom());
+			Collection<Ref> advertisedRefs = pullResult.getFetchResult().getAdvertisedRefs();
+			for (Ref ref : advertisedRefs) {
+				log.info("Got advertisedRef: " + ref.toString());
+			}
+
+			String messages = pullResult.getFetchResult().getMessages();
+			if (!messages.trim().isEmpty()) {
+				log.info("Got PullResult messages: " + messages);
+			}
+		} catch (GitAPIException e) {
+			throw new IllegalStateException("Unable to pull changes from remote", e);
+		}
+	}
+
+	/**
+	 * 
+	 * @return true iff commits are alrady in sync
+	 */
+	private boolean checkNoUnpushedCommits() {
 		try {
 
 			String localHead = determineLocalHead();
 			String remoteHead = fetchRemoteHead();
-			
-			// TODO STOPPED HERE! HEADs could be different because remote is ahead, need to pull first and then check again
-			
-			if(!localHead.equals(remoteHead)) {
-				throw new IllegalStateException("Local head different than remote head: local " + localHead + "  remote " + remoteHead);
+
+			if (localHead.equals(remoteHead)) {
+				log.info("Local HEAD and remote HEAD are equal, commits are in sync");
+				return true;
 			}
+
+			log.info("Local and remote HEAD are not the same, checking for unpushed commits");
+			// if remote head is already part of local refs, then we have unpushed commits
+			if (logHasCommit(remoteHead)) {
+				throw new IllegalStateException(
+						"Unpushed local commits detected, remote HEAD part of local commits but heads are not equal");
+			}
+
+			log.info("Remote is ahead of local, need to pull");
+			return false;
+
 		} catch (GitAPIException | IOException e) {
 			throw new IllegalStateException("Unable to check for unpushed commits", e);
 		}
-		
+
+	}
+
+	private boolean logHasCommit(String commitId) throws InvalidRemoteException, TransportException, GitAPIException {
+		Iterable<RevCommit> logResults = git.log().call();
+		for (RevCommit revCommit : logResults) {
+			if (commitId.equals(revCommit.getName())) {
+				log.info("Found commitId in local repository: " + commitId);
+				return true;
+			}
+		}
+		log.info("Did not find commitId in local repository: " + commitId);
+		return false;
 	}
 
 	private String determineLocalHead() throws IOException {
 		Ref localHeadRef = git.getRepository().getRefDatabase().getRef("HEAD");
 		log.info("Local HEAD: " + localHeadRef);
-		if(localHeadRef == null) {
+		if (localHeadRef == null) {
 			throw new IllegalStateException("Dit not find local HEAD rev");
 		}
 		return localHeadRef.getObjectId().getName();
@@ -148,26 +182,32 @@ public class GitUtil {
 	}
 
 	private String fetchRemoteHead() throws InvalidRemoteException, TransportException, GitAPIException {
-		log.info("Fetching remote HEAD");
-		LsRemoteCommand lsRemote = git.lsRemote().setHeads(true);
-		configureAuthentication(lsRemote);
-		Collection<Ref> remoteRefs = lsRemote.call();
-		for(Ref ref : remoteRefs) {
-			log.info("Got remote ref: " + ref.toString());
-			if(ref.getName().equals("refs/heads/" + gitBranch)) {
+		Collection<Ref> remoteRefs = fetchRemoteRefs(true);
+		for (Ref ref : remoteRefs) {
+			log.info("Got remote head ref: " + ref.toString());
+			if (ref.getName().equals("refs/heads/" + gitBranch)) {
 				return ref.getObjectId().getName();
 			}
 		}
-		
+
 		throw new IllegalStateException("Unable to determine remote head");
+	}
+
+	private Collection<Ref> fetchRemoteRefs(boolean fetchHeadRefs)
+			throws GitAPIException, InvalidRemoteException, TransportException {
+		log.debug("Fetching remote refs, heads: " + fetchHeadRefs);
+		LsRemoteCommand lsRemote = git.lsRemote().setHeads(fetchHeadRefs);
+		configureAuthentication(lsRemote);
+		Collection<Ref> remoteRefs = lsRemote.call();
+		return remoteRefs;
 	}
 
 	private void checkStatusIsUnmodified() throws GitAPIException {
 
 		log.info("Making sure local repository does not have any kind of modifications");
-		
+
 		Status status = git.status().call();
-		
+
 		// check for any kind of local modifications to the working directory
 		checkStatusIsUnmodified("Uncomitted", status.getUncommittedChanges());
 		checkStatusIsUnmodified("Added", status.getAdded());
@@ -180,7 +220,7 @@ public class GitUtil {
 		checkStatusIsUnmodified("UntrackedFolder", status.getUntrackedFolders());
 
 		// yaya I just found this convenience method later
-		if(!status.isClean()) {
+		if (!status.isClean()) {
 			throw new IllegalStateException("Local repository is not clean");
 		}
 	}
@@ -278,7 +318,7 @@ public class GitUtil {
 				sshTransport.setSshSessionFactory(sshSessionFactory);
 			}
 		});
-		
+
 		// for convenience
 		return transportCommand;
 	}
