@@ -99,7 +99,7 @@ public class Config {
 	public String KAFKA_CONSUMER_BOOTSTRAP_SERVERS = "app-01-dwh.test.t24.eu-west-1.sg-cloud.co.uk:9092";
 	public String KAFKA_CONSUMER_GROUP_ID = "DataHeartHBaseConnector";
 
-	public int KAFKA_CONSUMER_POLL_TIMEOUT = 1000;
+	public int KAFKA_CONSUMER_POLL_TIMEOUT = 100;
 
 	// kafka consumer config
 

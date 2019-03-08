@@ -17,6 +17,7 @@ import org.apache.http.client.fluent.Request;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.adobe.xmp.impl.Base64;
@@ -37,7 +38,7 @@ public class MessageParser {
 
 	private RegistryClient registryClient;
 	private Map<String, Schema> schemaCache;
-	private ObjectMapper mapper;
+	private ObjectMapper jsonObjectMapper;
 
 	public MessageParser(Config config) {
 		this.config = config;
@@ -48,7 +49,7 @@ public class MessageParser {
 	}
 
 	private void initJackson() {
-		mapper = new ObjectMapper();
+		jsonObjectMapper = new ObjectMapper();
 	}
 
 	private void initRegistryClient() {
@@ -71,12 +72,6 @@ public class MessageParser {
 		} catch (UnknownSchemaException | IOException e) {
 			throw new IllegalStateException("Unable to handle message: " + Bytes.toString(message), e);
 		}
-
-//		if (config.PROCESSOR_ANALYZE_MESSAGES) {
-//			Analyzer.analyzeJson(extractedJson, record.topic());
-//		}
-
-//		Statistics.countEvent(record.topic());
 
 		return extractedJson;
 
@@ -169,7 +164,11 @@ public class MessageParser {
 			jsonString = Bytes.toString(message);
 		}
 
-		return mapper.readTree(jsonString);
+		return stringToJsonNode(jsonString);
+	}
+	
+	public JsonNode stringToJsonNode(String jsonString) throws JsonProcessingException, IOException {
+		return jsonObjectMapper.readTree(jsonString);
 	}
 
 	public boolean isMessageAvro(byte[] message) {

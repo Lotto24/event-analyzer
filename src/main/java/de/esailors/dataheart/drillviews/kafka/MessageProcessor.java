@@ -28,9 +28,10 @@ public class MessageProcessor {
 	}
 
 	public void processRecords(Topic topic, ConsumerRecords<byte[], byte[]> consumedRecords) {
-		log.debug("Received records to process: " + consumedRecords.count());
 		if (consumedRecords.count() == 0) {
 			log.warn("Did not receive any event for " + topic);
+		} else {
+			log.info("Received " + consumedRecords.count() + " messages for: " + topic);
 		}
 		for (ConsumerRecord<byte[], byte[]> record : consumedRecords) {
 			Event event = eventFactory.buildEvent(topic, record);

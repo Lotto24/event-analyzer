@@ -5,10 +5,8 @@ import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.codehaus.jackson.JsonNode;
 
 import de.esailors.dataheart.drillviews.conf.Config;
-import de.esailors.dataheart.drillviews.data.Event;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.drill.DrillConnection;
 import de.esailors.dataheart.drillviews.drill.DrillViews;
@@ -53,8 +51,8 @@ public class Processor {
 			// write entries to changeSet for "major" events like a new topic / view
 			gitUtil.addToRepository(config.OUTPUT_CHANGELOGS_DIRECTORY);
 		}
-		
-		gitUtil.commitAndPush();
+
+		gitUtil.commitAndPush(persister.getFormattedCurrentTime());
 	}
 
 	private boolean writeChangeLog() {
@@ -62,7 +60,7 @@ public class Processor {
 			log.info("No major changes detected, not writing a changelog for this run");
 			return false;
 		}
-		// TODO add last m changelogs to README.md in reverse chrnological order
+		// TODO add last n changelogs to README.md in reverse chronological order
 		persister.persistChangeLog(changeLog);
 		return true;
 	}
@@ -107,10 +105,12 @@ public class Processor {
 
 			log.info("Creating Drill views for " + topic);
 			String createStatement = CreateViewSQLBuilder.generateDrillViewsFor(topic.getExampleEvent());
+			// TODO check if view actually changed
 			// write drill views to disk
 			persister.persistDrillView(topic, createStatement);
 			try {
 				drillConnection.executeSqlStatements(createStatement);
+				// TODO run count on newly created view for sanity checking and report
 			} catch (SQLException e) {
 //				log.error("Error while executing create view statement", e);
 				throw new IllegalStateException("Error while executing create view statement on Drill", e);
@@ -122,12 +122,14 @@ public class Processor {
 
 		topic.markInconsistencies();
 
-		if (topic.isConsistent()) {
-			log.info("Consistency checks passed: " + topic);
+		if (topic.getEvents().size() == 0) {
+			changeLog.addMessage("No events received for " + topic);
 		} else {
-			String message = "Inconsistencies detected in " + topic;
-			log.warn(message);
-			changeLog.addMessage(message);
+			if (topic.isConsistent()) {
+				log.info("Consistency checks passed: " + topic);
+			} else {
+				changeLog.addMessage("Inconsistencies detected in " + topic);
+			}
 		}
 	}
 

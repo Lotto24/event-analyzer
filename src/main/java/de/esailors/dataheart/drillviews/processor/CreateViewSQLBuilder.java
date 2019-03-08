@@ -46,7 +46,7 @@ public class CreateViewSQLBuilder {
 
 		StringBuilder viewBuilder = new StringBuilder();
 
-		generateCommentBlock(viewBuilder, viewName, json);
+//		generateCommentBlock(viewBuilder, viewName, json);
 
 		generateView(json, viewName, viewBuilder, null, null);
 		generateView(json, viewName, viewBuilder, "'-1' day", "last_day");
@@ -69,14 +69,14 @@ public class CreateViewSQLBuilder {
 		generateViewEnd(viewBuilder, eventType, timeLimit);
 	}
 
-	private static void generateCommentBlock(StringBuilder viewBuilder, String viewName, JsonNode json) {
-		viewBuilder.append("/*\n");
-		viewBuilder.append("Auto-generated view for ");
-		viewBuilder.append(viewName);
+//	private static void generateCommentBlock(StringBuilder viewBuilder, String viewName, JsonNode json) {
+//		viewBuilder.append("/*\n");
+//		viewBuilder.append("Auto-generated view for ");
+//		viewBuilder.append(viewName);
 //		viewBuilder.append("\nSample event used for view generation:\n");
 //		viewBuilder.append(JsonPrettyPrinter.prettyPrintJsonString(json));
-		viewBuilder.append("\n*/\n\n");
-	}
+//		viewBuilder.append("\n*/\n\n");
+//	}
 
 	private static void generateSelectColumns(JsonNode json, StringBuilder viewBuilder, String fieldPrefix,
 			String keyPrefix) {

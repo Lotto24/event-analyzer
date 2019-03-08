@@ -42,6 +42,11 @@ public class GitUtil {
 	private String gitUri = "git@srv-git-01-hh1.alinghi.tipp24.net:andre-mis/drill-views.git";
 	private String gitBranch = "master";
 	private String gitRemote = "origin";
+	private String gitAuthor = "DrillViewGenerator";
+	// TODO maybe determine hostname for part of email address
+	private String gitEmail = "dataheart-systems@esailors.de";
+	
+	
 	private static final String gitDirectoryPath = "out/git_repository";
 
 	private static final Logger log = LogManager.getLogger(GitUtil.class.getName());
@@ -54,7 +59,7 @@ public class GitUtil {
 
 	public GitUtil(Config config) {
 		this.config = config;
-
+		
 		initShutdownHook();
 		initSshSessionFactory();
 		initRepository();
@@ -106,10 +111,10 @@ public class GitUtil {
 		configureAuthentication(pullCommand);
 		try {
 			PullResult pullResult = pullCommand.call();
-			log.info("Fetched from: " + pullResult.getFetchedFrom());
+			log.debug("Fetched from: " + pullResult.getFetchedFrom());
 			Collection<Ref> advertisedRefs = pullResult.getFetchResult().getAdvertisedRefs();
 			for (Ref ref : advertisedRefs) {
-				log.info("Got advertisedRef: " + ref.toString());
+				log.debug("Got advertisedRef: " + ref.toString());
 			}
 
 			String messages = pullResult.getFetchResult().getMessages();
@@ -244,7 +249,13 @@ public class GitUtil {
 
 	private void close() {
 		if (git != null) {
-			// TODO maybe warn of uncommitted changes?
+			try {
+				if(!git.status().call().isClean()) {
+					log.warn("About to close git repository but there are still local modifications");
+				}
+			} catch (NoWorkTreeException | GitAPIException e) {
+				log.warn("Unable to check git status", e);
+			}
 			git.close();
 		}
 	}
@@ -288,12 +299,18 @@ public class GitUtil {
 		}
 	}
 
-	public void commitAndPush() {
-		// TODO write proper commit message, probably want to add a date
-		String commitMessage = "first automated commit with ssh";
+	public void commitAndPush(String commitMessagePrefix) {
+		String commitMessage = commitMessagePrefix + " DrillViewGenerator commit";
 		log.info("Pushing changes to git: " + commitMessage);
 		try {
-			git.commit().setMessage(commitMessage).call();
+			// check if there even is anything to commit
+			if(git.status().call().isClean()) {
+				log.info("No local modifications to commit");
+				return;
+			}
+			log.info("Commit local changes in git repository");
+			git.commit().setMessage(commitMessage).setAuthor(gitAuthor, gitEmail).call();
+			log.info("Pushing to git remote branch " + gitBranch + " at " + gitUri);
 			configureAuthentication(git.push()).call();
 		} catch (GitAPIException e) {
 			throw new IllegalStateException("Unable to commit and push changes to git", e);

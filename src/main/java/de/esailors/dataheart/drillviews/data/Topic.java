@@ -40,12 +40,8 @@ public class Topic {
 
 		reportMessages = new ArrayList<>();
 		
-		if(getEvents().size() == 0) {
-			addMessageToReport("No events received for " + this);
-		}
-		
 		if (getEvents().size() < 2) {
-			addMessageToReport("Can't properly check event consistency because I did not get enough events for: " + this);
+			addMessageToReport("Can't properly check event consistency because I did not get enough events for: " + this + " (received " + getEvents().size() + ")");
 		}
 
 		// idea: gather values in Sets, if they have more than 1 entry afterwards
