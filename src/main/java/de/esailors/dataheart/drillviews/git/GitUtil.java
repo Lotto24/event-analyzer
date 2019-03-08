@@ -3,19 +3,16 @@ package de.esailors.dataheart.drillviews.git;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.jgit.api.CloneCommand;
-import org.eclipse.jgit.api.FetchCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LsRemoteCommand;
 import org.eclipse.jgit.api.PullCommand;
 import org.eclipse.jgit.api.PullResult;
-import org.eclipse.jgit.api.PushCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.TransportCommand;
 import org.eclipse.jgit.api.TransportConfigCallback;
@@ -24,11 +21,7 @@ import org.eclipse.jgit.api.errors.InvalidRemoteException;
 import org.eclipse.jgit.api.errors.TransportException;
 import org.eclipse.jgit.errors.NoWorkTreeException;
 import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.ReflogEntry;
-import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-import org.eclipse.jgit.transport.FetchResult;
 import org.eclipse.jgit.transport.JschConfigSessionFactory;
 import org.eclipse.jgit.transport.OpenSshConfig.Host;
 import org.eclipse.jgit.transport.SshSessionFactory;
@@ -55,7 +48,7 @@ public class GitUtil {
 
 	private Config config;
 
-	private File gitDirectory;
+	private File localGitRepositoryDirectory;
 	private SshSessionFactory sshSessionFactory;
 	private Git git;
 
@@ -69,11 +62,11 @@ public class GitUtil {
 
 	private void initRepository() {
 
-		File gitDirectory = new File(gitDirectoryPath);
-		log.info("Initializing git repository at " + gitDirectory.getAbsolutePath());
-		if (!gitDirectory.exists()) {
-			log.info("Git directory path is empty, cloning repository to: " + gitDirectory.getAbsolutePath());
-			cloneRepositoryToDirectory(gitDirectory);
+		localGitRepositoryDirectory = new File(gitDirectoryPath);
+		log.info("Initializing git repository at " + localGitRepositoryDirectory.getAbsolutePath());
+		if (!localGitRepositoryDirectory.exists()) {
+			log.info("Git directory path is empty, cloning repository to: " + localGitRepositoryDirectory.getAbsolutePath());
+			cloneRepositoryToDirectory(localGitRepositoryDirectory);
 			return;
 		}
 
@@ -82,7 +75,7 @@ public class GitUtil {
 
 		log.info("Git directroy path already exists, trying to reuse repository");
 		// check if directory already is a repository
-		File existingDirectoryRepository = new File(gitDirectory.getAbsolutePath() + File.separator + ".git/");
+		File existingDirectoryRepository = new File(localGitRepositoryDirectory.getAbsolutePath() + File.separator + ".git/");
 
 		if (existingDirectoryRepository.exists() && existingDirectoryRepository.isDirectory()) {
 
@@ -173,7 +166,7 @@ public class GitUtil {
 
 	private String determineLocalHead() throws IOException {
 		Ref localHeadRef = git.getRepository().getRefDatabase().getRef("HEAD");
-		log.info("Local HEAD: " + localHeadRef);
+		log.debug("Local HEAD: " + localHeadRef);
 		if (localHeadRef == null) {
 			throw new IllegalStateException("Dit not find local HEAD rev");
 		}
@@ -184,7 +177,7 @@ public class GitUtil {
 	private String fetchRemoteHead() throws InvalidRemoteException, TransportException, GitAPIException {
 		Collection<Ref> remoteRefs = fetchRemoteRefs(true);
 		for (Ref ref : remoteRefs) {
-			log.info("Got remote head ref: " + ref.toString());
+			log.debug("Got remote head ref: " + ref.toString());
 			if (ref.getName().equals("refs/heads/" + gitBranch)) {
 				return ref.getObjectId().getName();
 			}
@@ -204,7 +197,7 @@ public class GitUtil {
 
 	private void checkStatusIsUnmodified() throws GitAPIException {
 
-		log.info("Making sure local repository does not have any kind of modifications");
+		log.info("Making sure local git repository does not have any kind of local modifications");
 
 		Status status = git.status().call();
 
@@ -270,7 +263,7 @@ public class GitUtil {
 		if (!fileToAdd.exists()) {
 			throw new IllegalArgumentException("Unable to add non existing path to repository: " + filePath);
 		}
-		String newlyAddedPath = gitDirectory.getAbsolutePath() + File.separatorChar + fileToAdd.getName();
+		String newlyAddedPath = localGitRepositoryDirectory.getAbsolutePath() + File.separatorChar + fileToAdd.getName();
 		log.info("Adding " + filePath + " to git repository: " + newlyAddedPath);
 		if (fileToAdd.isDirectory()) {
 			try {
@@ -281,7 +274,7 @@ public class GitUtil {
 			}
 		} else if (fileToAdd.isFile()) {
 			try {
-				FileUtils.copyFileToDirectory(fileToAdd, gitDirectory);
+				FileUtils.copyFileToDirectory(fileToAdd, localGitRepositoryDirectory);
 			} catch (IOException e) {
 				throw new IllegalStateException("Unable to copy file to git repository: " + filePath, e);
 			}

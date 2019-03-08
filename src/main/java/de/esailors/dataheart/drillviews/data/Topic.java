@@ -1,11 +1,16 @@
 package de.esailors.dataheart.drillviews.data;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.avro.Schema;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 public class Topic {
+
+	private static final Logger log = LogManager.getLogger(Topic.class.getName());
 
 	private String topicName;
 	private int partitionCount = -1;
@@ -21,35 +26,73 @@ public class Topic {
 		this.topicName = topicName;
 	}
 
+	public void markInconsistencies() {
+		// check consistency within topics
+		// - each topic only has avro / json - if avro always the same schema?
+		// - JSON structure doesnt change (always the same fields?)
+		// - always the same event Type in each topic
+
+		if (getEvents().size() < 2) {
+			log.warn("Can't properly check event consistency because I did not get enough events for: " + this);
+		}
+
+		// idea: gather values in Sets, if they have more than 1 entry afterwards
+		// something is fishy
+		messagesAreAvro = new HashSet<>();
+		messageSchemas = new HashSet<>();
+		eventTypes = new HashSet<>();
+		schemaVersions = new HashSet<>();
+
+		Event firstEvent = null;
+		Iterator<Event> iterator = getEvents().iterator();
+		while (iterator.hasNext()) {
+			Event event = iterator.next();
+
+			messagesAreAvro.add(event.isAvroMessage());
+			messageSchemas.add(event.getSchema());
+			eventTypes.add(event.readEventType());
+			schemaVersions.add(event.readSchemaVersion());
+
+			if (firstEvent == null) {
+				// first one we see, use this as example event
+				firstEvent = event;
+				setExampleEvent(event);
+			}
+
+		}
+
+		if (messagesAreAvro.size() > 1) {
+			log.warn("Mixed Avro and plain JSON within the same topic: " + this);
+		}
+		if (messageSchemas.size() > 1) {
+			log.warn("Mixed Avro schemas within the same topic: " + this);
+		}
+		if (eventTypes.size() > 1) {
+			log.warn("Mixed EventTypes within the same topic: " + this);
+		}
+		if (schemaVersions.size() > 1) {
+			log.warn("Mixed Versions within the same topic: " + this);
+		}
+
+	}
+
+	public boolean isConsistent() {
+		if (messagesAreAvro == null || messageSchemas == null || eventTypes == null || schemaVersions == null) {
+			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
+		}
+		return messagesAreAvro.size() == 1 && messageSchemas.size() == 1 && eventTypes.size() == 1
+				&& schemaVersions.size() == 1;
+	}
+
 	public void addEvent(Event event) {
 		events.add(event);
 	}
-	
+
 	public void setExampleEvent(Event exampleEvent) {
 		if (!events.contains(exampleEvent)) {
 			throw new IllegalArgumentException("Was given an example event that I don't know " + this);
 		}
 		this.exampleEvent = exampleEvent;
-	}
-	
-	public boolean isConsistent() {
-		return messagesAreAvro.size() == 1 && messageSchemas.size() == 1 && eventTypes.size() == 1 && schemaVersions.size() == 1;
-	}
-	
-	public void setMessagesAreAvro(Set<Boolean> messagesAreAvro) {
-		this.messagesAreAvro = messagesAreAvro;
-	}
-
-	public void setMessageSchemas(Set<Schema> messageSchemas) {
-		this.messageSchemas = messageSchemas;
-	}
-
-	public void setEventTypes(Set<String> eventTypes) {
-		this.eventTypes = eventTypes;
-	}
-	
-	public void setSchemaVersions(Set<String> schemaVersions) {
-		this.schemaVersions = schemaVersions;
 	}
 
 	public Event getExampleEvent() {

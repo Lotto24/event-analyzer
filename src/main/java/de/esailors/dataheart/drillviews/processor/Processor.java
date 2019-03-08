@@ -1,11 +1,8 @@
 package de.esailors.dataheart.drillviews.processor;
 
 import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.avro.Schema;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
@@ -29,12 +26,12 @@ public class Processor {
 	private GitUtil gitUtil;
 	private ChangeLog changeLog;
 
-	public Processor(Config config) {
+	public Processor(Config config, GitUtil gitUtil) {
 		this.config = config;
+		this.gitUtil = gitUtil;
 		this.drillConnection = new DrillConnection(config);
 		this.drillViews = new DrillViews(config, drillConnection);
 		this.persister = new Persister(config);
-		this.gitUtil = new GitUtil(config);
 		this.changeLog = new ChangeLog(config);
 	}
 
@@ -44,6 +41,8 @@ public class Processor {
 			process(topic);
 		}
 
+		log.info("Adding process output to local git repository");
+		
 		// push everything that is written to disk also to git
 		gitUtil.addToRepository(config.OUTPUT_DRILL_DIRECTORY);
 		gitUtil.addToRepository(config.OUTPUT_SAMPLES_DIRECTORY);
@@ -61,6 +60,7 @@ public class Processor {
 			log.info("No major changes detected, not writing a changelog for this run");
 			return false;
 		}
+		// TODO add last m changelogs to README.md in reverse chrnological order
 		persister.persistChangeLog(changeLog);
 		return true;
 	}
@@ -87,6 +87,8 @@ public class Processor {
 	}
 
 	private void writeEventSamples(Topic topic) {
+		// TODO check local git repository if we already have enough example events (for
+		// this schemaVersion) and don't persist more if we already do
 		persister.persistEventSamples(topic);
 	}
 
@@ -101,6 +103,7 @@ public class Processor {
 			if (drillViews.doesViewExist(topic.getTopicName())) {
 				log.debug("Drill view for " + topic + " already exists");
 				// TODO check if it's the same view and don't execute if it is
+				// TODO fetch view from local git repository and compare
 			} else {
 				log.info("No Drill view exists yet for " + topic);
 				changeLog.addMessage("Genearting new Drill view for: " + topic);
@@ -120,64 +123,8 @@ public class Processor {
 	}
 
 	private void markTopicInconsistencies(Topic topic) {
-		// TODO move this to Topic?
 
-		// check consistency within topics
-		// - each topic only has avro / json - if avro always the same schema?
-		// - JSON structure doesnt change (always the same fields?)
-		// - always the same event Type in each topic
-
-		if (topic.getEvents().size() < 2) {
-			log.warn("Can't properly check event consistency because I did not get enough events for " + topic);
-		}
-
-		// idea: gather values in Sets, if they have more than 1 entry afterwards
-		// something is fishy
-		Set<Boolean> messagesAreAvro = new HashSet<>();
-		Set<Schema> messageSchemas = new HashSet<>();
-		Set<String> eventTypes = new HashSet<>();
-		Set<String> schemaVersions = new HashSet<>();
-
-		Event firstEvent = null;
-		Iterator<Event> iterator = topic.getEvents().iterator();
-		while (iterator.hasNext()) {
-			Event event = iterator.next();
-
-			messagesAreAvro.add(event.isAvroMessage());
-			messageSchemas.add(event.getSchema());
-			eventTypes.add(getEventTypeFromEvent(event));
-			schemaVersions.add(getSchemaVersionFromEvent(event));
-
-			if (firstEvent == null) {
-				// first one we see, use this to compare to all others
-				firstEvent = event;
-				topic.setExampleEvent(event);
-//			} else {
-//				if (event.isAvroMessage() != firstEvent.isAvroMessage()) {
-//					log.warn("Mixed Avro and plain JSON within the same topic: " + topic);
-//				}
-			}
-
-		}
-
-		// TODO mark these findings either in Processor or in Topic
-		if (messagesAreAvro.size() > 1) {
-			log.warn("Mixed Avro and plain JSON within the same topic: " + topic);
-		}
-		if (messageSchemas.size() > 1) {
-			log.warn("Mixed Avro schemas within the same topic: " + topic);
-		}
-		if (eventTypes.size() > 1) {
-			log.warn("Mixed EventTypes within the same topic: " + topic);
-		}
-		if (schemaVersions.size() > 1) {
-			log.warn("Mixed Versions within the same topic: " + topic);
-		}
-
-		topic.setMessagesAreAvro(messagesAreAvro);
-		topic.setMessageSchemas(messageSchemas);
-		topic.setEventTypes(eventTypes);
-		topic.setSchemaVersions(schemaVersions);
+		topic.markInconsistencies();
 
 		if (topic.isConsistent()) {
 			log.info("Consistency checks passed: " + topic);
@@ -186,25 +133,6 @@ public class Processor {
 			log.warn(message);
 			changeLog.addMessage(message);
 		}
-	}
-
-	private String getEventTypeFromEvent(Event event) {
-		// TODO doesn't really belong here, move somewhere else
-		return getFieldFromEvent(event, config.EVENT_FIELD_EVENT_TYPE);
-	}
-
-	private String getSchemaVersionFromEvent(Event event) {
-		// TODO doesn't really belong here, move somewhere else
-		return getFieldFromEvent(event, config.EVENT_FIELD_VERSION);
-	}
-
-	private String getFieldFromEvent(Event event, String field) {
-		JsonNode jsonNode = event.getEventJson().get(field);
-		if (jsonNode == null) {
-			log.warn("Field not found for '" + field + "' in: " + event);
-			return null;
-		}
-		return jsonNode.asText();
 	}
 
 }

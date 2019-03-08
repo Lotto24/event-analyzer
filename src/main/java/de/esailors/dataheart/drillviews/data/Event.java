@@ -3,9 +3,17 @@ package de.esailors.dataheart.drillviews.data;
 import java.util.Arrays;
 
 import org.apache.avro.Schema;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 
+import de.esailors.dataheart.drillviews.conf.Config;
+
 public class Event {
+	
+	private static final Logger log = LogManager.getLogger(Event.class.getName());
+	
+	private Config config;
 	
 	private byte[] message;
 	private Topic topic;
@@ -13,12 +21,40 @@ public class Event {
 	private boolean avroMessage;
 	private Schema schema;
 
-	public Event(byte[] message, Topic topic, JsonNode eventJson, boolean avroMessage, Schema schema) {
+	public Event(Config config, byte[] message, Topic topic, JsonNode eventJson, boolean avroMessage, Schema schema) {
+		this.config = config;
+		
 		this.message = message; 
 		this.topic = topic;
 		this.eventJson = eventJson;
 		this.avroMessage = avroMessage;
 		this.schema = schema;
+	}
+	
+	
+	public String readId() {
+		return fieldFromEvent(config.EVENT_FIELD_ID);
+	}
+	
+	public String readTimestamp() {
+		return fieldFromEvent(config.EVENT_FIELD_TIMESTAMP);
+	}
+	
+	public String readEventType() {
+		return fieldFromEvent(config.EVENT_FIELD_EVENT_TYPE);
+	}
+
+	public String readSchemaVersion() {
+		return fieldFromEvent(config.EVENT_FIELD_VERSION);
+	}
+
+	public String fieldFromEvent(String field) {
+		JsonNode jsonNode = getEventJson().get(field);
+		if (jsonNode == null) {
+			log.warn("Field not found for '" + field + "' in: " + this);
+			return null;
+		}
+		return jsonNode.asText();
 	}
 
 	public byte[] getMessage() {
@@ -62,5 +98,12 @@ public class Event {
 			return false;
 		return true;
 	}
+
+	@Override
+	public String toString() {
+		return "Event [topic=" + topic + "]";
+	}
+	
+	
 
 }

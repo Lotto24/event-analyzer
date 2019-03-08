@@ -32,6 +32,6 @@ public class EventFactory {
 		JsonNode eventJson = messageParser.parseMessage(message);
 		log.debug("Parsed eventJson: " + eventJson.toString());
 		
-		return new Event(message, topic, eventJson, messageParser.isMessageAvro(message), messageParser.getSchemaForMessage(message));
+		return new Event(config, message, topic, eventJson, messageParser.isMessageAvro(message), messageParser.getSchemaForMessage(message));
 	}
 }

@@ -18,9 +18,9 @@ public class FileWriterUtil {
 		}
 
 		File f = new File(folder + File.separator + fileName);
-		log.info("Writing file to: " + f.getAbsolutePath());
+		log.debug("Writing file to: " + f.getAbsolutePath());
 		if (f.exists()) {
-			log.info("Overwriting file that already exists: " + f.getAbsolutePath());
+			log.warn("Overwriting file that already exists: " + f.getAbsolutePath());
 			if (!f.delete()) {
 				throw new IllegalStateException(
 						"Writing to file that existed before and can not be deleted: " + f.getAbsolutePath());
