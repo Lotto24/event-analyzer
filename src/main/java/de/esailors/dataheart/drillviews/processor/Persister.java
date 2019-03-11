@@ -208,7 +208,7 @@ public class Persister {
 				topicInformation += "  * " + (item == null ? "null" : item.toString()) + "\n";
 			}
 		} else {
-			topicInformation += "  * _none detected_";
+			topicInformation += "  * _none detected_\n";
 		}
 		return topicInformation;
 	}
