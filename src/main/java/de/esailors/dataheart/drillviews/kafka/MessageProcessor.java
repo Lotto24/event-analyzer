@@ -7,7 +7,6 @@ import org.apache.logging.log4j.Logger;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Event;
-import de.esailors.dataheart.drillviews.data.EventFactory;
 import de.esailors.dataheart.drillviews.data.Topic;
 
 public class MessageProcessor {
@@ -19,11 +18,6 @@ public class MessageProcessor {
 
 	public MessageProcessor(Config config) {
 		this.config = config;
-
-		initEventFactory();
-	}
-
-	private void initEventFactory() {
 		this.eventFactory = new EventFactory(config);
 	}
 

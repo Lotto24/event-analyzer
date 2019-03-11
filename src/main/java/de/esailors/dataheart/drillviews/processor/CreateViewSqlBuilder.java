@@ -7,11 +7,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 
+import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Event;
 
-public class CreateViewSQLBuilder {
+public class CreateViewSqlBuilder {
 
-	private static final Logger log = LogManager.getLogger(CreateViewSQLBuilder.class.getName());
+	private static final Logger log = LogManager.getLogger(CreateViewSqlBuilder.class.getName());
 
 	// TODO move these to Config
 
@@ -24,16 +25,20 @@ public class CreateViewSQLBuilder {
 	private static final String DRILL_VIEW_WORKSPACE = "drill.views";
 	private static final String DRILL_VIEW_SUBFOLDER = "json_events";
 
-	private static final String ROW_TIMESTAMP_ALIAS = "row_timestamp";
 
+	// 
+	private static final String ROW_TIMESTAMP_ALIAS = "row_timestamp";
 	private static final String SUBSELECT_ALIAS = "e";
 	private static final String JSON_FIELD_ALIAS = "json";
-
-	private static final String EVENT_TYPE_FIELD = "eventType";
-
 	private static final int IDENTATION = 4;
 
-	public static String generateDrillViewsFor(Event event) {
+	private Config config;
+
+	public CreateViewSqlBuilder(Config config) {
+		this.config = config;
+	}
+
+	public String generateDrillViewsFor(Event event) {
 		if (event == null) {
 			throw new IllegalArgumentException("null given");
 		}
@@ -56,7 +61,7 @@ public class CreateViewSQLBuilder {
 
 	}
 
-	private static void generateView(JsonNode json, String viewName, StringBuilder viewBuilder, String timeLimit,
+	private void generateView(JsonNode json, String viewName, StringBuilder viewBuilder, String timeLimit,
 			String subfolder) {
 		generateViewStart(viewBuilder, viewName, subfolder);
 
@@ -64,7 +69,7 @@ public class CreateViewSQLBuilder {
 
 		generateSelectColumns(json, viewBuilder, fieldPrefix, "");
 
-		String eventType = json.get(EVENT_TYPE_FIELD).asText().toUpperCase();
+		String eventType = json.get(config.EVENT_FIELD_EVENT_TYPE).asText().toUpperCase();
 
 		generateViewEnd(viewBuilder, eventType, timeLimit);
 	}
@@ -78,8 +83,7 @@ public class CreateViewSQLBuilder {
 //		viewBuilder.append("\n*/\n\n");
 //	}
 
-	private static void generateSelectColumns(JsonNode json, StringBuilder viewBuilder, String fieldPrefix,
-			String keyPrefix) {
+	private void generateSelectColumns(JsonNode json, StringBuilder viewBuilder, String fieldPrefix, String keyPrefix) {
 
 		Iterator<Entry<String, JsonNode>> fields = json.getFields();
 		while (fields.hasNext()) {
@@ -104,7 +108,7 @@ public class CreateViewSQLBuilder {
 		}
 	}
 
-	private static void generateViewStart(StringBuilder viewBuilder, String viewName, String subFolder) {
+	private void generateViewStart(StringBuilder viewBuilder, String viewName, String subFolder) {
 		viewBuilder.append("CREATE OR REPLACE VIEW\n");
 		viewBuilder.append(ident());
 		viewBuilder.append(DRILL_VIEW_WORKSPACE);
@@ -131,7 +135,7 @@ public class CreateViewSQLBuilder {
 		viewBuilder.append(ROW_TIMESTAMP_ALIAS);
 	}
 
-	private static void generateViewEnd(StringBuilder viewBuilder, String eventType, String timeLimit) {
+	private void generateViewEnd(StringBuilder viewBuilder, String eventType, String timeLimit) {
 		viewBuilder.append("\nFROM (\n");
 		viewBuilder.append(ident());
 		viewBuilder.append("SELECT\n");
@@ -173,7 +177,7 @@ public class CreateViewSQLBuilder {
 		viewBuilder.append(";\n");
 	}
 
-	private static void generateRowKeyStart(StringBuilder viewBuilder, String timeLimit) {
+	private void generateRowKeyStart(StringBuilder viewBuilder, String timeLimit) {
 		String rowKeyStart;
 		if (timeLimit == null) {
 			rowKeyStart = "0'";

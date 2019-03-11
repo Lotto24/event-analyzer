@@ -1,4 +1,4 @@
-package de.esailors.dataheart.drillviews.data;
+package de.esailors.dataheart.drillviews.kafka;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.logging.log4j.LogManager;
@@ -6,7 +6,8 @@ import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 
 import de.esailors.dataheart.drillviews.conf.Config;
-import de.esailors.dataheart.drillviews.kafka.MessageParser;
+import de.esailors.dataheart.drillviews.data.Event;
+import de.esailors.dataheart.drillviews.data.Topic;
 
 public class EventFactory {
 	
@@ -17,11 +18,6 @@ public class EventFactory {
 	
 	public EventFactory(Config config) {
 		this.config = config;
-
-		initMessageParser();
-	}
-
-	private void initMessageParser() {
 		this.messageParser = new MessageParser(config);
 	}
 

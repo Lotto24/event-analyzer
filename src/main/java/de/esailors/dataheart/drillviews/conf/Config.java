@@ -17,52 +17,57 @@ public class Config {
 
 	// drill config
 
-	public static final String DRILL_JDBC_URL_KEY = "drill.jdbc.url";
+	private static final String DRILL_JDBC_URL_KEY = "drill.jdbc.url";
 
-	public static final String DRILL_VIEW_ALL_DATABASE_KEY = "drill.view.all.database";
-	public static final String DRILL_VIEW_DAY_DATABASE_KEY = "drill.view.day.database";
-	public static final String DRILL_VIEW_WEEK_DATABASE_KEY = "drill.view.week.database";
+	private static final String DRILL_VIEW_ALL_DATABASE_KEY = "drill.view.all.database";
+	private static final String DRILL_VIEW_DAY_DATABASE_KEY = "drill.view.day.database";
+	private static final String DRILL_VIEW_WEEK_DATABASE_KEY = "drill.view.week.database";
 
 	// processor config
 
-	public static final String CONSUL_HOST_KEY = "consul.host";
-	public static final String CONSUL_PORT_KEY = "consul.port";
+	private static final String CONSUL_HOST_KEY = "consul.host";
+	private static final String CONSUL_PORT_KEY = "consul.port";
 
-	public static final String EVENT_FIELD_ID_KEY = "events.field.id";
-	public static final String EVENT_FIELD_TIMESTAMP_KEY = "events.field.timestamp";
-	public static final String EVENT_FIELD_EVENT_TYPE_KEY = "events.field.event_type";
-	public static final String EVENT_FIELD_VERSION_KEY = "events.field.version";
-	
-	public static final String PROCESSOR_SCHEMA_HASH_LENGTH_KEY = "events.schema_hash_length";
-	
+	private static final String EVENT_FIELD_ID_KEY = "events.field.id";
+	private static final String EVENT_FIELD_TIMESTAMP_KEY = "events.field.timestamp";
+	private static final String EVENT_FIELD_EVENT_TYPE_KEY = "events.field.event_type";
+	private static final String EVENT_FIELD_VERSION_KEY = "events.field.version";
+
+	private static final String PROCESSOR_SCHEMA_HASH_LENGTH_KEY = "events.schema_hash_length";
+
 	// persister config
+
+	private static final String OUTPUT_DIRECTORY_KEY = "persister.out.directory";
+	private static final String OUTPUT_DRILL_DIRECTORY_KEY = "persister.out.drill.directory";
+	private static final String OUTPUT_CHANGELOGS_DIRECTORY_KEY = "persister.out.changelogs.directory";
+	private static final String OUTPUT_TOPIC_DIRECTORY_KEY = "persister.out.topics.directory";
+	private static final String OUTPUT_EVENTTYPE_DIRECTORY_KEY = "persister.out.eventtypes.directory";
+	private static final String OUTPUT_AVROSCHEMAS_DIRECTORY_KEY = "persister.out.avroschemas.directory";
+	private static final String OUTPUT_SAMPLES_DIRECTORY_KEY = "persister.out.samples.directory";
 	
-//	public static final String OUTPUT_DIRECTORY_KEY = "persister.out.directory";
-	public static final String OUTPUT_DRILL_DIRECTORY_KEY = "persister.out.drill.directory";
-	public static final String OUTPUT_SAMPLES_DIRECTORY_KEY = "persister.out.samples.directory";
-	public static final String OUTPUT_CHANGELOGS_DIRECTORY_KEY = "persister.out.changelogs.directory";
-	public static final String OUTPUT_TOPIC_DIRECTORY_KEY = "persister.out.topics.directory";
+	private static final String OUTPUT_SAMPLES_COUNT_KEY = "persister.out.samples.count";
 
 	/* kafka config keys */
 
-	public static final String MAX_RUNTIME_MS_KEY = "kafka.max.runtime";
-	public static final String MAX_RECORDS_TO_CONSUME_KEY = "kafka.max.records";
-	public static final String KAFKA_POLLS_BEFORE_GIVING_UP_KEY = "kafka.max.polls_without_records";
+	private static final String KAFKA_CONSUMER_BOOTSTRAP_SERVERS_KEY = "kafka.consumer.bootstrapserver";
+	private static final String KAFKA_CONSUMER_GROUP_ID_KEY = "kafka.consumer.group_id";
 
-	public static final String KAFKA_CONSUMER_BOOTSTRAP_SERVERS_KEY = "kafka.consumer.bootstrapserver";
-	public static final String KAFKA_CONSUMER_GROUP_ID_KEY = "kafka.consumer.group_id";
+	private static final String KAFKA_CONSUMER_POLL_TIMEOUT_KEY = "kafka.consumer.poll.timeout";
 
-	public static final String KAFKA_CONSUMER_POLL_TIMEOUT_KEY = "kafka.consumer.poll.timeout";
-	public static final String KAFKA_CONSUMER_POLL_MIN_DELAY_KEY = "kafka.consumer.poll.min_delay";
+	private static final String KAFKA_CONSUMER_AUTO_OFFSET_RESET_KEY = "kafka.consumer.auto_offset_reset";
+	private static final String KAFKA_CONSUMER_ENABLE_AUTO_COMMIT_KEY = "kafka.consumer.enable_autocommit";
+	private static final String KAFKA_CONSUMER_MAX_POLL_RECORDS_KEY = "kafka.consumer.max_poll_records";
 
-	public static final String KAFKA_CONSUMER_AUTO_OFFSET_RESET_KEY = "kafka.consumer.auto_offset_reset";
-	public static final String KAFKA_CONSUMER_ENABLE_AUTO_COMMIT_KEY = "kafka.consumer.enable_autocommit";
-	public static final String KAFKA_CONSUMER_MAX_POLL_RECORDS_KEY = "kafka.consumer.max_poll_records";
-	public static final String KAFKA_CONSUMER_FETCH_MIN_BYTES_KEY = "kafka.consumer.fetch_min_bytes";
-	public static final String KAFKA_CONSUMER_FETCH_MAX_WAIT_MS_KEY = "kafka.consumer.fetch_max_wait";
+	// git settings
 
-	public static final String KAFKA_RESET_CONSUMER_OFFSETS_KEY = "kafka.consumer.reset_offsets";
-	public static final String KAFKA_ASSIGN_TO_ALL_TOPICS_KEY = "kafka.topics.assign_to_all";
+	private static final String GIT_LOCAL_REPOSITORY_PATH_KEY = "git.local.repository.path";
+	private static final String GIT_SSH_KEY_PATH_KEY = "git.sshkey.path";
+	private static final String GIT_REPOSITORY_URI_KEY = "git.repository.uri";
+	private static final String GIT_BRANCH_KEY = "git.branch";
+	private static final String GIT_REMOTE_NAME_KEY = "git.remote";
+	private static final String GIT_AUTHOR_KEY = "git.author";
+	private static final String GIT_EMAIL_DEFAULT_USER_KEY = "git.email.default.user";
+	private static final String GIT_EMAIL_DEFAULT_HOST_KEY = "git.email.default.host";
 
 	/* CONFIG DEFAULT VALUES */
 
@@ -80,19 +85,23 @@ public class Config {
 	public int CONSUL_PORT = 8500;
 
 	public int PROCESSOR_SCHEMA_HASH_LENGTH = 32;
-	
+
 	public String EVENT_FIELD_ID = "id";
 	public String EVENT_FIELD_TIMESTAMP = "timestamp";
 	public String EVENT_FIELD_EVENT_TYPE = "eventType";
 	public String EVENT_FIELD_VERSION = "version";
-	
-	
+
 	// persister settings
+
+	public String OUTPUT_DIRECTORY = "out/";
+	public String OUTPUT_DRILL_DIRECTORY = "drill_views/";
+	public String OUTPUT_CHANGELOGS_DIRECTORY = "change_logs/";
+	public String OUTPUT_TOPIC_DIRECTORY = "topic_reports/";
+	public String OUTPUT_EVENTTYPE_DIRECTORY = "event_types/";
+	public String OUTPUT_AVROSCHEMAS_DIRECTORY = "avro_schemas/";
+	public String OUTPUT_SAMPLES_DIRECTORY = "event_samples/";
 	
-	public String OUTPUT_DRILL_DIRECTORY = "out/drill_views/";
-	public String OUTPUT_SAMPLES_DIRECTORY = "out/event_samples/";
-	public String OUTPUT_CHANGELOGS_DIRECTORY = "out/change_logs/";
-	public String OUTPUT_TOPIC_DIRECTORY = "out/topic_reports/";
+	public int OUTPUT_SAMPLES_COUNT = 10;
 
 	// kafka connection settings
 
@@ -108,6 +117,18 @@ public class Config {
 	public int KAFKA_CONSUMER_MAX_POLL_RECORDS = 10;
 
 	public boolean KAFKA_RESET_CONSUMER_OFFSETS = false;
+
+	// git settings
+	
+	public String GIT_LOCAL_REPOSITORY_PATH = "git_repository/";
+
+	public String GIT_SSH_KEY_PATH = "/home/andre.mis/.ssh/team_id_rsa";
+	public String GIT_REPOSITORY_URI = "git@srv-git-01-hh1.alinghi.tipp24.net:andre-mis/drill-views.git";
+	public String GIT_BRANCH = "master";
+	public String GIT_REMOTE_NAME = "origin";
+	public String GIT_AUTHOR = "DrillViewGenerator";
+	public String GIT_EMAIL_DEFAULT_USER = "drillviewgenerator";
+	public String GIT_EMAIL_DEFAULT_HOST = "esailors.de";
 
 	// config internal fields
 
@@ -146,13 +167,29 @@ public class Config {
 		loadKafkaSettings();
 		loadProcessorSettings();
 		loadPersisterSettings();
+		loadGitSettings();
+	}
+
+	private void loadGitSettings() {
+		GIT_LOCAL_REPOSITORY_PATH = loadConfigString(GIT_LOCAL_REPOSITORY_PATH_KEY);
+		GIT_SSH_KEY_PATH = loadConfigString(GIT_SSH_KEY_PATH_KEY);
+		GIT_REPOSITORY_URI = loadConfigString(GIT_REPOSITORY_URI_KEY);
+		GIT_BRANCH = loadConfigString(GIT_BRANCH_KEY);
+		GIT_REMOTE_NAME = loadConfigString(GIT_REMOTE_NAME_KEY);
+		GIT_AUTHOR = loadConfigString(GIT_AUTHOR_KEY);
+		GIT_EMAIL_DEFAULT_USER = loadConfigString(GIT_EMAIL_DEFAULT_USER_KEY);
+		GIT_EMAIL_DEFAULT_HOST = loadConfigString(GIT_EMAIL_DEFAULT_HOST_KEY);
 	}
 
 	private void loadPersisterSettings() {
+		OUTPUT_DIRECTORY = loadConfigString(OUTPUT_DIRECTORY_KEY);
 		OUTPUT_DRILL_DIRECTORY = loadConfigString(OUTPUT_DRILL_DIRECTORY_KEY);
-		OUTPUT_SAMPLES_DIRECTORY = loadConfigString(OUTPUT_SAMPLES_DIRECTORY_KEY);
 		OUTPUT_CHANGELOGS_DIRECTORY = loadConfigString(OUTPUT_CHANGELOGS_DIRECTORY_KEY);
 		OUTPUT_TOPIC_DIRECTORY = loadConfigString(OUTPUT_TOPIC_DIRECTORY_KEY);
+		OUTPUT_EVENTTYPE_DIRECTORY = loadConfigString(OUTPUT_EVENTTYPE_DIRECTORY_KEY);
+		OUTPUT_AVROSCHEMAS_DIRECTORY = loadConfigString(OUTPUT_AVROSCHEMAS_DIRECTORY_KEY);
+		OUTPUT_SAMPLES_DIRECTORY = loadConfigString(OUTPUT_SAMPLES_DIRECTORY_KEY);
+		OUTPUT_SAMPLES_COUNT = loadConfigInteger(OUTPUT_SAMPLES_COUNT_KEY);
 	}
 
 	private void loadProcessorSettings() {

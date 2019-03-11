@@ -29,6 +29,7 @@ import org.eclipse.jgit.transport.SshTransport;
 import org.eclipse.jgit.transport.Transport;
 import org.eclipse.jgit.util.FS;
 
+import com.google.common.base.Optional;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
@@ -36,18 +37,6 @@ import com.jcraft.jsch.Session;
 import de.esailors.dataheart.drillviews.conf.Config;
 
 public class GitUtil {
-
-	// TODO move to config
-	private String gitSshKey = "/home/andre.mis/.ssh/team_id_rsa";
-	private String gitUri = "git@srv-git-01-hh1.alinghi.tipp24.net:andre-mis/drill-views.git";
-	private String gitBranch = "master";
-	private String gitRemote = "origin";
-	private String gitAuthor = "DrillViewGenerator";
-	// TODO maybe determine hostname for part of email address
-	private String gitEmail = "dataheart-systems@esailors.de";
-	
-	
-	private static final String gitDirectoryPath = "out/git_repository";
 
 	private static final Logger log = LogManager.getLogger(GitUtil.class.getName());
 
@@ -67,7 +56,7 @@ public class GitUtil {
 
 	private void initRepository() {
 
-		localGitRepositoryDirectory = new File(gitDirectoryPath);
+		localGitRepositoryDirectory = new File(config.GIT_LOCAL_REPOSITORY_PATH);
 		log.info("Initializing git repository at " + localGitRepositoryDirectory.getAbsolutePath());
 		if (!localGitRepositoryDirectory.exists()) {
 			log.info("Git directory path is empty, cloning repository to: " + localGitRepositoryDirectory.getAbsolutePath());
@@ -101,7 +90,7 @@ public class GitUtil {
 			}
 
 		} else {
-			throw new IllegalStateException("Git directoy is not empty but also not a repository: " + gitDirectoryPath);
+			throw new IllegalStateException("Local git repository path is not empty but also not a repository: " + config.GIT_LOCAL_REPOSITORY_PATH);
 		}
 	}
 
@@ -183,7 +172,7 @@ public class GitUtil {
 		Collection<Ref> remoteRefs = fetchRemoteRefs(true);
 		for (Ref ref : remoteRefs) {
 			log.debug("Got remote head ref: " + ref.toString());
-			if (ref.getName().equals("refs/heads/" + gitBranch)) {
+			if (ref.getName().equals("refs/heads/" + config.GIT_BRANCH)) {
 				return ref.getObjectId().getName();
 			}
 		}
@@ -235,9 +224,9 @@ public class GitUtil {
 
 	private void cloneRepositoryToDirectory(File gitDirectory) {
 		CloneCommand cloneCommand = Git.cloneRepository();
-		cloneCommand.setURI(gitUri);
-		cloneCommand.setBranch(gitBranch);
-		cloneCommand.setRemote(gitRemote);
+		cloneCommand.setURI(config.GIT_REPOSITORY_URI);
+		cloneCommand.setBranch(config.GIT_BRANCH);
+		cloneCommand.setRemote(config.GIT_REMOTE_NAME);
 		cloneCommand.setDirectory(gitDirectory);
 		configureAuthentication(cloneCommand);
 		try {
@@ -309,12 +298,30 @@ public class GitUtil {
 				return;
 			}
 			log.info("Commit local changes in git repository");
-			git.commit().setMessage(commitMessage).setAuthor(gitAuthor, gitEmail).call();
-			log.info("Pushing to git remote branch " + gitBranch + " at " + gitUri);
+			git.commit().setMessage(commitMessage).setAuthor(config.GIT_AUTHOR, gitEmailAddress()).call();
+			log.info("Pushing to git remote branch " + config.GIT_BRANCH + " at " + config.GIT_REPOSITORY_URI);
 			configureAuthentication(git.push()).call();
 		} catch (GitAPIException e) {
 			throw new IllegalStateException("Unable to commit and push changes to git", e);
 		}
+	}
+
+	private String gitEmailAddress() {
+		String emailUser;
+		Optional<String> localUser = SystemUtil.getCurrentUser();
+		if(localUser.isPresent()) {
+			emailUser = localUser.get();
+		} else {
+			emailUser = config.GIT_EMAIL_DEFAULT_USER;
+		}
+		String emailHost;
+		Optional<String> localHostname = SystemUtil.getLocalHostname();
+		if(localHostname.isPresent()) {
+			emailHost = localHostname.get();
+		} else {
+			emailHost = config.GIT_EMAIL_DEFAULT_HOST;
+		}
+		return emailUser + "@" + emailHost;
 	}
 
 	private TransportCommand<?, ?> configureAuthentication(TransportCommand<?, ?> transportCommand) {
@@ -346,7 +353,7 @@ public class GitUtil {
 				// https://stackoverflow.com/questions/13686643/using-keys-with-jgit-to-access-a-git-repository-securely
 				JSch defaultJSch = super.createDefaultJSch(fs);
 				defaultJSch.removeAllIdentity();
-				defaultJSch.addIdentity(gitSshKey);
+				defaultJSch.addIdentity(config.GIT_SSH_KEY_PATH);
 				return defaultJSch;
 			}
 

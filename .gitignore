@@ -2,5 +2,6 @@
 .project
 .settings
 target
-log/*
-out/*
+log
+out
+git_drill_views

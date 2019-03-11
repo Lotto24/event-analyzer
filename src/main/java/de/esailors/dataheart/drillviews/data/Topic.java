@@ -1,9 +1,12 @@
 package de.esailors.dataheart.drillviews.data;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.avro.Schema;
@@ -21,10 +24,9 @@ public class Topic {
 	private Event exampleEvent;
 	
 	private Set<Boolean> messagesAreAvro;
-	private Set<Schema> messageSchemas;
 	private Set<String> eventTypes;
 	private Set<String> schemaVersions;
-	private Set<String> avroSchemaHashes;
+	private Map<String, Schema> avroSchemas;
 
 	private List<String> reportMessages;
 	
@@ -35,7 +37,7 @@ public class Topic {
 	public void markInconsistencies() {
 		// check consistency within topics
 		// - each topic only has avro / json - if avro always the same schema?
-		// - JSON structure doesnt change (always the same fields?)
+		// - TODO check JSON structure doesnt change (always the same fields?)
 		// - always the same event Type in each topic
 
 		reportMessages = new ArrayList<>();
@@ -49,8 +51,7 @@ public class Topic {
 		eventTypes = new HashSet<>();
 		schemaVersions = new HashSet<>();
 		messagesAreAvro = new HashSet<>();
-		messageSchemas = new HashSet<>();
-		avroSchemaHashes = new HashSet<>();
+		avroSchemas = new HashMap<>();
 
 		Event firstEvent = null;
 		Iterator<Event> iterator = getEvents().iterator();
@@ -58,10 +59,12 @@ public class Topic {
 			Event event = iterator.next();
 
 			messagesAreAvro.add(event.isAvroMessage());
-			messageSchemas.add(event.getAvroSchema());
+			avroSchemas.put(event.getAvroSchemaHash(), event.getAvroSchema());
 			eventTypes.add(event.readEventType());
 			schemaVersions.add(event.readSchemaVersion());
-			avroSchemaHashes.add(event.getAvroSchemaHash());
+			if(avroSchemas.get(event.getAvroSchemaHash()) != null && !avroSchemas.get(event.getAvroSchemaHash()).equals(event.getAvroSchema())) {
+				addMessageToReport("Found two different Avro schemas with the same hash: " + event.getAvroSchemaHash());
+			}
 
 			if (firstEvent == null) {
 				// first one we see, use this as example event
@@ -80,11 +83,8 @@ public class Topic {
 		if (messagesAreAvro.size() > 1) {
 			addMessageToReport("Mixed Avro and plain JSON within the same topic: " + this);
 		}
-		if (messageSchemas.size() > 1) {
+		if (avroSchemas.size() > 1) {
 			addMessageToReport("Mixed Avro schemas within the same topic: " + this);
-		}
-		if (avroSchemaHashes.size() > 1) {
-			addMessageToReport("Mixed Avro Schema Hashes within the same topic: " + this);
 		}
 
 	}
@@ -95,11 +95,11 @@ public class Topic {
 	}
 
 	public boolean isConsistent() {
-		if (messagesAreAvro == null || messageSchemas == null || eventTypes == null || schemaVersions == null || avroSchemaHashes == null) {
+		if (messagesAreAvro == null || avroSchemas == null || eventTypes == null || schemaVersions == null) {
 			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
 		}
-		return messagesAreAvro.size() == 1 && messageSchemas.size() == 1 && eventTypes.size() == 1
-				&& schemaVersions.size() == 1 && avroSchemaHashes.size() == 1;
+		return messagesAreAvro.size() == 1 && avroSchemas.keySet().size() == 1 && eventTypes.size() == 1
+				&& schemaVersions.size() == 1;
 	}
 
 	public void addEvent(Event event) {
@@ -133,10 +133,6 @@ public class Topic {
 		return messagesAreAvro;
 	}
 
-	public Set<Schema> getMessageSchemas() {
-		return messageSchemas;
-	}
-
 	public Set<String> getEventTypes() {
 		return eventTypes;
 	}
@@ -145,8 +141,16 @@ public class Topic {
 		return schemaVersions;
 	}
 	
+	public Map<String, Schema> getAvroSchemas() {
+		return avroSchemas;
+	}
+	
 	public Set<String> getAvroSchemaHashes() {
-		return avroSchemaHashes;
+		return avroSchemas.keySet();
+	}
+	
+	public Collection<Schema> getMessageSchemas() {
+		return avroSchemas.values();
 	}
 
 	public void setPartitionCount(int partitionCount) {
