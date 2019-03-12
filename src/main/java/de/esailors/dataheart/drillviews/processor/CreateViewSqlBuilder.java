@@ -45,6 +45,7 @@ public class CreateViewSqlBuilder {
 
 		log.info("Generating create view statement for Event from " + event.getTopic().getName());
 		// TODO generate drill views from avro schema if possible
+		// TODO ^ generate the view using EventStructure
 
 		JsonNode json = event.getEventJson();
 		String viewName = event.getTopic().getName();
@@ -189,7 +190,7 @@ public class CreateViewSqlBuilder {
 		viewBuilder.append(rowKeyStart);
 	}
 
-	private static Object ident() {
+	private static String ident() {
 		StringBuilder r = new StringBuilder();
 		for (int i = 0; i < IDENTATION; i++) {
 			r.append(" ");

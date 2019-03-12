@@ -118,8 +118,8 @@ public class KafkaEventFetcher {
 		topicsBlacklist = new HashSet<String>();
 		topicsBlacklist.add("__consumer_offsets");
 		topicsBlacklist.add("avro_schema");
-		topicsBlacklist.add("test_events");
-		topicsBlacklist.add("test");
+//		topicsBlacklist.add("test_events");
+//		topicsBlacklist.add("test");
 		log.debug("Blacklisted topics: " + topicsBlacklist.size());
 	}
 

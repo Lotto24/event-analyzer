@@ -65,6 +65,7 @@ public class Processor {
 		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY));
 		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY));
 		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY));
+		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_EVENTSTRUCTURES_DIRECTORY));
 		// do a kind of "EventType Report" that maps from EventType to topic (at the
 		// moment we only have topic)
 
@@ -80,7 +81,7 @@ public class Processor {
 	private void writeAvroSchemas() {
 		// TODO check if it actually changes before persisting
 		for(String schemaHash : avroSchemas.keySet()) {
-			persister.writeAvroSchema(schemaHash, avroSchemas.get(schemaHash));
+			persister.persistAvroSchema(schemaHash, avroSchemas.get(schemaHash));
 		}
 		
 	}
@@ -92,7 +93,7 @@ public class Processor {
 			if (topicList.size() > 1) {
 				changeLog.addMessage("Found eventType " + eventType + " in " + topicList.size() + " topics");
 			}
-			persister.writeEventTypeReport(eventType, topicList);
+			persister.persistEventTypeReport(eventType, topicList);
 		}
 	}
 
@@ -115,7 +116,12 @@ public class Processor {
 		updateAvroSchemaMap(topic);
 		createDrillViews(topic);
 		writeEventSamples(topic);
+		writeEventStructures(topic);
 		writeTopicReport(topic);
+	}
+
+	private void writeEventStructures(Topic topic) {
+		persister.persistEventStructures(topic);
 	}
 
 	private void updateAvroSchemaMap(Topic topic) {

@@ -23,6 +23,7 @@ public class Topic {
 	private Set<Event> events = new HashSet<>();
 	private Event exampleEvent;
 	
+	private Set<EventStructure> eventStructures;
 	private Set<Boolean> messagesAreAvro;
 	private Set<String> eventTypes;
 	private Set<String> schemaVersions;
@@ -32,12 +33,18 @@ public class Topic {
 	
 	public Topic(String topicName) {
 		this.topicName = topicName;
+		
+		// TODO get more configuration information from topic (can we get retention?)
+		// TODO somehow link to official eSailors/kafka-events repo
+		// https://srv-git-01-hh1.alinghi.tipp24.net/eSailors/kafka-events
 	}
 
 	public void markInconsistencies() {
+		// TODO this has gotten pretty big, probably a good idea to move this out of this class by now
+		
 		// check consistency within topics
 		// - each topic only has avro / json - if avro always the same schema?
-		// - TODO check JSON structure doesnt change (always the same fields?)
+		// - check JSON structure doesnt change (always the same event structure)
 		// - always the same event Type in each topic
 
 		reportMessages = new ArrayList<>();
@@ -48,6 +55,7 @@ public class Topic {
 
 		// idea: gather values in Sets, if they have more than 1 entry afterwards
 		// something is fishy
+		eventStructures = new HashSet<>();
 		eventTypes = new HashSet<>();
 		schemaVersions = new HashSet<>();
 		messagesAreAvro = new HashSet<>();
@@ -58,6 +66,8 @@ public class Topic {
 		while (iterator.hasNext()) {
 			Event event = iterator.next();
 
+			eventStructures.add(new EventStructure(this.topicName, event));
+			
 			messagesAreAvro.add(event.isAvroMessage());
 			avroSchemas.put(event.getAvroSchemaHash(), event.getAvroSchema());
 			eventTypes.add(event.readEventType());
@@ -74,6 +84,9 @@ public class Topic {
 
 		}
 
+		if (eventStructures.size() > 1) {
+			addMessageToReport("Mixed EventStructures within the same topic: " + this);
+		}
 		if (eventTypes.size() > 1) {
 			addMessageToReport("Mixed EventTypes within the same topic: " + this);
 		}
@@ -95,10 +108,10 @@ public class Topic {
 	}
 
 	public boolean isConsistent() {
-		if (messagesAreAvro == null || avroSchemas == null || eventTypes == null || schemaVersions == null) {
+		if (eventStructures == null || messagesAreAvro == null || avroSchemas == null || eventTypes == null || schemaVersions == null) {
 			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
 		}
-		return messagesAreAvro.size() == 1 && avroSchemas.keySet().size() == 1 && eventTypes.size() == 1
+		return eventStructures.size() == 1 && messagesAreAvro.size() == 1 && avroSchemas.keySet().size() == 1 && eventTypes.size() == 1
 				&& schemaVersions.size() == 1;
 	}
 
@@ -141,6 +154,10 @@ public class Topic {
 		return schemaVersions;
 	}
 	
+	public Set<EventStructure> getEventStructures() {
+		return eventStructures;
+	}
+
 	public Map<String, Schema> getAvroSchemas() {
 		return avroSchemas;
 	}

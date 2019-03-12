@@ -43,6 +43,7 @@ public class Config {
 	private static final String OUTPUT_TOPIC_DIRECTORY_KEY = "persister.out.topics.directory";
 	private static final String OUTPUT_EVENTTYPE_DIRECTORY_KEY = "persister.out.eventtypes.directory";
 	private static final String OUTPUT_AVROSCHEMAS_DIRECTORY_KEY = "persister.out.avroschemas.directory";
+	private static final String OUTPUT_EVENTSTRUCTURES_DIRECTORY_KEY = "persister.out.eventstructures.directory";
 	private static final String OUTPUT_SAMPLES_DIRECTORY_KEY = "persister.out.samples.directory";
 	
 	private static final String OUTPUT_SAMPLES_COUNT_KEY = "persister.out.samples.count";
@@ -99,6 +100,7 @@ public class Config {
 	public String OUTPUT_TOPIC_DIRECTORY = "topic_reports/";
 	public String OUTPUT_EVENTTYPE_DIRECTORY = "event_types/";
 	public String OUTPUT_AVROSCHEMAS_DIRECTORY = "avro_schemas/";
+	public String OUTPUT_EVENTSTRUCTURES_DIRECTORY = "event_structures/";
 	public String OUTPUT_SAMPLES_DIRECTORY = "event_samples/";
 	
 	public int OUTPUT_SAMPLES_COUNT = 10;
@@ -188,6 +190,7 @@ public class Config {
 		OUTPUT_TOPIC_DIRECTORY = loadConfigString(OUTPUT_TOPIC_DIRECTORY_KEY);
 		OUTPUT_EVENTTYPE_DIRECTORY = loadConfigString(OUTPUT_EVENTTYPE_DIRECTORY_KEY);
 		OUTPUT_AVROSCHEMAS_DIRECTORY = loadConfigString(OUTPUT_AVROSCHEMAS_DIRECTORY_KEY);
+		OUTPUT_EVENTSTRUCTURES_DIRECTORY = loadConfigString(OUTPUT_EVENTSTRUCTURES_DIRECTORY_KEY);
 		OUTPUT_SAMPLES_DIRECTORY = loadConfigString(OUTPUT_SAMPLES_DIRECTORY_KEY);
 		OUTPUT_SAMPLES_COUNT = loadConfigInteger(OUTPUT_SAMPLES_COUNT_KEY);
 	}

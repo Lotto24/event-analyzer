@@ -17,11 +17,15 @@ import org.codehaus.jackson.map.ObjectMapper;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Event;
+import de.esailors.dataheart.drillviews.data.EventStructure;
 import de.esailors.dataheart.drillviews.data.Topic;
+import de.esailors.dataheart.drillviews.data.TreePlotter;
 
 public class Persister {
 
 	// TODO might want to extract markdown specifics to utility class
+	// TODO clean output directory on init so we don't copy over old / inconsistend
+	// leftover data
 
 	private static final Logger log = LogManager.getLogger(Persister.class.getName());
 
@@ -44,6 +48,7 @@ public class Persister {
 		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_SAMPLES_DIRECTORY));
 		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY));
 		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY));
+		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_EVENTSTRUCTURES_DIRECTORY));
 	}
 
 	private void ensureDirectoryExists(String directoryPath) {
@@ -65,6 +70,11 @@ public class Persister {
 
 	public String outputDirectoryPathFor(String subPath) {
 		return config.OUTPUT_DIRECTORY + File.separator + subPath + File.separator;
+	}
+
+	public String outputDirectoryPathFor(EventStructure eventStructure) {
+		return outputDirectoryPathFor(config.OUTPUT_EVENTSTRUCTURES_DIRECTORY) + eventStructure.getStructureBaseName()
+				+ File.separator;
 	}
 
 	public void persistEventSamples(Topic topic) {
@@ -116,16 +126,6 @@ public class Persister {
 		}
 
 		reportContent += "#### Analyzed events: " + topic.getEvents().size() + "\n\n";
-		if (topic.getExampleEvent() != null) {
-			// add links to sample events and drill view
-			reportContent += "#### Links:\n";
-			reportContent += "* " + linkToEventSamples(topic) + "\n";
-			reportContent += "* " + linkToDrillView(topic) + "\n";
-			reportContent += generateJsonInformation("Example Event", topic.getExampleEvent().getEventJson());
-		} else {
-			reportContent += "#### Example Event: **Not available**\n";
-		}
-		reportContent += generateTopicInformation(topic);
 
 		if (!topic.getReportMessages().isEmpty()) {
 			reportContent += "### Report messages:\n";
@@ -133,6 +133,20 @@ public class Persister {
 				reportContent += "* " + reportMessage + "\n";
 			}
 			reportContent += "\n\n";
+		}
+
+		reportContent += generateTopicInformation(topic);
+
+		// not sure if I want to keep this now that we have event structures
+		// TODO throw this out, then I can also check if topic report even changed
+		if (topic.getExampleEvent() != null) {
+			// add links to sample events and drill view
+			reportContent += "#### Links:\n";
+			reportContent += "* " + linkToEventSamples(topic) + "\n";
+			reportContent += "* " + linkToDrillView(topic) + "\n";
+//			reportContent += generateJsonInformation("Example Event", topic.getExampleEvent().getEventJson());
+//		} else {
+//			reportContent += "#### Example Event: **Not available**\n";
 		}
 
 		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY), fileNameForTopicReport(topic),
@@ -149,26 +163,14 @@ public class Persister {
 
 	private String generateTopicInformation(Topic topic) {
 		String topicInformation = "### Topic information:\n";
-		topicInformation += generateSubTopicInformation("EventType", eventTypeLinks(topic.getEventTypes()));
+		topicInformation += generateSubTopicInformation("Event Types", eventTypeLinks(topic.getEventTypes()));
+		topicInformation += generateSubTopicInformation("Event Structures",
+				eventStructureLinks(topic.getEventStructures()));
 		topicInformation += generateSubTopicInformation("Avro Schemas", avroSchemaLinks(topic.getAvroSchemaHashes()));
 		topicInformation += generateSubTopicInformation("Schema Versions", topic.getSchemaVersions());
 		topicInformation += generateSubTopicInformation("Messages are avro", topic.getMessagesAreAvro());
-		// TODO maybe persist avro schemas separately and link to them
 
 		topicInformation += "* Topic Partitions: " + topic.getPartitionCount() + "\n";
-
-		// TODO cleanup
-//		// TODO hmm ok I'm not sure this actually works for topics with mixed avro and
-//		// non-avro events
-//		if (topic.getMessageSchemas().size() == 1) {
-//			Schema schema = topic.getMessageSchemas().iterator().next();
-//			if (schema == null) {
-//				topicInformation += "#### Avro Schema: **NOT Avro**\n";
-//			} else {
-//				topicInformation += generateJsonInformation("Avro Schema", parseToJson(schema));
-//
-//			}
-//		}
 
 		return topicInformation;
 	}
@@ -176,7 +178,11 @@ public class Persister {
 	private Set<?> avroSchemaLinks(Set<String> avroSchemaHashes) {
 		Set<String> r = new HashSet<>();
 		for (String schemaHash : avroSchemaHashes) {
-			r.add(linkToAvroSchema(schemaHash));
+			if (schemaHash != null) {
+				r.add(linkToAvroSchema(schemaHash));
+			} else {
+				r.add(null);
+			}
 		}
 		return r;
 	}
@@ -201,8 +207,16 @@ public class Persister {
 		return r;
 	}
 
+	private Set<String> eventStructureLinks(Set<EventStructure> eventStructures) {
+		Set<String> r = new HashSet<>();
+		for (EventStructure eventStructure : eventStructures) {
+			r.add(linkToEventStructureReport(eventStructure));
+		}
+		return r;
+	}
+
 	private String generateSubTopicInformation(String type, Set<?> items) {
-		String topicInformation = "* " + type + "\n";
+		String topicInformation = "* **" + items.size() + "** " + type + "\n";
 		if (items.size() > 0) {
 			for (Object item : items) {
 				topicInformation += "  * " + (item == null ? "null" : item.toString()) + "\n";
@@ -217,7 +231,7 @@ public class Persister {
 		return formattedCurrentTime;
 	}
 
-	public void writeEventTypeReport(String eventType, List<Topic> topicList) {
+	public void persistEventTypeReport(String eventType, List<Topic> topicList) {
 		String eventTypeReportContent = "# EventType Report for " + eventType + "\n";
 		eventTypeReportContent += "### Found EventType in the following topics:\n";
 		for (Topic topic : topicList) {
@@ -228,13 +242,45 @@ public class Persister {
 				fileNameForEventTypeReport(eventType), eventTypeReportContent);
 	}
 
-	public void writeAvroSchema(String schemaHash, Schema schema) {
+	public void persistAvroSchema(String schemaHash, Schema schema) {
 		String avroSchemaContent = JsonPrettyPrinter.prettyPrintJsonString(parseToJson(schema));
 
 		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY),
 				fileNameForAvroSchema(schemaHash), avroSchemaContent);
 	}
-	
+
+	public void persistEventStructures(Topic topic) {
+		for (EventStructure eventStructure : topic.getEventStructures()) {
+			persistEventStructure(eventStructure);
+		}
+	}
+
+	public void persistEventStructure(EventStructure eventStructure) {
+		// first write .dot and render as .png
+		TreePlotter.getInstance().plotTree(eventStructure.getEventStructureTree(),
+				outputDirectoryPathFor(eventStructure), fileNameForEventStructureDot(eventStructure),
+				outputDirectoryPathFor(eventStructure), fileNameForEventStructurePlot(eventStructure));
+
+		// make an .md for this event structure
+		String eventStructureContent = "# Event Structure for: " + eventStructure.structureSpecificName() + "\n";
+
+		eventStructureContent += "### Base Name: " + eventStructure.getStructureBaseName() + "\n";
+
+		eventStructureContent += "### Plot\n";
+		eventStructureContent += eventStructurePicture(eventStructure) + "\n";
+
+		eventStructureContent += generateJsonInformation("Example event",
+				eventStructure.getStructureSource().getEventJson());
+
+		FileWriterUtil.writeFile(outputDirectoryPathFor(eventStructure), fileNameForEventStructure(eventStructure),
+				eventStructureContent);
+	}
+
+	private String eventStructurePicture(EventStructure eventStructure) {
+		return "!"
+				+ generateLink(eventStructure.structureSpecificName(), fileNameForEventStructurePlot(eventStructure));
+	}
+
 	public String fileNameForDrillView(Topic topic) {
 		return topic.getName() + ".sql";
 	}
@@ -253,6 +299,18 @@ public class Persister {
 
 	public String fileNameForAvroSchema(String schemaHash) {
 		return schemaHash + ".json";
+	}
+
+	public String fileNameForEventStructure(EventStructure eventStructure) {
+		return eventStructure.structureSpecificName() + ".md";
+	}
+
+	public String fileNameForEventStructureDot(EventStructure eventStructure) {
+		return eventStructure.structureSpecificName() + ".dot";
+	}
+
+	public String fileNameForEventStructurePlot(EventStructure eventStructure) {
+		return eventStructure.structureSpecificName() + ".png";
 	}
 
 	private String linkToTopicReport(Topic topic) {
@@ -275,6 +333,12 @@ public class Persister {
 	private String linkToAvroSchema(String schemaHash) {
 		return generateLink(schemaHash,
 				"../" + config.OUTPUT_AVROSCHEMAS_DIRECTORY + fileNameForAvroSchema(schemaHash));
+	}
+
+	private String linkToEventStructureReport(EventStructure eventStructure) {
+		return generateLink(eventStructure.structureSpecificName(),
+				"../" + config.OUTPUT_EVENTSTRUCTURES_DIRECTORY + File.separator + eventStructure.getStructureBaseName()
+						+ File.separator + fileNameForEventStructure(eventStructure));
 	}
 
 	private String generateLink(String text, String reference) {
