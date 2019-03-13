@@ -13,6 +13,8 @@ import org.apache.avro.Schema;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.google.common.base.Optional;
+
 public class Topic {
 
 	private static final Logger log = LogManager.getLogger(Topic.class.getName());
@@ -22,7 +24,10 @@ public class Topic {
 
 	private Set<Event> events = new HashSet<>();
 	private Event exampleEvent;
-	
+
+	// absent if there are no events
+	private Optional<EventStructure> mergedEventStructure;
+
 	private Set<EventStructure> eventStructures;
 	private Set<Boolean> messagesAreAvro;
 	private Set<String> eventTypes;
@@ -30,27 +35,29 @@ public class Topic {
 	private Map<String, Schema> avroSchemas;
 
 	private List<String> reportMessages;
-	
+
 	public Topic(String topicName) {
 		this.topicName = topicName;
-		
+
 		// TODO get more configuration information from topic (can we get retention?)
 		// TODO somehow link to official eSailors/kafka-events repo
 		// https://srv-git-01-hh1.alinghi.tipp24.net/eSailors/kafka-events
 	}
 
 	public void markInconsistencies() {
-		// TODO this has gotten pretty big, probably a good idea to move this out of this class by now
-		
+		// TODO this has gotten pretty big, probably a good idea to move this out of
+		// this class by now
+
 		// check consistency within topics
 		// - each topic only has avro / json - if avro always the same schema?
 		// - check JSON structure doesnt change (always the same event structure)
 		// - always the same event Type in each topic
 
 		reportMessages = new ArrayList<>();
-		
+
 		if (getEvents().size() < 2) {
-			addMessageToReport("Can't properly check event consistency because I did not get enough events for: " + this + " (received " + getEvents().size() + ")");
+			addMessageToReport("Can't properly check event consistency because I did not get enough events for: " + this
+					+ " (received " + getEvents().size() + ")");
 		}
 
 		// idea: gather values in Sets, if they have more than 1 entry afterwards
@@ -67,12 +74,13 @@ public class Topic {
 			Event event = iterator.next();
 
 			eventStructures.add(new EventStructure(this.topicName, event));
-			
+
 			messagesAreAvro.add(event.isAvroMessage());
 			avroSchemas.put(event.getAvroSchemaHash(), event.getAvroSchema());
 			eventTypes.add(event.readEventType());
 			schemaVersions.add(event.readSchemaVersion());
-			if(avroSchemas.get(event.getAvroSchemaHash()) != null && !avroSchemas.get(event.getAvroSchemaHash()).equals(event.getAvroSchema())) {
+			if (avroSchemas.get(event.getAvroSchemaHash()) != null
+					&& !avroSchemas.get(event.getAvroSchemaHash()).equals(event.getAvroSchema())) {
 				addMessageToReport("Found two different Avro schemas with the same hash: " + event.getAvroSchemaHash());
 			}
 
@@ -108,11 +116,34 @@ public class Topic {
 	}
 
 	public boolean isConsistent() {
-		if (eventStructures == null || messagesAreAvro == null || avroSchemas == null || eventTypes == null || schemaVersions == null) {
+		if (eventStructures == null || messagesAreAvro == null || avroSchemas == null || eventTypes == null
+				|| schemaVersions == null) {
 			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
 		}
-		return eventStructures.size() == 1 && messagesAreAvro.size() == 1 && avroSchemas.keySet().size() == 1 && eventTypes.size() == 1
+		// eventStructures.size() == 1 &&
+		// TODO maybe add a check to see if different event structures are "compatible"
+		// with another
+		return messagesAreAvro.size() == 1 && avroSchemas.keySet().size() == 1 && eventTypes.size() == 1
 				&& schemaVersions.size() == 1;
+	}
+
+	private void buildMergedEventStructure() {
+		if (eventStructures == null) {
+			throw new IllegalStateException(
+					"Can't build combined event structure yet, call markInconsistencies() first");
+		}
+		if (eventStructures.isEmpty()) {
+			mergedEventStructure = Optional.absent();
+		} else {
+			mergedEventStructure = Optional.of(new EventStructure(topicName, eventStructures));
+		}
+	}
+
+	public Optional<EventStructure> getMergedEventStructured() {
+		if (mergedEventStructure == null || !mergedEventStructure.isPresent()) {
+			buildMergedEventStructure();
+		}
+		return mergedEventStructure;
 	}
 
 	public void addEvent(Event event) {
@@ -149,11 +180,11 @@ public class Topic {
 	public Set<String> getEventTypes() {
 		return eventTypes;
 	}
-	
+
 	public Set<String> getSchemaVersions() {
 		return schemaVersions;
 	}
-	
+
 	public Set<EventStructure> getEventStructures() {
 		return eventStructures;
 	}
@@ -161,11 +192,11 @@ public class Topic {
 	public Map<String, Schema> getAvroSchemas() {
 		return avroSchemas;
 	}
-	
+
 	public Set<String> getAvroSchemaHashes() {
 		return avroSchemas.keySet();
 	}
-	
+
 	public Collection<Schema> getMessageSchemas() {
 		return avroSchemas.values();
 	}
@@ -173,7 +204,7 @@ public class Topic {
 	public void setPartitionCount(int partitionCount) {
 		this.partitionCount = partitionCount;
 	}
-	
+
 	public List<String> getReportMessages() {
 		return reportMessages;
 	}

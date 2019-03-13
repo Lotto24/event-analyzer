@@ -18,7 +18,12 @@ public class Main {
 	private static final String DEFAULT_CONFIG_PATH = "conf/config.properties";
 
 	public static void main(String[] args) {
-
+		
+//		Path sourcePath = Paths.get("structures/");
+//		Path targetPath = Paths.get("schemas/target.file");
+//		Path relative = sourcePath.relativize(targetPath);
+//		System.out.println(relative.toString());
+		
 //		TreeFactory treeFactory = new TreeFactory();
 //		TreePlotter treePlotter = new TreePlotter();
 //		

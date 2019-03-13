@@ -2,7 +2,9 @@ package de.esailors.dataheart.drillviews.processor;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -14,6 +16,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+
+import com.google.common.base.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Event;
@@ -118,6 +122,8 @@ public class Persister {
 
 	public void persistTopicReport(Topic topic) {
 		log.info("Writing topic report for: " + topic.getName());
+		String sourcePath = outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY);
+
 		String reportContent = "# Topic report for: " + topic.getName() + "\n";
 		if (topic.isConsistent()) {
 			reportContent += "### Topic was consistent\n\n";
@@ -135,22 +141,25 @@ public class Persister {
 			reportContent += "\n\n";
 		}
 
-		reportContent += generateTopicInformation(topic);
+		reportContent += "### Merged Event Structure:\n";
+		Optional<EventStructure> mergedEventStructured = topic.getMergedEventStructured();
+		if (mergedEventStructured.isPresent()) {
+			reportContent += "* " + linkToEventStructureReport(mergedEventStructured.get(), sourcePath) + "\n";
+		} else {
+			reportContent += "* _not available_\n";
+		}
+
+		reportContent += generateTopicInformation(topic, sourcePath);
 
 		// not sure if I want to keep this now that we have event structures
-		// TODO throw this out, then I can also check if topic report even changed
 		if (topic.getExampleEvent() != null) {
 			// add links to sample events and drill view
 			reportContent += "#### Links:\n";
-			reportContent += "* " + linkToEventSamples(topic) + "\n";
-			reportContent += "* " + linkToDrillView(topic) + "\n";
-//			reportContent += generateJsonInformation("Example Event", topic.getExampleEvent().getEventJson());
-//		} else {
-//			reportContent += "#### Example Event: **Not available**\n";
+			reportContent += "* " + linkToEventSamples(topic, sourcePath) + "\n";
+			reportContent += "* " + linkToDrillView(topic, sourcePath) + "\n";
 		}
 
-		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY), fileNameForTopicReport(topic),
-				reportContent);
+		FileWriterUtil.writeFile(sourcePath, fileNameForTopicReport(topic), reportContent);
 	}
 
 	private String generateJsonInformation(String name, JsonNode json) {
@@ -161,25 +170,27 @@ public class Persister {
 		return jsonInformation;
 	}
 
-	private String generateTopicInformation(Topic topic) {
+	private String generateTopicInformation(Topic topic, String sourcePath) {
 		String topicInformation = "### Topic information:\n";
-		topicInformation += generateSubTopicInformation("Event Types", eventTypeLinks(topic.getEventTypes()));
+		topicInformation += generateSubTopicInformation("Event Types",
+				eventTypeLinks(topic.getEventTypes(), sourcePath));
 		topicInformation += generateSubTopicInformation("Event Structures",
-				eventStructureLinks(topic.getEventStructures()));
-		topicInformation += generateSubTopicInformation("Avro Schemas", avroSchemaLinks(topic.getAvroSchemaHashes()));
+				eventStructureLinks(topic.getEventStructures(), sourcePath));
+		topicInformation += generateSubTopicInformation("Avro Schemas",
+				avroSchemaLinks(topic.getAvroSchemaHashes(), sourcePath));
 		topicInformation += generateSubTopicInformation("Schema Versions", topic.getSchemaVersions());
 		topicInformation += generateSubTopicInformation("Messages are avro", topic.getMessagesAreAvro());
 
-		topicInformation += "* Topic Partitions: " + topic.getPartitionCount() + "\n";
+		topicInformation += "* **" + topic.getPartitionCount() + "** Topic Partitions\n";
 
 		return topicInformation;
 	}
 
-	private Set<?> avroSchemaLinks(Set<String> avroSchemaHashes) {
+	private Set<?> avroSchemaLinks(Set<String> avroSchemaHashes, String sourcePath) {
 		Set<String> r = new HashSet<>();
 		for (String schemaHash : avroSchemaHashes) {
 			if (schemaHash != null) {
-				r.add(linkToAvroSchema(schemaHash));
+				r.add(linkToAvroSchema(schemaHash, sourcePath));
 			} else {
 				r.add(null);
 			}
@@ -199,18 +210,18 @@ public class Persister {
 		}
 	}
 
-	private Set<String> eventTypeLinks(Set<String> eventTypes) {
+	private Set<String> eventTypeLinks(Set<String> eventTypes, String sourcePath) {
 		Set<String> r = new HashSet<>();
 		for (String eventType : eventTypes) {
-			r.add(linkToEventTypeReport(eventType));
+			r.add(linkToEventTypeReport(eventType, sourcePath));
 		}
 		return r;
 	}
 
-	private Set<String> eventStructureLinks(Set<EventStructure> eventStructures) {
+	private Set<String> eventStructureLinks(Set<EventStructure> eventStructures, String sourcePath) {
 		Set<String> r = new HashSet<>();
 		for (EventStructure eventStructure : eventStructures) {
-			r.add(linkToEventStructureReport(eventStructure));
+			r.add(linkToEventStructureReport(eventStructure, sourcePath));
 		}
 		return r;
 	}
@@ -235,7 +246,8 @@ public class Persister {
 		String eventTypeReportContent = "# EventType Report for " + eventType + "\n";
 		eventTypeReportContent += "### Found EventType in the following topics:\n";
 		for (Topic topic : topicList) {
-			eventTypeReportContent += "* " + linkToTopicReport(topic) + "\n";
+			eventTypeReportContent += "* "
+					+ linkToTopicReport(topic, outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY)) + "\n";
 		}
 
 		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY),
@@ -253,32 +265,56 @@ public class Persister {
 		for (EventStructure eventStructure : topic.getEventStructures()) {
 			persistEventStructure(eventStructure);
 		}
+		Optional<EventStructure> mergedEventStructured = topic.getMergedEventStructured();
+		if (mergedEventStructured.isPresent()) {
+			persistEventStructure(mergedEventStructured.get());
+		}
+		;
 	}
 
 	public void persistEventStructure(EventStructure eventStructure) {
 		// first write .dot and render as .png
-		TreePlotter.getInstance().plotTree(eventStructure.getEventStructureTree(),
-				outputDirectoryPathFor(eventStructure), fileNameForEventStructureDot(eventStructure),
-				outputDirectoryPathFor(eventStructure), fileNameForEventStructurePlot(eventStructure));
+		String sourcePath = outputDirectoryPathFor(eventStructure);
+		TreePlotter.getInstance().plotTree(eventStructure.getEventStructureTree(), sourcePath,
+				fileNameForEventStructureDot(eventStructure), sourcePath,
+				fileNameForEventStructurePlot(eventStructure));
 
 		// make an .md for this event structure
-		String eventStructureContent = "# Event Structure for: " + eventStructure.structureSpecificName() + "\n";
+		String eventStructureContent = "# Event Structure for: " + eventStructure.toString() + "\n";
 
 		eventStructureContent += "### Base Name: " + eventStructure.getStructureBaseName() + "\n";
 
 		eventStructureContent += "### Plot\n";
-		eventStructureContent += eventStructurePicture(eventStructure) + "\n";
+		eventStructureContent += eventStructurePicture(eventStructure, sourcePath) + "\n";
 
-		eventStructureContent += generateJsonInformation("Example event",
-				eventStructure.getStructureSource().getEventJson());
+		eventStructureContent += "### Source: " + eventStructure.getSource().getType() + "\n";
+		switch (eventStructure.getSource().getType()) {
+		case EVENT: {
+			eventStructureContent += generateJsonInformation("Source event",
+					eventStructure.getSource().getSourceEvent().get().getEventJson());
+			break;
+		}
+		case AVRO_SCHEMA: {
+			eventStructureContent += "* "
+					+ linkToAvroSchema(eventStructure.getSource().getSourceSchemaHash().get(), sourcePath) + "\n";
+			break;
+		}
+		case STRUCTURE_MERGE: {
+			Collection<EventStructure> sourceStructures = eventStructure.getSource().getSourceStructures().get();
+			for (EventStructure sourceStructure : sourceStructures) {
+				eventStructureContent += "* " + linkToEventStructureReport(sourceStructure, sourcePath) + "\n";
+			}
 
-		FileWriterUtil.writeFile(outputDirectoryPathFor(eventStructure), fileNameForEventStructure(eventStructure),
-				eventStructureContent);
+			break;
+		}
+		}
+
+		FileWriterUtil.writeFile(sourcePath, fileNameForEventStructure(eventStructure), eventStructureContent);
 	}
 
-	private String eventStructurePicture(EventStructure eventStructure) {
-		return "!"
-				+ generateLink(eventStructure.structureSpecificName(), fileNameForEventStructurePlot(eventStructure));
+	private String eventStructurePicture(EventStructure eventStructure, String sourcePath) {
+		return "!" + generateLink(eventStructure.toString(), sourcePath,
+				outputDirectoryPathFor(eventStructure) + fileNameForEventStructurePlot(eventStructure));
 	}
 
 	public String fileNameForDrillView(Topic topic) {
@@ -302,47 +338,53 @@ public class Persister {
 	}
 
 	public String fileNameForEventStructure(EventStructure eventStructure) {
-		return eventStructure.structureSpecificName() + ".md";
+		return eventStructure.toString() + ".md";
 	}
 
 	public String fileNameForEventStructureDot(EventStructure eventStructure) {
-		return eventStructure.structureSpecificName() + ".dot";
+		return eventStructure.toString() + ".dot";
 	}
 
 	public String fileNameForEventStructurePlot(EventStructure eventStructure) {
-		return eventStructure.structureSpecificName() + ".png";
+		return eventStructure.toString() + ".png";
 	}
 
-	private String linkToTopicReport(Topic topic) {
-		return generateLink(topic.getName(), "../" + config.OUTPUT_TOPIC_DIRECTORY + fileNameForTopicReport(topic));
+	private String linkToTopicReport(Topic topic, String sourcePath) {
+		return generateLink(topic.getName(), sourcePath, outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY) + fileNameForTopicReport(topic));
 	}
 
-	private String linkToEventTypeReport(String eventType) {
-		return generateLink(eventType,
-				"../" + config.OUTPUT_EVENTTYPE_DIRECTORY + fileNameForEventTypeReport(eventType));
+	private String linkToEventTypeReport(String eventType, String sourcePath) {
+		return generateLink(eventType, sourcePath,
+				outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY) + fileNameForEventTypeReport(eventType));
 	}
 
-	private String linkToEventSamples(Topic topic) {
-		return generateLink("Event sample", "../" + config.OUTPUT_SAMPLES_DIRECTORY + fileNameForEventSamples(topic));
+	private String linkToEventSamples(Topic topic, String sourcePath) {
+		return generateLink("Event sample", sourcePath,
+				outputDirectoryPathFor(config.OUTPUT_SAMPLES_DIRECTORY) + fileNameForEventSamples(topic));
 	}
 
-	private String linkToDrillView(Topic topic) {
-		return generateLink("Drill view", "../" + config.OUTPUT_DRILL_DIRECTORY + fileNameForDrillView(topic));
+	private String linkToDrillView(Topic topic, String sourcePath) {
+		return generateLink("Drill view", sourcePath, outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY) + fileNameForDrillView(topic));
 	}
 
-	private String linkToAvroSchema(String schemaHash) {
-		return generateLink(schemaHash,
-				"../" + config.OUTPUT_AVROSCHEMAS_DIRECTORY + fileNameForAvroSchema(schemaHash));
+	private String linkToAvroSchema(String schemaHash, String sourcePath) {
+		return generateLink(schemaHash, sourcePath,
+				outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY) + fileNameForAvroSchema(schemaHash));
 	}
 
-	private String linkToEventStructureReport(EventStructure eventStructure) {
-		return generateLink(eventStructure.structureSpecificName(),
-				"../" + config.OUTPUT_EVENTSTRUCTURES_DIRECTORY + File.separator + eventStructure.getStructureBaseName()
-						+ File.separator + fileNameForEventStructure(eventStructure));
+	private String linkToEventStructureReport(EventStructure eventStructure, String sourcePath) {
+		return generateLink(eventStructure.toString(), sourcePath,
+				outputDirectoryPathFor(eventStructure) + fileNameForEventStructure(eventStructure));
 	}
 
-	private String generateLink(String text, String reference) {
-		return "[" + text + "](" + reference + ")";
+	private String generateLink(String text, String sourcePath, String targetPath) {
+		return "[" + text + "](" + relativePathBetween(sourcePath, targetPath) + ")";
+	}
+
+	private String relativePathBetween(String sourcePath, String targetPath) {
+		// inspired by
+		// https://stackoverflow.com/questions/204784/how-to-construct-a-relative-path-in-java-from-two-absolute-paths-or-urls
+		return Paths.get(sourcePath).relativize(Paths.get(targetPath)).toString();
 	}
 
 }

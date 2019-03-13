@@ -1,33 +1,52 @@
 package de.esailors.dataheart.drillviews.data;
 
+import java.util.Set;
+
+import org.apache.avro.Schema;
+
 public class EventStructure {
 
 	private String structureBaseName;
-	private Event structureSource;
 	private Tree eventStructureTree;
+
+	private EventStructureSource source;
 	
-	public EventStructure(String structureBaseName, Event structureSource) {
+	public EventStructure(String structureBaseName, Event sourceEvent) {
 		this.structureBaseName = structureBaseName;
-		this.structureSource = structureSource;
-		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromJsonNode(structureSource.getEventJson(), structureBaseName);
-		
-		// TODO handle structure of avro schema as well
+		this.source = new EventStructureSource(sourceEvent);
+		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromJsonNode(sourceEvent.getEventJson(), structureBaseName);
 	}
 	
-	public String structureSpecificName() {
-		return structureBaseName + "_" + structureSource.readSchemaVersion() + "_" + hashCode();
+	public EventStructure(String structureBaseName, Schema sourceSchema, String sourceSchemaHash) {
+		this.structureBaseName = structureBaseName;
+		this.source = new EventStructureSource(sourceSchema, sourceSchemaHash);
+		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromAvroSchema(sourceSchema);
+		
+		// TODO not used yet
 	}
+	
+	public EventStructure(String structureBaseName, Set<EventStructure> eventStructures) {
+		this.structureBaseName = structureBaseName;
+		this.source = new EventStructureSource(eventStructures);
+		this.eventStructureTree = EventStructureMerger.getInstance().mergeEventStructures(eventStructures);
+	}
+	
 	
 	public String getStructureBaseName() {
 		return structureBaseName;
 	}
 
-	public Event getStructureSource() {
-		return structureSource;
+	public EventStructureSource getSource() {
+		return source;
 	}
 	
 	public Tree getEventStructureTree() {
 		return eventStructureTree;
+	}
+	
+	@Override
+	public String toString() {
+		return structureBaseName + "_" + source.toString() + "_" + hashCode();
 	}
 
 	@Override
@@ -58,6 +77,5 @@ public class EventStructure {
 	public String toDot() {
 		return eventStructureTree.toDot();
 	}
-	
 	
 }
