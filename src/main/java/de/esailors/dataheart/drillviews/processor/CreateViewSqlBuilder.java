@@ -1,14 +1,13 @@
 package de.esailors.dataheart.drillviews.processor;
 
-import java.util.Iterator;
-import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.codehaus.jackson.JsonNode;
 
 import de.esailors.dataheart.drillviews.conf.Config;
-import de.esailors.dataheart.drillviews.data.Event;
+import de.esailors.dataheart.drillviews.data.EventStructure;
+import de.esailors.dataheart.drillviews.data.Node;
 
 public class CreateViewSqlBuilder {
 
@@ -22,11 +21,7 @@ public class CreateViewSqlBuilder {
 
 	private static final String DRILL_HBASE_STORAGE_PLUGIN_NAME = "hbase";
 
-	private static final String DRILL_VIEW_WORKSPACE = "drill.views";
-	private static final String DRILL_VIEW_SUBFOLDER = "json_events";
-
-
-	// 
+	// internal
 	private static final String ROW_TIMESTAMP_ALIAS = "row_timestamp";
 	private static final String SUBSELECT_ALIAS = "e";
 	private static final String JSON_FIELD_ALIAS = "json";
@@ -38,88 +33,39 @@ public class CreateViewSqlBuilder {
 		this.config = config;
 	}
 
-	public String generateDrillViewsFor(Event event) {
-		if (event == null) {
-			throw new IllegalArgumentException("null given");
-		}
+	public String generateDrillViewsFor(EventStructure eventStructure) {
 
-		log.info("Generating create view statement for Event from " + event.getTopic().getName());
-		// TODO generate drill views from avro schema if possible
-		// TODO ^ generate the view using EventStructure
+		log.info("Generating create view statement from EventStructure from " + eventStructure.toString());
 
-		JsonNode json = event.getEventJson();
-		String viewName = event.getTopic().getName();
+		String viewName = eventStructure.getStructureBaseName();
 
 		StringBuilder viewBuilder = new StringBuilder();
 
 //		generateCommentBlock(viewBuilder, viewName, json);
 
-		generateView(json, viewName, viewBuilder, null, null);
-		generateView(json, viewName, viewBuilder, "'-1' day", "last_day");
-		generateView(json, viewName, viewBuilder, "'-7' day", "last_week");
+		generateView(config.DRILL_VIEW_ALL_DATABASE, eventStructure, viewName, viewBuilder, null);
+		generateView(config.DRILL_VIEW_DAY_DATABASE, eventStructure, viewName, viewBuilder, "'-1' day");
+		generateView(config.DRILL_VIEW_WEEK_DATABASE, eventStructure, viewName, viewBuilder, "'-7' day");
 
 		return viewBuilder.toString();
-
 	}
-
-	private void generateView(JsonNode json, String viewName, StringBuilder viewBuilder, String timeLimit,
-			String subfolder) {
-		generateViewStart(viewBuilder, viewName, subfolder);
+	
+	private void generateView(String drillDatabase, EventStructure eventStructure, String viewName, StringBuilder viewBuilder, String timeLimit) {
+		generateViewStart(drillDatabase, viewBuilder, viewName);
 
 		String fieldPrefix = SUBSELECT_ALIAS + "." + JSON_FIELD_ALIAS + ".";
 
-		generateSelectColumns(json, viewBuilder, fieldPrefix, "");
+		Node rootNode = eventStructure.getEventStructureTree().getRootNode();
+		
+		generateSelectColumns(rootNode, viewBuilder, fieldPrefix, "");
 
-		String eventType = json.get(config.EVENT_FIELD_EVENT_TYPE).asText().toUpperCase();
-
-		generateViewEnd(viewBuilder, eventType, timeLimit);
+		generateViewEnd(viewBuilder, eventStructure.getEventType().toUpperCase(), timeLimit);
 	}
-
-//	private static void generateCommentBlock(StringBuilder viewBuilder, String viewName, JsonNode json) {
-//		viewBuilder.append("/*\n");
-//		viewBuilder.append("Auto-generated view for ");
-//		viewBuilder.append(viewName);
-//		viewBuilder.append("\nSample event used for view generation:\n");
-//		viewBuilder.append(JsonPrettyPrinter.prettyPrintJsonString(json));
-//		viewBuilder.append("\n*/\n\n");
-//	}
-
-	private void generateSelectColumns(JsonNode json, StringBuilder viewBuilder, String fieldPrefix, String keyPrefix) {
-
-		Iterator<Entry<String, JsonNode>> fields = json.getFields();
-		while (fields.hasNext()) {
-			Entry<String, JsonNode> entry = fields.next();
-
-			if (entry.getValue().isObject()) {
-				// recursive call
-				String newKeyPrefix = keyPrefix + entry.getKey() + "_";
-				String newFieldPrefix = fieldPrefix + "`" + entry.getKey() + "`.";
-				generateSelectColumns(entry.getValue(), viewBuilder, newFieldPrefix, newKeyPrefix);
-			} else {
-				viewBuilder.append(",\n");
-				viewBuilder.append(ident());
-				viewBuilder.append(fieldPrefix);
-				viewBuilder.append("`");
-				viewBuilder.append(entry.getKey());
-				viewBuilder.append("` as `");
-				viewBuilder.append(keyPrefix);
-				viewBuilder.append(entry.getKey());
-				viewBuilder.append("`");
-			}
-		}
-	}
-
-	private void generateViewStart(StringBuilder viewBuilder, String viewName, String subFolder) {
-		viewBuilder.append("CREATE OR REPLACE VIEW\n");
-		viewBuilder.append(ident());
-		viewBuilder.append(DRILL_VIEW_WORKSPACE);
+	
+	private void generateViewStart(String drillDatabase, StringBuilder viewBuilder, String viewName) {
+		viewBuilder.append("CREATE OR REPLACE VIEW ");
+		viewBuilder.append(drillDatabase);
 		viewBuilder.append(".`");
-		viewBuilder.append(DRILL_VIEW_SUBFOLDER);
-		viewBuilder.append("/");
-		if (subFolder != null) {
-			viewBuilder.append(subFolder);
-			viewBuilder.append("/");
-		}
 		viewBuilder.append(viewName);
 		viewBuilder.append("` AS\n");
 		viewBuilder.append("SELECT\n");
@@ -135,6 +81,100 @@ public class CreateViewSqlBuilder {
 		viewBuilder.append(".row_key, 'UTF8'), '-') + 1, 10) AS BIGINT)) as ");
 		viewBuilder.append(ROW_TIMESTAMP_ALIAS);
 	}
+	
+	private void generateSelectColumns(Node node, StringBuilder viewBuilder, String fieldPrefix, String keyPrefix) {
+		Set<Node> children = node.getChildren();
+		for(Node child : children) {
+			String nodeName = child.getName();
+			if(child.hasChildren()) {
+				// recursion
+				String newKeyPrefix = keyPrefix + nodeName + "_";
+				String newFieldPrefix = fieldPrefix + "`" + nodeName + "`.";
+				generateSelectColumns(child, viewBuilder, newFieldPrefix, newKeyPrefix);
+			} else {
+				viewBuilder.append(",\n");
+				viewBuilder.append(ident());
+				viewBuilder.append(fieldPrefix);
+				viewBuilder.append("`");
+				viewBuilder.append(nodeName);
+				viewBuilder.append("` as `");
+				viewBuilder.append(keyPrefix);
+				viewBuilder.append(nodeName);
+				viewBuilder.append("`");
+			}
+		}
+	}
+
+	
+//	public String generateDrillViewsFor(Event event) {
+//		if (event == null) {
+//			throw new IllegalArgumentException("null given");
+//		}
+//
+//		log.info("Generating create view statement for Event from " + event.getTopic().getName());
+//		// TODO generate drill views from avro schema if possible
+//		// TODO ^ generate the view using EventStructure
+//
+//		JsonNode json = event.getEventJson();
+//		String viewName = event.getTopic().getName();
+//
+//		StringBuilder viewBuilder = new StringBuilder();
+//
+////		generateCommentBlock(viewBuilder, viewName, json);
+//
+//		generateView(json, viewName, viewBuilder, null, null);
+//		generateView(json, viewName, viewBuilder, "'-1' day", "last_day");
+//		generateView(json, viewName, viewBuilder, "'-7' day", "last_week");
+//
+//		return viewBuilder.toString();
+//	}
+
+//	private void generateView(JsonNode json, String viewName, StringBuilder viewBuilder, String timeLimit,
+//			String subfolder) {
+//		generateViewStart(viewBuilder, viewName, subfolder);
+//
+//		String fieldPrefix = SUBSELECT_ALIAS + "." + JSON_FIELD_ALIAS + ".";
+//
+//		generateSelectColumns(json, viewBuilder, fieldPrefix, "");
+//
+//		String eventType = json.get(config.EVENT_FIELD_EVENT_TYPE).asText().toUpperCase();
+//
+//		generateViewEnd(viewBuilder, eventType, timeLimit);
+//	}
+
+//	private static void generateCommentBlock(StringBuilder viewBuilder, String viewName, JsonNode json) {
+//		viewBuilder.append("/*\n");
+//		viewBuilder.append("Auto-generated view for ");
+//		viewBuilder.append(viewName);
+//		viewBuilder.append("\nSample event used for view generation:\n");
+//		viewBuilder.append(JsonPrettyPrinter.prettyPrintJsonString(json));
+//		viewBuilder.append("\n*/\n\n");
+//	}
+//	
+//	private void generateSelectColumns(JsonNode json, StringBuilder viewBuilder, String fieldPrefix, String keyPrefix) {
+//
+//		Iterator<Entry<String, JsonNode>> fields = json.getFields();
+//		while (fields.hasNext()) {
+//			Entry<String, JsonNode> entry = fields.next();
+//
+//			if (entry.getValue().isObject()) {
+//				// recursive call
+//				String newKeyPrefix = keyPrefix + entry.getKey() + "_";
+//				String newFieldPrefix = fieldPrefix + "`" + entry.getKey() + "`.";
+//				generateSelectColumns(entry.getValue(), viewBuilder, newFieldPrefix, newKeyPrefix);
+//			} else {
+//				viewBuilder.append(",\n");
+//				viewBuilder.append(ident());
+//				viewBuilder.append(fieldPrefix);
+//				viewBuilder.append("`");
+//				viewBuilder.append(entry.getKey());
+//				viewBuilder.append("` as `");
+//				viewBuilder.append(keyPrefix);
+//				viewBuilder.append(entry.getKey());
+//				viewBuilder.append("`");
+//			}
+//		}
+//	}
 
 	private void generateViewEnd(StringBuilder viewBuilder, String eventType, String timeLimit) {
 		viewBuilder.append("\nFROM (\n");

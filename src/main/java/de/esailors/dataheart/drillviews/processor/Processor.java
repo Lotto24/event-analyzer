@@ -18,6 +18,7 @@ import org.apache.logging.log4j.Logger;
 import com.google.common.base.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
+import de.esailors.dataheart.drillviews.data.EventStructure;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.drill.DrillConnection;
 import de.esailors.dataheart.drillviews.drill.DrillViews;
@@ -177,7 +178,11 @@ public class Processor {
 
 		log.info("Creating Drill view create SQL for " + topic);
 		// TODO handle invalid events without eventType
-		String viewFromCurrentRun = createViewSqlBuilder.generateDrillViewsFor(topic.getExampleEvent());
+		Optional<EventStructure> mergedEventStructuredOption = topic.getMergedEventStructured();
+		if(!mergedEventStructuredOption.isPresent()) {
+			throw new IllegalStateException("Topic does not provide a merged event structure even though it had an example event");
+		}
+		String viewFromCurrentRun = createViewSqlBuilder.generateDrillViewsFor(mergedEventStructuredOption.get());
 
 		if (drillViews.doesViewExist(topic.getName())) {
 			log.debug("Drill view for " + topic + " already exists");

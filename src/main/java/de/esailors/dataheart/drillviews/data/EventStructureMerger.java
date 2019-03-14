@@ -62,7 +62,7 @@ public class EventStructureMerger {
 			return;
 		}
 		for (Node sourceChild : sourceNode.getChildren()) {
-			Optional<Node> mergedChildOption = mergedNode.getChildByName(sourceChild.getName());
+			Optional<Node> mergedChildOption = mergedNode.getChildByName(sourceChild.getId());
 			if (mergedChildOption.isPresent()) {
 				Node mergedChild = mergedChildOption.get();
 				mergeNodeInto(sourceChild, mergedChild, false);

@@ -46,12 +46,13 @@ public class TreeFactory {
 		Iterator<Entry<String, JsonNode>> fields = json.getFields();
 		while(fields.hasNext()) {
 			Entry<String, JsonNode> field = fields.next();
-			String nodeName = "";
+			String nodeId = "";
 			if(prependParentName) {
-				nodeName += currentParent.getName() + ".";
+				nodeId += currentParent.getId() + ".";
 			}
-			nodeName += field.getKey();
-			Node node = new Node(nodeName);
+			String nodeName = field.getKey();
+			nodeId += nodeName;
+			Node node = new Node(nodeId, nodeName);
 			currentParent.addChild(node);
 			
 			JsonNode fieldJson = field.getValue();
@@ -89,13 +90,14 @@ public class TreeFactory {
 	private void extendTreeWithAvroFields(Node currentParent, Collection<Field> fields, boolean prependParentName) {
 
 		for (Field field : fields) {
-			String nodeName = "";
+			String nodeId = "";
 			if(prependParentName) {
-				nodeName += currentParent.getName() + ".";
+				nodeId += currentParent.getId() + ".";
 			}
-			nodeName += field.name();
+			String nodeName = field.name();
+			nodeId += nodeName;
 			
-			Node node = new Node(nodeName);
+			Node node = new Node(nodeId, nodeName);
 			currentParent.addChild(node);
 
 			if (isNestedAvroSchema(field.schema())) {

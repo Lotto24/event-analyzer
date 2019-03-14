@@ -11,7 +11,7 @@ public class Tree {
 	private Node rootNode;
 	
 	public Tree(String rootNodeName) {
-		this.rootNode = new Node(rootNodeName);
+		this.rootNode = new Node(rootNodeName, rootNodeName);
 	}
 	
 	public Node getRootNode() {

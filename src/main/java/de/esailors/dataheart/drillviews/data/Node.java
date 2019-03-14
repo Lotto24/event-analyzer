@@ -9,10 +9,14 @@ import com.google.common.base.Optional;
 
 public class Node {
 
+	// i.e. parterinfo.trackinginfo.url
+	private String id;
+	// i.e. url
 	private String name;
 	private Map<String, Node> children;
 
-	public Node(String name) {
+	public Node(String id, String name) {
+		this.id = id;
 		this.name = name;
 		// TODO would be nice to be able to set properties for nodes to contain
 		// additional information
@@ -33,9 +37,13 @@ public class Node {
 		if (children == null) {
 			children = new HashMap<>();
 		}
-		children.put(child.getName(), child);
+		children.put(child.getId(), child);
 	}
-
+	
+	public String getId() {
+		return id;
+	}
+	
 	public String getName() {
 		return name;
 	}
@@ -52,16 +60,16 @@ public class Node {
 
 	public String toDot() {
 		StringBuilder r = new StringBuilder();
-		r.append("\"" + name + "\"");
+		r.append("\"" + id + "\"");
 		if (hasChildren()) {
 			r.append(" [shape=record]");
 		}
 		r.append(";\n");
 		if (hasChildren()) {
-			r.append("subgraph \"cluster_" + name + "\" {\n");
+			r.append("subgraph \"cluster_" + id + "\" {\n");
 			for (Node child : children.values()) {
 				r.append(child.toDot());
-				r.append("\"" + name + "\" -> \"" + child.getName() + "\";\n");
+				r.append("\"" + id + "\" -> \"" + child.getId() + "\";\n");
 			}
 			r.append("}\n");
 		}
@@ -86,7 +94,7 @@ public class Node {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((children == null) ? 0 : children.hashCode());
-		result = prime * result + ((name == null) ? 0 : name.hashCode());
+		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		return result;
 	}
 
@@ -104,10 +112,10 @@ public class Node {
 				return false;
 		} else if (!children.equals(other.children))
 			return false;
-		if (name == null) {
-			if (other.name != null)
+		if (id == null) {
+			if (other.id != null)
 				return false;
-		} else if (!name.equals(other.name))
+		} else if (!id.equals(other.id))
 			return false;
 		return true;
 	}
