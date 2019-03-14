@@ -32,7 +32,7 @@ public class KafkaEventFetcher {
 
 	private Consumer<byte[], byte[]> consumer;
 	private Set<Topic> topics = new HashSet<>();
-	
+
 	public KafkaEventFetcher(Config config) {
 		this.config = config;
 
@@ -41,7 +41,7 @@ public class KafkaEventFetcher {
 		initMessageProcessor();
 		initShutdownHook();
 	}
-	
+
 	public Set<Topic> fetchEvents() {
 		log.info("Consuming events from Kafka");
 		long consumeStart = System.currentTimeMillis();
@@ -50,16 +50,15 @@ public class KafkaEventFetcher {
 		}
 		long consumeEnd = System.currentTimeMillis();
 		log.info("Consuming finished after " + (consumeEnd - consumeStart) + " ms");
-		
+
 		return topics;
 	}
-	
+
 	private void fetchEventsForTopic(Topic topic) {
 		prepareConsumerFor(topic);
 		ConsumerRecords<byte[], byte[]> consumedRecords = consumer.poll(config.KAFKA_CONSUMER_POLL_TIMEOUT);
 		eventProcessor.processRecords(topic, consumedRecords);
 	}
-	
 
 	private void prepareConsumerFor(Topic topic) {
 		log.debug("Preparing for: " + topic);
@@ -109,7 +108,7 @@ public class KafkaEventFetcher {
 		}
 		log.info("Topics to process: " + topicNames.size());
 	}
-	
+
 	private void initMessageProcessor() {
 		this.eventProcessor = new MessageProcessor(config);
 	}
@@ -118,8 +117,16 @@ public class KafkaEventFetcher {
 		topicsBlacklist = new HashSet<String>();
 		topicsBlacklist.add("__consumer_offsets");
 		topicsBlacklist.add("avro_schema");
-//		topicsBlacklist.add("test_events");
-//		topicsBlacklist.add("test");
+
+		// TODO this is only for testing, remove them again
+		topicsBlacklist.add("account_balance_booking_modified");
+		topicsBlacklist.add("customer_login");
+		topicsBlacklist.add("customer_registration");
+		topicsBlacklist.add("dwh_customer_personaldata");
+		topicsBlacklist.add("personaldata_change");
+		topicsBlacklist.add("test_events");
+		topicsBlacklist.add("test");
+
 		log.debug("Blacklisted topics: " + topicsBlacklist.size());
 	}
 

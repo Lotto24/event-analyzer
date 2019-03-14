@@ -176,6 +176,7 @@ public class Processor {
 		}
 
 		log.info("Creating Drill view create SQL for " + topic);
+		// TODO handle invalid events without eventType
 		String viewFromCurrentRun = createViewSqlBuilder.generateDrillViewsFor(topic.getExampleEvent());
 
 		if (drillViews.doesViewExist(topic.getName())) {

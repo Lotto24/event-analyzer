@@ -35,6 +35,16 @@ public class SystemUtil {
 			return Optional.absent();
 		}
 	}
+	
+	public static Optional<String> getWorkingDirectory() {
+		String workingDirectory = System.getProperty("user.dir");
+		log.debug("Determined current user: " + workingDirectory);
+		if (workingDirectory != null && !workingDirectory.isEmpty()) {
+			return Optional.of(workingDirectory);
+		} else {
+			return Optional.absent();
+		}
+	}
 
 	public static void executeCommand(String command) {
 		// inspired by https://alvinalexander.com/java/edu/pj/pj010016

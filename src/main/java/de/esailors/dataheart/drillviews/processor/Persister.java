@@ -2,6 +2,7 @@ package de.esailors.dataheart.drillviews.processor;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
@@ -24,6 +25,7 @@ import de.esailors.dataheart.drillviews.data.Event;
 import de.esailors.dataheart.drillviews.data.EventStructure;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.data.TreePlotter;
+import de.esailors.dataheart.drillviews.git.SystemUtil;
 
 public class Persister {
 
@@ -47,12 +49,44 @@ public class Persister {
 	}
 
 	private void initOutputDirectories() {
+		wipeDirectory(config.OUTPUT_DIRECTORY);
+
 		ensureDirectoryExists(config.OUTPUT_DIRECTORY);
+		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY));
 		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY));
 		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_SAMPLES_DIRECTORY));
 		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY));
 		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY));
 		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_EVENTSTRUCTURES_DIRECTORY));
+	}
+
+	private void wipeDirectory(String directoryPath) {
+		File directory = new File(directoryPath);
+		log.info("Wiping directory: " + directory.getAbsolutePath());
+		if(!directory.exists()) {
+			return;
+		}
+		if(!directory.isDirectory()) {
+			throw new IllegalArgumentException("Got asked to wipe a path that exists but is not a directory: " + directoryPath);
+		}
+
+		// only wipe directories that are somewhere within working directory to avoi
+		// absolute mayhem
+		Optional<String> workingDirectoryOption = SystemUtil.getWorkingDirectory();
+		if (!workingDirectoryOption.isPresent()) {
+			throw new IllegalStateException("Unable to determine working directory, refusing to wipe directory");
+		}
+		String workingDirectoryPath = workingDirectoryOption.get();
+		if (!isParentOf(workingDirectoryPath, directory.getAbsolutePath())) {
+			throw new IllegalArgumentException("Was asked to wipe a directory (" + directory.getAbsolutePath()
+					+ ") that is not part of current working directory: " + workingDirectoryPath);
+		}
+
+		try {
+			FileUtils.forceDelete(directory);
+		} catch (IOException e) {
+			throw new IllegalStateException("Unable to wipe directory: " + directory.getAbsolutePath(), e);
+		}
 	}
 
 	private void ensureDirectoryExists(String directoryPath) {
@@ -350,7 +384,8 @@ public class Persister {
 	}
 
 	private String linkToTopicReport(Topic topic, String sourcePath) {
-		return generateLink(topic.getName(), sourcePath, outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY) + fileNameForTopicReport(topic));
+		return generateLink(topic.getName(), sourcePath,
+				outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY) + fileNameForTopicReport(topic));
 	}
 
 	private String linkToEventTypeReport(String eventType, String sourcePath) {
@@ -364,7 +399,8 @@ public class Persister {
 	}
 
 	private String linkToDrillView(Topic topic, String sourcePath) {
-		return generateLink("Drill view", sourcePath, outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY) + fileNameForDrillView(topic));
+		return generateLink("Drill view", sourcePath,
+				outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY) + fileNameForDrillView(topic));
 	}
 
 	private String linkToAvroSchema(String schemaHash, String sourcePath) {
@@ -385,6 +421,16 @@ public class Persister {
 		// inspired by
 		// https://stackoverflow.com/questions/204784/how-to-construct-a-relative-path-in-java-from-two-absolute-paths-or-urls
 		return Paths.get(sourcePath).relativize(Paths.get(targetPath)).toString();
+	}
+
+	private boolean isParentOf(String parentPath, String childPath) {
+		// inspired by
+		// https://stackoverflow.com/questions/4746671/how-to-check-if-a-given-path-is-possible-child-of-another-path
+		Path parent = Paths.get(parentPath).toAbsolutePath();
+		Path child = Paths.get(childPath).toAbsolutePath();
+		boolean r = child.startsWith(parent);
+		log.info("Checking if " + parent.toString() + " is parent of " + child.toString() + ": " + r);
+		return r;
 	}
 
 }
