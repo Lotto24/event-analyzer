@@ -123,7 +123,7 @@ public class TreeFactory {
 			return r;
 		}
 		case MAP: {
-			// TODO maybe implement map?
+			// TODO implement map
 //			log.warn("Encountered avro type MAP");
 		}
 		default:

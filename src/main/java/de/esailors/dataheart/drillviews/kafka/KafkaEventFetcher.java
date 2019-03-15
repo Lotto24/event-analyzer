@@ -84,7 +84,6 @@ public class KafkaEventFetcher {
 
 		topic.setPartitionCount(partitions.size());
 		log.debug("Preparation for " + topic + " done, partitions: " + partitions.size());
-
 	}
 
 	private void initTopicList() {

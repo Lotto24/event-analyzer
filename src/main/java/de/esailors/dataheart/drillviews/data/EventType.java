@@ -40,6 +40,9 @@ public class EventType {
 		this.name = eventTypeName;
 		addSourceTopic(sourceTopic);
 		addEvents(events);
+		
+		// TODO somehow link to official eSailors/kafka-events repo
+		// https://srv-git-01-hh1.alinghi.tipp24.net/eSailors/kafka-events
 	}
 
 	public void markInconsistencies() {

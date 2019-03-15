@@ -136,16 +136,16 @@ public class Persister {
 
 	}
 
-	public void persistChangeLog(ChangeLog changeLog) {
+	public void persistChanges(ChangeLog changeLog) {
 
-		if (!changeLog.hasEntries()) {
+		if (!changeLog.hasChanges()) {
 			return;
 		}
 		// TODO more of a placeholder for now
 		// changeSet should be part of README and update in descending chronological
 		// order with nice markdown formatting
 		String changeSetContent = "## " + formattedCurrentTime + " ChangeLog:\n\n";
-		for (String message : changeLog.getMessages()) {
+		for (String message : changeLog.getChanges()) {
 			changeSetContent += "* " + message + "\n";
 		}
 
@@ -153,6 +153,21 @@ public class Persister {
 
 		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY), changeSetFile,
 				changeSetContent);
+	}
+	
+	public void persistWarnings(ChangeLog changeLog) {
+		if (!changeLog.hasWarnings()) {
+			return;
+		}
+		String changeSetContent = "## " + formattedCurrentTime + " Warnings:\n\n";
+		for (String message : changeLog.getWarnings()) {
+			changeSetContent += "* " + message + "\n";
+		}
+
+		String changeSetFile = "warnings_" + formattedCurrentTime + ".md";
+
+		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY), changeSetFile,
+				changeSetContent);		
 	}
 
 	public void persistTopicReport(Topic topic) {
@@ -167,6 +182,7 @@ public class Persister {
 		}
 
 		reportContent += "#### Analyzed events: " + topic.getEvents().size() + "\n\n";
+		reportContent += "#### Invalid events: " + topic.getInvalidEvents().size() + "\n\n";
 
 		if (!topic.getReportMessages().isEmpty()) {
 			reportContent += "### Report messages:\n";

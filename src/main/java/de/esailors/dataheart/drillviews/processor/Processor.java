@@ -47,7 +47,7 @@ public class Processor {
 		this.createViewSqlBuilder = new CreateViewSqlBuilder(config);
 		this.drillViews = new DrillViews(config, drillConnection);
 		this.persister = new Persister(config);
-		this.changeLog = new ChangeLog(config);
+		this.changeLog = new ChangeLog();
 	}
 
 	public void process(Set<Topic> topics) {
@@ -66,9 +66,16 @@ public class Processor {
 			writeEventStructures(eventType);
 		}
 
+		// TODO fields report? maybe overkill but sounds cool
+
 		writeEventTypeReport();
 		writeAvroSchemas();
+		writeChangeLog();
 
+		addOutputToGitRepository();
+	}
+
+	private void addOutputToGitRepository() {
 		log.info("Adding process output to local git repository");
 
 		// push everything that is written to disk also to git
@@ -78,14 +85,9 @@ public class Processor {
 		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY));
 		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY));
 		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_EVENTSTRUCTURES_DIRECTORY));
-		// do a kind of "EventType Report" that maps from EventType to topic (at the
-		// moment we only have topic)
+		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY));
 
 		// TODO output any kind of statistics / report? to git / readme + changelog
-		if (writeChangeLog()) {
-			// write entries to changeSet for "major" events like a new topic / view
-			gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY));
-		}
 
 		gitUtil.commitAndPush(persister.getFormattedCurrentTime());
 	}
@@ -100,20 +102,25 @@ public class Processor {
 
 	private void writeEventTypeReport() {
 		// TODO check if it actually changes before persisting
-		
-		for(EventType eventType : eventTypes.values()) {
+
+		for (EventType eventType : eventTypes.values()) {
 			persister.persistEventTypeReport(eventType);
 		}
 	}
 
-	private boolean writeChangeLog() {
-		if (!changeLog.hasEntries()) {
-			log.info("No major changes detected, not writing a changelog for this run");
-			return false;
+	private void writeChangeLog() {
+		if (!changeLog.hasWarnings()) {
+			log.info("No major warnings detected");
+		} else {
+			persister.persistWarnings(changeLog);
 		}
-		// TODO add last n changelogs to README.md in reverse chronological order
-		persister.persistChangeLog(changeLog);
-		return true;
+
+		if (!changeLog.hasChanges()) {
+			log.info("No major changes detected");
+		} else {
+			// TODO add last n changelogs to README.md in reverse chronological order
+			persister.persistChanges(changeLog);
+		}
 	}
 
 	public void process(Topic topic) {
@@ -136,7 +143,7 @@ public class Processor {
 			if (schemaHash != null) {
 				if (avroSchemas.get(schemaHash) != null
 						&& !avroSchemas.get(schemaHash).equals(schemaEntry.getValue())) {
-					changeLog.addMessage("Found two different Avro Schemas for the same schema hash (" + schemaHash
+					changeLog.addChange("Found two different Avro Schemas for the same schema hash (" + schemaHash
 							+ ") in " + eventType);
 				}
 
@@ -187,7 +194,6 @@ public class Processor {
 		}
 
 		// generate drill views and execute them
-		// TODO handle invalid events without eventType
 		Optional<EventStructure> mergedEventStructuredOption = eventType.getMergedEventStructured();
 		if (!mergedEventStructuredOption.isPresent()) {
 			throw new IllegalStateException(
@@ -205,14 +211,14 @@ public class Processor {
 							"View from repository is the same as the view from current run, skipping further processing");
 					return;
 				} else {
-					changeLog.addMessage("Drill view changed for " + eventType);
+					changeLog.addChange("Drill view changed for " + eventType);
 					// TODO use git diff to see changes
 				}
 			}
 
 		} else {
 			log.info("No Drill view exists yet for " + eventType);
-			changeLog.addMessage("Genearting new Drill view for: " + eventType);
+			changeLog.addChange("Genearting new Drill view for: " + eventType);
 		}
 
 		// execute create statement on Drill
@@ -230,7 +236,7 @@ public class Processor {
 	private Optional<String> loadDrillViewFromRepository(EventType eventType) {
 
 		// TODO doesn't belong here
-		
+
 		log.info("Loading drill view from local repository for " + eventType);
 
 		File drillViewFile = new File(config.GIT_LOCAL_REPOSITORY_PATH + File.separator + config.OUTPUT_DRILL_DIRECTORY
@@ -255,12 +261,12 @@ public class Processor {
 		topic.markInconsistencies();
 
 		if (topic.getEvents().size() == 0) {
-			changeLog.addMessage("No events received for " + topic);
+			changeLog.addWarning("No events received for " + topic);
 		} else {
 			if (topic.isConsistent()) {
 				log.info("Consistency checks passed: " + topic);
 			} else {
-				changeLog.addMessage("Inconsistencies detected in " + topic);
+				changeLog.addChange("Inconsistencies detected in " + topic);
 			}
 		}
 	}

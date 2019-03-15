@@ -12,25 +12,36 @@ public class ChangeLog {
 
 	private static final Logger log = LogManager.getLogger(ChangeLog.class.getName());
 
-	private Config config;
+	 // separate warnings (no events found) from changes (new view)
+	private List<String> changes = new ArrayList<>();
+	private List<String> warnings = new ArrayList<>();
 
-	private List<String> messages = new ArrayList<>();
-
-	public ChangeLog(Config config) {
-		this.config = config;
+	public ChangeLog() {
 	}
 
-	public void addMessage(String message) {
-		log.info("New ChangeSet entry: " + message);
-		messages.add(message);
+	public void addChange(String change) {
+		log.info("New Change: " + change);
+		changes.add(change);
 	}
 
-	public List<String> getMessages() {
-		return messages;
+	public List<String> getChanges() {
+		return changes;
 	}
 
-	public boolean hasEntries() {
-		return !messages.isEmpty();
+	public boolean hasChanges() {
+		return !changes.isEmpty();
 	}
 
+	public void addWarning(String warning) {
+		log.warn("New Warning: " + warning);
+		warnings.add(warning);
+	}
+	
+	public List<String> getWarnings() {
+		return warnings;
+	}
+
+	public boolean hasWarnings() {
+		return !warnings.isEmpty();
+	}
 }

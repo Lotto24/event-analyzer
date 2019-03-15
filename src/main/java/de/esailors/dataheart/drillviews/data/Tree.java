@@ -46,7 +46,7 @@ public class Tree {
 	public String toDot() {
 		StringBuilder r = new StringBuilder();
 		
-		// TODO make use of rank feature by keeping track of current depth
+		// TODO move to separate class and add more information to graph
 		
 		r.append("digraph G { \n");
 		r.append("rankdir=LR; \n");

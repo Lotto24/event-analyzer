@@ -25,10 +25,6 @@ public class Topic {
 
 	public Topic(String topicName) {
 		this.topicName = topicName;
-
-		// TODO get more configuration information from topic (can we get retention?)
-		// TODO somehow link to official eSailors/kafka-events repo
-		// https://srv-git-01-hh1.alinghi.tipp24.net/eSailors/kafka-events
 	}
 
 	public void markInconsistencies() {
@@ -45,7 +41,6 @@ public class Topic {
 			}
 			addEventForEventType(readEventType, event);
 		}
-		// TODO report these
 		if (invalidEvents.size() > 1) {
 			addMessageToReport("Invalid events detected in: " + this);
 		}
@@ -68,7 +63,7 @@ public class Topic {
 		if (eventTypeNames == null) {
 			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
 		}
-		return eventTypeNames.size() == 1;
+		return eventTypeNames.size() == 1 && invalidEvents.size() == 0;
 	}
 	
 	public void addEvent(Event event) {
