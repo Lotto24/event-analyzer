@@ -13,13 +13,6 @@ public class CreateViewSqlBuilder {
 
 	private static final Logger log = LogManager.getLogger(CreateViewSqlBuilder.class.getName());
 
-	// TODO move these to Config
-
-	private static final String HBASE_TABLE = "kafka_events";
-	private static final String HBASE_COLUMN_FAMILY = "d";
-	private static final String HBASE_JSON_FIELD = "json";
-
-	private static final String DRILL_HBASE_STORAGE_PLUGIN_NAME = "hbase";
 
 	// internal
 	private static final String ROW_TIMESTAMP_ALIAS = "row_timestamp";
@@ -40,8 +33,6 @@ public class CreateViewSqlBuilder {
 		String viewName = eventStructure.getStructureBaseName();
 
 		StringBuilder viewBuilder = new StringBuilder();
-
-//		generateCommentBlock(viewBuilder, viewName, json);
 
 		generateView(config.DRILL_VIEW_ALL_DATABASE, eventStructure, viewName, viewBuilder, null);
 		generateView(config.DRILL_VIEW_DAY_DATABASE, eventStructure, viewName, viewBuilder, "'-1' day");
@@ -106,76 +97,6 @@ public class CreateViewSqlBuilder {
 	}
 
 	
-//	public String generateDrillViewsFor(Event event) {
-//		if (event == null) {
-//			throw new IllegalArgumentException("null given");
-//		}
-//
-//		log.info("Generating create view statement for Event from " + event.getTopic().getName());
-//		// TODO generate drill views from avro schema if possible
-//		// TODO ^ generate the view using EventStructure
-//
-//		JsonNode json = event.getEventJson();
-//		String viewName = event.getTopic().getName();
-//
-//		StringBuilder viewBuilder = new StringBuilder();
-//
-////		generateCommentBlock(viewBuilder, viewName, json);
-//
-//		generateView(json, viewName, viewBuilder, null, null);
-//		generateView(json, viewName, viewBuilder, "'-1' day", "last_day");
-//		generateView(json, viewName, viewBuilder, "'-7' day", "last_week");
-//
-//		return viewBuilder.toString();
-//	}
-
-//	private void generateView(JsonNode json, String viewName, StringBuilder viewBuilder, String timeLimit,
-//			String subfolder) {
-//		generateViewStart(viewBuilder, viewName, subfolder);
-//
-//		String fieldPrefix = SUBSELECT_ALIAS + "." + JSON_FIELD_ALIAS + ".";
-//
-//		generateSelectColumns(json, viewBuilder, fieldPrefix, "");
-//
-//		String eventType = json.get(config.EVENT_FIELD_EVENT_TYPE).asText().toUpperCase();
-//
-//		generateViewEnd(viewBuilder, eventType, timeLimit);
-//	}
-
-//	private static void generateCommentBlock(StringBuilder viewBuilder, String viewName, JsonNode json) {
-//		viewBuilder.append("/*\n");
-//		viewBuilder.append("Auto-generated view for ");
-//		viewBuilder.append(viewName);
-//		viewBuilder.append("\nSample event used for view generation:\n");
-//		viewBuilder.append(JsonPrettyPrinter.prettyPrintJsonString(json));
-//		viewBuilder.append("\n*/\n\n");
-//	}
-//	
-//	private void generateSelectColumns(JsonNode json, StringBuilder viewBuilder, String fieldPrefix, String keyPrefix) {
-//
-//		Iterator<Entry<String, JsonNode>> fields = json.getFields();
-//		while (fields.hasNext()) {
-//			Entry<String, JsonNode> entry = fields.next();
-//
-//			if (entry.getValue().isObject()) {
-//				// recursive call
-//				String newKeyPrefix = keyPrefix + entry.getKey() + "_";
-//				String newFieldPrefix = fieldPrefix + "`" + entry.getKey() + "`.";
-//				generateSelectColumns(entry.getValue(), viewBuilder, newFieldPrefix, newKeyPrefix);
-//			} else {
-//				viewBuilder.append(",\n");
-//				viewBuilder.append(ident());
-//				viewBuilder.append(fieldPrefix);
-//				viewBuilder.append("`");
-//				viewBuilder.append(entry.getKey());
-//				viewBuilder.append("` as `");
-//				viewBuilder.append(keyPrefix);
-//				viewBuilder.append(entry.getKey());
-//				viewBuilder.append("`");
-//			}
-//		}
-//	}
-
 	private void generateViewEnd(StringBuilder viewBuilder, String eventType, String timeLimit) {
 		viewBuilder.append("\nFROM (\n");
 		viewBuilder.append(ident());
@@ -186,11 +107,11 @@ public class CreateViewSqlBuilder {
 		viewBuilder.append(ident());
 		viewBuilder.append(ident());
 		viewBuilder.append("CONVERT_FROM(");
-		viewBuilder.append(HBASE_TABLE);
+		viewBuilder.append(config.DRILL_VIEW_HBASE_TABLE);
 		viewBuilder.append(".");
-		viewBuilder.append(HBASE_COLUMN_FAMILY);
+		viewBuilder.append(config.DRILL_VIEW_HBASE_COLUMN_FAMILY);
 		viewBuilder.append(".");
-		viewBuilder.append(HBASE_JSON_FIELD);
+		viewBuilder.append(config.DRILL_VIEW_HBASE_JSON_FIELD);
 		viewBuilder.append(", 'JSON') AS ");
 		viewBuilder.append(JSON_FIELD_ALIAS);
 		viewBuilder.append("\n");
@@ -198,9 +119,9 @@ public class CreateViewSqlBuilder {
 		viewBuilder.append("FROM\n");
 		viewBuilder.append(ident());
 		viewBuilder.append(ident());
-		viewBuilder.append(DRILL_HBASE_STORAGE_PLUGIN_NAME);
+		viewBuilder.append(config.DRILL_VIEW_HBASE_STORAGE_PLUGIN_NAME);
 		viewBuilder.append(".");
-		viewBuilder.append(HBASE_TABLE);
+		viewBuilder.append(config.DRILL_VIEW_HBASE_TABLE);
 		viewBuilder.append("\n");
 		viewBuilder.append(ident());
 		viewBuilder.append("WHERE\n");

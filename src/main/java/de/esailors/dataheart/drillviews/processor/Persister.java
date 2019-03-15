@@ -8,7 +8,6 @@ import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.avro.Schema;
@@ -23,6 +22,7 @@ import com.google.common.base.Optional;
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Event;
 import de.esailors.dataheart.drillviews.data.EventStructure;
+import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.data.TreePlotter;
 import de.esailors.dataheart.drillviews.git.SystemUtil;
@@ -63,11 +63,12 @@ public class Persister {
 	private void wipeDirectory(String directoryPath) {
 		File directory = new File(directoryPath);
 		log.info("Wiping directory: " + directory.getAbsolutePath());
-		if(!directory.exists()) {
+		if (!directory.exists()) {
 			return;
 		}
-		if(!directory.isDirectory()) {
-			throw new IllegalArgumentException("Got asked to wipe a path that exists but is not a directory: " + directoryPath);
+		if (!directory.isDirectory()) {
+			throw new IllegalArgumentException(
+					"Got asked to wipe a path that exists but is not a directory: " + directoryPath);
 		}
 
 		// only wipe directories that are somewhere within working directory to avoi
@@ -100,9 +101,9 @@ public class Persister {
 		}
 	}
 
-	public void persistDrillView(Topic topic, String createStatement) {
-		log.info("Writing drill view to disc for " + topic);
-		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY), fileNameForDrillView(topic),
+	public void persistDrillView(EventType eventType, String createStatement) {
+		log.info("Writing drill view to disc for " + eventType);
+		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY), fileNameForDrillView(eventType),
 				createStatement);
 	}
 
@@ -115,14 +116,14 @@ public class Persister {
 				+ File.separator;
 	}
 
-	public void persistEventSamples(Topic topic) {
-		if (topic.getEvents().size() == 0) {
-			log.debug("No events received to write samples for in: " + topic);
+	public void persistEventSamples(EventType eventType) {
+		if (eventType.getEvents().size() == 0) {
+			log.debug("No events received to write samples for in: " + eventType);
 			return;
 		}
 		String eventSample = "";
 		int cnt = 0;
-		for (Event event : topic.getEvents()) {
+		for (Event event : eventType.getEvents()) {
 //			eventSample += JsonPrettyPrinter.prettyPrintJsonString(event.getEventJson()) + "\n";
 			eventSample += event.getEventJson().toString() + "\n";
 			cnt++;
@@ -131,7 +132,7 @@ public class Persister {
 			}
 		}
 		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_SAMPLES_DIRECTORY),
-				fileNameForEventSamples(topic), eventSample);
+				fileNameForEventSamples(eventType), eventSample);
 
 	}
 
@@ -175,23 +176,11 @@ public class Persister {
 			reportContent += "\n\n";
 		}
 
-		reportContent += "### Merged Event Structure:\n";
-		Optional<EventStructure> mergedEventStructured = topic.getMergedEventStructured();
-		if (mergedEventStructured.isPresent()) {
-			reportContent += "* " + linkToEventStructureReport(mergedEventStructured.get(), sourcePath) + "\n";
-		} else {
-			reportContent += "* _not available_\n";
-		}
+		reportContent += "### Topic information:\n";
+		reportContent += generateSubInformation("Event Types",
+				eventTypeLinksByName(topic.getEventTypeNames().keySet(), sourcePath));
 
-		reportContent += generateTopicInformation(topic, sourcePath);
-
-		// not sure if I want to keep this now that we have event structures
-		if (topic.getExampleEvent() != null) {
-			// add links to sample events and drill view
-			reportContent += "#### Links:\n";
-			reportContent += "* " + linkToEventSamples(topic, sourcePath) + "\n";
-			reportContent += "* " + linkToDrillView(topic, sourcePath) + "\n";
-		}
+		reportContent += "* **" + topic.getPartitionCount() + "** Topic Partitions\n";
 
 		FileWriterUtil.writeFile(sourcePath, fileNameForTopicReport(topic), reportContent);
 	}
@@ -202,22 +191,6 @@ public class Persister {
 		jsonInformation += JsonPrettyPrinter.prettyPrintJsonString(json);
 		jsonInformation += "\n```\n";
 		return jsonInformation;
-	}
-
-	private String generateTopicInformation(Topic topic, String sourcePath) {
-		String topicInformation = "### Topic information:\n";
-		topicInformation += generateSubTopicInformation("Event Types",
-				eventTypeLinks(topic.getEventTypes(), sourcePath));
-		topicInformation += generateSubTopicInformation("Event Structures",
-				eventStructureLinks(topic.getEventStructures(), sourcePath));
-		topicInformation += generateSubTopicInformation("Avro Schemas",
-				avroSchemaLinks(topic.getAvroSchemaHashes(), sourcePath));
-		topicInformation += generateSubTopicInformation("Schema Versions", topic.getSchemaVersions());
-		topicInformation += generateSubTopicInformation("Messages are avro", topic.getMessagesAreAvro());
-
-		topicInformation += "* **" + topic.getPartitionCount() + "** Topic Partitions\n";
-
-		return topicInformation;
 	}
 
 	private Set<?> avroSchemaLinks(Set<String> avroSchemaHashes, String sourcePath) {
@@ -244,10 +217,18 @@ public class Persister {
 		}
 	}
 
-	private Set<String> eventTypeLinks(Set<String> eventTypes, String sourcePath) {
+	private Set<String> eventTypeLinks(Set<EventType> eventTypes, String sourcePath) {
 		Set<String> r = new HashSet<>();
-		for (String eventType : eventTypes) {
+		for (EventType eventType : eventTypes) {
 			r.add(linkToEventTypeReport(eventType, sourcePath));
+		}
+		return r;
+	}
+
+	private Set<String> eventTypeLinksByName(Set<String> eventTypeNames, String sourcePath) {
+		Set<String> r = new HashSet<>();
+		for (String eventTypeName : eventTypeNames) {
+			r.add(linkToEventTypeReportByName(eventTypeName, sourcePath));
 		}
 		return r;
 	}
@@ -260,7 +241,8 @@ public class Persister {
 		return r;
 	}
 
-	private String generateSubTopicInformation(String type, Set<?> items) {
+	private String generateSubInformation(String type, Set<?> items) {
+		// TODO this is purely markdown
 		String topicInformation = "* **" + items.size() + "** " + type + "\n";
 		if (items.size() > 0) {
 			for (Object item : items) {
@@ -276,16 +258,65 @@ public class Persister {
 		return formattedCurrentTime;
 	}
 
-	public void persistEventTypeReport(String eventType, List<Topic> topicList) {
-		String eventTypeReportContent = "# EventType Report for " + eventType + "\n";
-		eventTypeReportContent += "### Found EventType in the following topics:\n";
-		for (Topic topic : topicList) {
-			eventTypeReportContent += "* "
-					+ linkToTopicReport(topic, outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY)) + "\n";
+	public void persistEventTypeReport(EventType eventType) {
+		String sourcePath = outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY);
+
+		String reportContent = "# EventType Report for " + eventType.getName() + "\n";
+
+		// consistency
+		if (eventType.isConsistent()) {
+			reportContent += "### EventType was consistent\n\n";
+		} else {
+			reportContent += "### EventType was **NOT** consistent!\n\n";
 		}
 
-		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY),
-				fileNameForEventTypeReport(eventType), eventTypeReportContent);
+		reportContent += "#### Analyzed events: " + eventType.getEvents().size() + "\n\n";
+
+		// source topics
+		reportContent += "### Found in the following topics:\n";
+		for (Topic topic : eventType.getSourceTopics()) {
+			reportContent += "* " + linkToTopicReport(topic, outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY))
+					+ "\n";
+		}
+
+		// report messages
+		if (!eventType.getReportMessages().isEmpty()) {
+			reportContent += "### Report messages:\n";
+			for (String reportMessage : eventType.getReportMessages()) {
+				reportContent += "* " + reportMessage + "\n";
+			}
+			reportContent += "\n\n";
+		}
+
+		reportContent += "### Merged Event Structure:\n";
+		Optional<EventStructure> mergedEventStructured = eventType.getMergedEventStructured();
+		if (mergedEventStructured.isPresent()) {
+			reportContent += "* " + linkToEventStructureReport(mergedEventStructured.get(), sourcePath) + "\n";
+		} else {
+			reportContent += "* _not available_\n";
+		}
+
+		reportContent += generateEventTypeInformation(eventType, sourcePath);
+
+		// links
+		reportContent += "#### Links:\n";
+		reportContent += "* " + linkToEventSamples(eventType, sourcePath) + "\n";
+		reportContent += "* " + linkToDrillView(eventType, sourcePath) + "\n";
+
+		// write report to disk
+		FileWriterUtil.writeFile(sourcePath, fileNameForEventTypeReport(eventType), reportContent);
+	}
+
+	private String generateEventTypeInformation(EventType eventType, String sourcePath) {
+		String eventTypeInformation = "### EventType information:\n";
+		eventTypeInformation += generateSubInformation("Event Structures",
+				eventStructureLinks(eventType.getEventStructures(), sourcePath));
+		eventTypeInformation += generateSubInformation("Avro Schemas",
+				avroSchemaLinks(eventType.getAvroSchemaHashes(), sourcePath));
+		eventTypeInformation += generateSubInformation("Schema Versions", eventType.getSchemaVersions());
+		eventTypeInformation += generateSubInformation("Messages are avro", eventType.getMessagesAreAvro());
+
+		return eventTypeInformation;
 	}
 
 	public void persistAvroSchema(String schemaHash, Schema schema) {
@@ -295,11 +326,11 @@ public class Persister {
 				fileNameForAvroSchema(schemaHash), avroSchemaContent);
 	}
 
-	public void persistEventStructures(Topic topic) {
-		for (EventStructure eventStructure : topic.getEventStructures()) {
+	public void persistEventStructures(EventType eventType) {
+		for (EventStructure eventStructure : eventType.getEventStructures()) {
 			persistEventStructure(eventStructure);
 		}
-		Optional<EventStructure> mergedEventStructured = topic.getMergedEventStructured();
+		Optional<EventStructure> mergedEventStructured = eventType.getMergedEventStructured();
 		if (mergedEventStructured.isPresent()) {
 			persistEventStructure(mergedEventStructured.get());
 		}
@@ -351,20 +382,24 @@ public class Persister {
 				outputDirectoryPathFor(eventStructure) + fileNameForEventStructurePlot(eventStructure));
 	}
 
-	public String fileNameForDrillView(Topic topic) {
-		return topic.getName() + ".sql";
+	public String fileNameForDrillView(EventType eventType) {
+		return eventType.getName() + ".sql";
 	}
 
 	public String fileNameForTopicReport(Topic topic) {
 		return topic.getName() + ".md";
 	}
 
-	public String fileNameForEventSamples(Topic topic) {
-		return topic.getName() + ".json";
+	public String fileNameForEventSamples(EventType eventType) {
+		return eventType.getName() + ".json";
 	}
 
-	public String fileNameForEventTypeReport(String eventType) {
-		return eventType + ".md";
+	public String fileNameForEventTypeReport(EventType eventType) {
+		return fileNameForEventTypeReportByName(eventType.getName());
+	}
+
+	public String fileNameForEventTypeReportByName(String eventTypeName) {
+		return eventTypeName + ".md";
 	}
 
 	public String fileNameForAvroSchema(String schemaHash) {
@@ -388,19 +423,23 @@ public class Persister {
 				outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY) + fileNameForTopicReport(topic));
 	}
 
-	private String linkToEventTypeReport(String eventType, String sourcePath) {
-		return generateLink(eventType, sourcePath,
-				outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY) + fileNameForEventTypeReport(eventType));
+	private String linkToEventTypeReport(EventType eventType, String sourcePath) {
+		return linkToEventTypeReportByName(eventType.getName(), sourcePath);
 	}
 
-	private String linkToEventSamples(Topic topic, String sourcePath) {
+	private String linkToEventTypeReportByName(String eventTypeName, String sourcePath) {
+		return generateLink(eventTypeName, sourcePath, outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY)
+				+ fileNameForEventTypeReportByName(eventTypeName));
+	}
+
+	private String linkToEventSamples(EventType eventType, String sourcePath) {
 		return generateLink("Event sample", sourcePath,
-				outputDirectoryPathFor(config.OUTPUT_SAMPLES_DIRECTORY) + fileNameForEventSamples(topic));
+				outputDirectoryPathFor(config.OUTPUT_SAMPLES_DIRECTORY) + fileNameForEventSamples(eventType));
 	}
 
-	private String linkToDrillView(Topic topic, String sourcePath) {
+	private String linkToDrillView(EventType eventType, String sourcePath) {
 		return generateLink("Drill view", sourcePath,
-				outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY) + fileNameForDrillView(topic));
+				outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY) + fileNameForDrillView(eventType));
 	}
 
 	private String linkToAvroSchema(String schemaHash, String sourcePath) {

@@ -19,6 +19,11 @@ public class Config {
 
 	private static final String DRILL_JDBC_URL_KEY = "drill.jdbc.url";
 
+	private static final String DRILL_VIEW_HBASE_TABLE_KEY = "drill.view.hbase.table";
+	private static final String DRILL_VIEW_HBASE_COLUMN_FAMILY_KEY = "drill.view.hbase.column_family";
+	private static final String DRILL_VIEW_HBASE_JSON_FIELD_KEY = "drill.view.hbase.json_field";
+	private static final String DRILL_VIEW_HBASE_STORAGE_PLUGIN_NAME_KEY = "drill.view.hbase.storage_plugin";
+	
 	private static final String DRILL_VIEW_ALL_DATABASE_KEY = "drill.view.all.database";
 	private static final String DRILL_VIEW_DAY_DATABASE_KEY = "drill.view.day.database";
 	private static final String DRILL_VIEW_WEEK_DATABASE_KEY = "drill.view.week.database";
@@ -76,6 +81,11 @@ public class Config {
 
 	public String DRILL_JDBC_URL = "jdbc:drill:zk=hdp-master-01.t24.stagec.sg-cloud.co.uk:2181,hdp-master-02.t24.stagec.sg-cloud.co.uk:2181,hdp-master-03.t24.stagec.sg-cloud.co.uk:2181/drill/drillbits1";
 
+	public String DRILL_VIEW_HBASE_TABLE = "kafka_events";
+	public String DRILL_VIEW_HBASE_COLUMN_FAMILY = "d";
+	public String DRILL_VIEW_HBASE_JSON_FIELD = "json";
+	public String DRILL_VIEW_HBASE_STORAGE_PLUGIN_NAME = "hbase";
+	
 	public String DRILL_VIEW_ALL_DATABASE = "drill.json_events";
 	public String DRILL_VIEW_DAY_DATABASE = "drill.json_events_last_day";
 	public String DRILL_VIEW_WEEK_DATABASE = "drill.json_events_last_week";
@@ -117,8 +127,6 @@ public class Config {
 	public String KAFKA_CONSUMER_AUTO_OFFSET_RESET = "earliest";
 	public boolean KAFKA_CONSUMER_ENABLE_AUTO_COMMIT = false;
 	public int KAFKA_CONSUMER_MAX_POLL_RECORDS = 10;
-
-	public boolean KAFKA_RESET_CONSUMER_OFFSETS = false;
 
 	// git settings
 	
@@ -210,6 +218,12 @@ public class Config {
 
 	private void loadDrillSettings() {
 		DRILL_JDBC_URL = loadConfigString(DRILL_JDBC_URL_KEY);
+		
+		DRILL_VIEW_HBASE_TABLE = loadConfigString(DRILL_VIEW_HBASE_TABLE_KEY);
+		DRILL_VIEW_HBASE_COLUMN_FAMILY = loadConfigString(DRILL_VIEW_HBASE_COLUMN_FAMILY_KEY);
+		DRILL_VIEW_HBASE_JSON_FIELD = loadConfigString(DRILL_VIEW_HBASE_JSON_FIELD_KEY);
+		DRILL_VIEW_HBASE_STORAGE_PLUGIN_NAME = loadConfigString(DRILL_VIEW_HBASE_STORAGE_PLUGIN_NAME_KEY);
+		
 		DRILL_VIEW_ALL_DATABASE = loadConfigString(DRILL_VIEW_ALL_DATABASE_KEY);
 		DRILL_VIEW_DAY_DATABASE = loadConfigString(DRILL_VIEW_DAY_DATABASE_KEY);
 		DRILL_VIEW_WEEK_DATABASE = loadConfigString(DRILL_VIEW_WEEK_DATABASE_KEY);

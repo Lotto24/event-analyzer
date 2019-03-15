@@ -122,8 +122,11 @@ public class TreeFactory {
 			}
 			return r;
 		}
-		default:
+		case MAP: {
 			// TODO maybe implement map?
+//			log.warn("Encountered avro type MAP");
+		}
+		default:
 			return r;
 		}
 	}

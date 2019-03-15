@@ -131,12 +131,12 @@ public class KafkaEventFetcher {
 	}
 
 	private void initConsumer() {
-
-		log.info("Creating Kafka consumer for: " + config.KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
 		consumer = new KafkaConsumer<>(initializeConsumerProperties());
 	}
 
 	private Properties initializeConsumerProperties() {
+		log.info("Creating Kafka consumer for: " + config.KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
+		
 		Properties props = new Properties();
 		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
 		props.put(ConsumerConfig.GROUP_ID_CONFIG, config.KAFKA_CONSUMER_GROUP_ID);

@@ -19,35 +19,6 @@ public class Main {
 
 	public static void main(String[] args) {
 		
-//		Path sourcePath = Paths.get("structures/");
-//		Path targetPath = Paths.get("schemas/target.file");
-//		Path relative = sourcePath.relativize(targetPath);
-//		System.out.println(relative.toString());
-		
-//		TreeFactory treeFactory = new TreeFactory();
-//		TreePlotter treePlotter = new TreePlotter();
-//		
-//		String exampleEventType = "payment_payin_triggered";
-//		
-//		String exampleEventJsonString = FileUtils.readFileToString(new File("out/event_samples/" + exampleEventType + ".json"));
-//		Tree jsonTree = treeFactory.buildTreeFromJsonString(exampleEventJsonString, exampleEventType);
-//		treePlotter.plotTree(jsonTree);
-//
-//		
-//		String schemaHash = "adc8b1f993297331b327a698b4b48319";
-////		String schemaHash = "ded437dab71f948158ff066aa28010e2";
-//		String schemaPath = "out/avro_schemas/" + schemaHash + ".json";
-//		String avroSchemaJson = FileUtils.readFileToString(new File(schemaPath));
-//		
-//		Schema avroSchema = new Schema.Parser().parse(avroSchemaJson);
-////		System.out.println(avroSchema);
-//		
-//		
-//		Tree schemaTree = treeFactory.buildTreeFromAvroSchema(avroSchema);
-//		treePlotter.plotTree(schemaTree);
-//		
-//		if(1==1) throw new IllegalStateException("testing");
-		
 		log.info("Starting DrillViewGenerator");
 
 		// load configuration
