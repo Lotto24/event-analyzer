@@ -1,59 +1,42 @@
 package de.esailors.dataheart.drillviews.data;
 
+import java.util.HashSet;
 import java.util.Set;
 
 public class EventStructure {
 
 	private EventType eventType;
-	private String structureBaseName;
 	private Tree eventStructureTree;
 
 	private EventStructureSource source;
 
-	public EventStructure(String structureBaseName, Event sourceEvent, EventType eventType) {
-		this.eventType = eventType;
-		this.structureBaseName = structureBaseName;
+	public EventStructure(Event sourceEvent, EventType eventType) {
 		this.source = new EventStructureSource(sourceEvent);
-		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromJsonNode(sourceEvent.getEventJson(),
-				structureBaseName);
+		this.eventType = eventType;
+		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromJsonNode(sourceEvent.getEventJson(), eventType.getName());
 	}
 
-	public EventStructure(AvroSchema avroSchema, String structureBaseName) {
-		this.eventType = avroSchema.getEventType();
-		this.structureBaseName = structureBaseName;
+	public EventStructure(AvroSchema avroSchema) {
 		this.source = new EventStructureSource(avroSchema);
+		this.eventType = avroSchema.getEventType();
 		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromAvroSchema(avroSchema.getSchema());
 	}
 
-	public EventStructure(String structureBaseName, Set<EventStructure> eventStructures) {
-		this.structureBaseName = structureBaseName;
-		this.source = new EventStructureSource(eventStructures);
-		this.eventStructureTree = EventStructureMerger.getInstance().mergeEventStructures(eventStructures);
-
-		this.eventType = collectEventTypeFrom(eventStructures);
-	}
-
-	private EventType collectEventTypeFrom(Set<EventStructure> eventStructures) {
-		EventType r = null;
-		for (EventStructure eventStructure : eventStructures) {
-			if (r == null) {
-				r = eventStructure.getEventType();
-			} else {
-				if (!r.equals(eventStructure.getEventType())) {
-					throw new IllegalArgumentException("Received EventStructures with different eventTypes: " + r
-							+ " and " + eventStructure.getEventType());
-				}
+	public EventStructure(EventType eventType) {
+		// merged event structure
+		Set<EventStructure> eventStructures = new HashSet<>(eventType.getEventStructures());
+		if(eventType.getAvroSchemas() != null) {
+			for(AvroSchema avroSchema : eventType.getAvroSchemas().values()) {
+				eventStructures.add(avroSchema.getEventStructure());
 			}
 		}
-		return r;
+		this.source = new EventStructureSource(eventStructures);
+		this.eventStructureTree = EventStructureMerger.getInstance().mergeEventStructures(eventType, eventStructures);
+		this.eventType = eventType;
 	}
 
 	public EventType getEventType() {
 		return eventType;
-	}
-
-	public String getStructureBaseName() {
-		return structureBaseName;
 	}
 
 	public EventStructureSource getSource() {
@@ -66,7 +49,7 @@ public class EventStructure {
 
 	@Override
 	public String toString() {
-		return structureBaseName + "_" + source.toString() + "_" + hashCode();
+		return source.toString() + "_" + hashCode();
 	}
 
 	@Override

@@ -20,21 +20,20 @@ public class EventStructureMerger {
 	private EventStructureMerger() {
 	}
 
-	public Tree mergeEventStructures(Collection<EventStructure> sourceStructures) {
+	public Tree mergeEventStructures(EventType eventType, Collection<EventStructure> sourceStructures) {
 		Set<Tree> sourceTrees = new HashSet<>();
 		for(EventStructure sourceStructure : sourceStructures) {
 			sourceTrees.add(sourceStructure.getEventStructureTree());
 		}
-		return mergeTrees(sourceTrees);
+		return mergeTrees(eventType.getName(), sourceTrees);
 	}
 
-	public Tree mergeTrees(Set<Tree> sourceTrees) {
+	public Tree mergeTrees(String treeName, Set<Tree> sourceTrees) {
 		if (sourceTrees == null || sourceTrees.isEmpty()) {
 			throw new IllegalArgumentException("Need to be given at least 1 tree to do a merge");
 		}
 
-		// TODO better name
-		Tree mergedTree = new Tree("Merged tree");
+		Tree mergedTree = new Tree(treeName);
 
 		for (Tree sourceTree : sourceTrees) {
 			// merged Tree will be incrementally appended with nodes from soure tree

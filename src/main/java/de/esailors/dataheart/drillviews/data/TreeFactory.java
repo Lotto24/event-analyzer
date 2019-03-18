@@ -81,7 +81,7 @@ public class TreeFactory {
 		// be done when merging two trees
 
 		// either use the same name when comparing trees or exclude them from equals()
-		Tree r = new Tree(avroSchema.getFullName());
+		Tree r = new Tree(avroSchema.getName());
 
 		extendTreeWithAvroFields(r.getRootNode(), avroSchema.getFields(), false);
 
@@ -126,6 +126,8 @@ public class TreeFactory {
 		case MAP: {
 			// a map is technically nested, but we can not extract the nested fields from
 			// the schema, so we leave it as is for now
+			// TODO maybe mark this in the node, when we merge avro EventStructure with the
+			// regular one its more clear
 		}
 		default:
 			return r;

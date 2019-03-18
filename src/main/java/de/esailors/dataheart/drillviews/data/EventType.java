@@ -70,16 +70,15 @@ public class EventType {
 		while (iterator.hasNext()) {
 			Event event = iterator.next();
 
-			eventStructures.add(new EventStructure(name, event, this));
+			eventStructures.add(new EventStructure(event, this));
 
-			// TODO just changed how we behave when the message is not avro (no longer
-			// adding nulls)
 			boolean isAvroMessage = event.isAvroMessage();
 			messagesAreAvro.add(isAvroMessage);
 			if (isAvroMessage) {
-				AvroSchema avroSchema = new AvroSchema(event.getAvroSchemaHash(), event.getSchema(), this);
+				String schemaVersion = event.readSchemaVersion();
+				schemaVersions.add(schemaVersion);
+				AvroSchema avroSchema = new AvroSchema(event.getAvroSchemaHash(), event.getSchema(), schemaVersion, this);
 				avroSchemas.put(event.getAvroSchemaHash(), avroSchema);
-				schemaVersions.add(event.readSchemaVersion());
 			}
 
 			if (firstEvent == null) {
@@ -115,22 +114,22 @@ public class EventType {
 		return messagesAreAvro.size() == 1 && avroSchemas.keySet().size() == 1 && schemaVersions.size() == 1;
 	}
 
-	private void buildMergedEventStructure() {
+	public void buildMergedEventStructure() {
 		if (eventStructures == null) {
 			throw new IllegalStateException(
 					"Can't build combined event structure yet, call markInconsistencies() first");
 		}
-		// TODO this should take the Avro Schema(s) into account as well
 		if (eventStructures.isEmpty()) {
 			mergedEventStructure = Optional.absent();
 		} else {
-			mergedEventStructure = Optional.of(new EventStructure(name, eventStructures));
+			mergedEventStructure = Optional.of(new EventStructure(this));
 		}
 	}
 
 	public Optional<EventStructure> getMergedEventStructured() {
 		if (mergedEventStructure == null || !mergedEventStructure.isPresent()) {
-			buildMergedEventStructure();
+			throw new IllegalStateException(
+					"Can't provide combined event structures yet, call buildMergedEventStructure() first");
 		}
 		return mergedEventStructure;
 	}

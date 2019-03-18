@@ -117,15 +117,6 @@ public class KafkaEventFetcher {
 		topicsBlacklist.add("__consumer_offsets");
 		topicsBlacklist.add("avro_schema");
 
-		// TODO this is only for testing, remove them again
-		topicsBlacklist.add("account_balance_booking_modified");
-		topicsBlacklist.add("customer_login");
-		topicsBlacklist.add("customer_registration");
-		topicsBlacklist.add("dwh_customer_personaldata");
-		topicsBlacklist.add("personaldata_change");
-		topicsBlacklist.add("test_events");
-		topicsBlacklist.add("test");
-
 		log.debug("Blacklisted topics: " + topicsBlacklist.size());
 	}
 

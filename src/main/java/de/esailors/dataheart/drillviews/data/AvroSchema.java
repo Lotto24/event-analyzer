@@ -6,18 +6,30 @@ public class AvroSchema {
 
 	private String schemaHash;
 	private Schema schema;
+	private String schemaVersion; // read from schema, can be null
 	private EventType eventType;
 	private EventStructure eventStructure;
 
-	public AvroSchema(String schemaHash, Schema schema, EventType eventType) {
+	public AvroSchema(String schemaHash, Schema schema, String schemaVersion, EventType eventType) {
 		this.schemaHash = schemaHash;
 		this.eventType = eventType;
 		this.schema = schema;
-		this.eventStructure = new EventStructure(this, getName()); 
+		this.schemaVersion = schemaVersion;
+		this.eventStructure = new EventStructure(this); 
 	}
 
 	public String getName() {
-		return schema.getFullName() + "_" + schemaHash;
+//		return schema.getFullName() + "_" + schemaHash;
+		return schemaHash;
+	}
+	
+	public String getFullSchemaName() {
+		return schema.getFullName();
+	}
+	
+	
+	public String getSchemaVersion() {
+		return schemaVersion;
 	}
 
 	public String getSchemaHash() {

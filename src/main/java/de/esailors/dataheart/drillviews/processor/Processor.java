@@ -60,7 +60,7 @@ public class Processor {
 		}
 		for (EventType eventType : eventTypes.values()) {
 			log.info("Processing " + eventType);
-			eventType.markInconsistencies();
+			markEventTypeInconsistencies(eventType);
 			updateAvroSchemaMap(eventType);
 			createDrillViews(eventType);
 			writeEventSamples(eventType);
@@ -200,7 +200,7 @@ public class Processor {
 			throw new IllegalStateException(
 					"Topic does not provide a merged event structure even though it had an example event");
 		}
-		String viewFromCurrentRun = createViewSqlBuilder.generateDrillViewsFor(mergedEventStructuredOption.get());
+		String viewFromCurrentRun = createViewSqlBuilder.generateDrillViewsFor(eventType.getName(), mergedEventStructuredOption.get());
 
 		if (drillViews.doesViewExist(eventType.getName())) {
 			log.debug("Drill view for " + eventType + " already exists");
@@ -267,7 +267,22 @@ public class Processor {
 			if (topic.isConsistent()) {
 				log.info("Consistency checks passed: " + topic);
 			} else {
-				changeLog.addChange("Inconsistencies detected in " + topic);
+				changeLog.addWarning("Inconsistencies detected in " + topic);
+			}
+		}
+	}
+
+	private void markEventTypeInconsistencies(EventType eventType) {
+		eventType.markInconsistencies();
+		eventType.buildMergedEventStructure();
+
+		if (eventType.getEvents().size() == 0) {
+			changeLog.addWarning("No events received for " + eventType);
+		} else {
+			if (eventType.isConsistent()) {
+				log.info("Consistency checks passed: " + eventType);
+			} else {
+				changeLog.addWarning("Inconsistencies detected in " + eventType);
 			}
 		}
 	}

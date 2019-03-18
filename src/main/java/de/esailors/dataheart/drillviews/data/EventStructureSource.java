@@ -2,14 +2,12 @@ package de.esailors.dataheart.drillviews.data;
 
 import java.util.Collection;
 
-import org.apache.avro.Schema;
-
 import com.google.common.base.Optional;
 
 public class EventStructureSource {
 
 	public enum Type {
-		EVENT, AVRO_SCHEMA, STRUCTURE_MERGE
+		EVENT, AVRO, MERGE
 	}
 
 	private Type type;
@@ -24,19 +22,19 @@ public class EventStructureSource {
 	}
 
 	public EventStructureSource(AvroSchema sourceSchema) {
-		type = Type.AVRO_SCHEMA;
+		type = Type.AVRO;
 		this.sourceSchema = sourceSchema;
 	}
 
 	public EventStructureSource(Collection<EventStructure> sourceStructures) {
-		type = Type.STRUCTURE_MERGE;
+		type = Type.MERGE;
 		this.sourceStructures = sourceStructures;
 	}
 
 	public Type getType() {
 		return type;
 	}
-	
+
 	public Optional<Event> getSourceEvent() {
 		return Optional.fromNullable(sourceEvent);
 	}
@@ -44,7 +42,7 @@ public class EventStructureSource {
 	public Optional<AvroSchema> getSourceSchema() {
 		return Optional.fromNullable(sourceSchema);
 	}
-	
+
 	public Optional<Collection<EventStructure>> getSourceStructures() {
 		return Optional.fromNullable(sourceStructures);
 	}
@@ -54,15 +52,15 @@ public class EventStructureSource {
 		String r = getType().toString();
 		switch (type) {
 		case EVENT: {
-			r += "_" + sourceEvent.readSchemaVersion() + "_" + sourceEvent.hashCode();
+			r += "_" + sourceEvent.readEventType() + "_" + sourceEvent.readSchemaVersion();
 			break;
 		}
-		case AVRO_SCHEMA: {
-			r += "_" + sourceSchema.getSchema().getFullName();
+		case AVRO: {
+			r += "_" + sourceSchema.getSchema().getName() + "_" + sourceSchema.getSchemaVersion();
 			break;
 		}
-		case STRUCTURE_MERGE: {
-			for(EventStructure sourceStructure : sourceStructures) {
+		case MERGE: {
+			for (EventStructure sourceStructure : sourceStructures) {
 				r += "_" + sourceStructure.hashCode();
 			}
 			break;
