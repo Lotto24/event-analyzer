@@ -19,17 +19,17 @@ public class Event {
 	private Topic topic;
 	private JsonNode eventJson;
 	private boolean avroMessage;
-	private Schema avroSchema;
+	private Schema schema;
 	private String avroSchemaHash;
 
-	public Event(Config config, byte[] message, Topic topic, JsonNode eventJson, boolean avroMessage, String avroSchemaHash, Schema avroSchema) {
+	public Event(Config config, byte[] message, Topic topic, JsonNode eventJson, boolean avroMessage, String avroSchemaHash, Schema schema) {
 		this.config = config;
 		
 		this.message = message; 
 		this.topic = topic;
 		this.eventJson = eventJson;
 		this.avroMessage = avroMessage;
-		this.avroSchema = avroSchema;
+		this.schema = schema;
 		this.avroSchemaHash = avroSchemaHash;
 	}
 	
@@ -75,8 +75,8 @@ public class Event {
 		return avroMessage;
 	}
 
-	public Schema getAvroSchema() {
-		return avroSchema;
+	public Schema getSchema() {
+		return schema;
 	}
 	
 	public String getAvroSchemaHash() {

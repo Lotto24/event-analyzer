@@ -50,7 +50,7 @@ public class CreateViewSqlBuilder {
 		
 		generateSelectColumns(rootNode, viewBuilder, fieldPrefix, "");
 
-		generateViewEnd(viewBuilder, eventStructure.getEventType().toUpperCase(), timeLimit);
+		generateViewEnd(viewBuilder, eventStructure.getEventType().getName().toUpperCase(), timeLimit);
 	}
 	
 	private void generateViewStart(String drillDatabase, StringBuilder viewBuilder, String viewName) {

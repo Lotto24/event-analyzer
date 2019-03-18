@@ -2,31 +2,27 @@ package de.esailors.dataheart.drillviews.data;
 
 import java.util.Set;
 
-import org.apache.avro.Schema;
-
 public class EventStructure {
 
-	private String eventType;
+	private EventType eventType;
 	private String structureBaseName;
 	private Tree eventStructureTree;
 
 	private EventStructureSource source;
 
-	public EventStructure(String structureBaseName, Event sourceEvent) {
-		this.eventType = sourceEvent.readEventType(); // TODO handle eventType not existing / invalid events in general
+	public EventStructure(String structureBaseName, Event sourceEvent, EventType eventType) {
+		this.eventType = eventType;
 		this.structureBaseName = structureBaseName;
 		this.source = new EventStructureSource(sourceEvent);
 		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromJsonNode(sourceEvent.getEventJson(),
 				structureBaseName);
 	}
 
-	public EventStructure(String eventType, String structureBaseName, Schema sourceSchema, String sourceSchemaHash) {
-		this.eventType = eventType;
+	public EventStructure(AvroSchema avroSchema, String structureBaseName) {
+		this.eventType = avroSchema.getEventType();
 		this.structureBaseName = structureBaseName;
-		this.source = new EventStructureSource(sourceSchema, sourceSchemaHash);
-		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromAvroSchema(sourceSchema);
-
-		// TODO not used yet
+		this.source = new EventStructureSource(avroSchema);
+		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromAvroSchema(avroSchema.getSchema());
 	}
 
 	public EventStructure(String structureBaseName, Set<EventStructure> eventStructures) {
@@ -37,8 +33,8 @@ public class EventStructure {
 		this.eventType = collectEventTypeFrom(eventStructures);
 	}
 
-	private String collectEventTypeFrom(Set<EventStructure> eventStructures) {
-		String r = null;
+	private EventType collectEventTypeFrom(Set<EventStructure> eventStructures) {
+		EventType r = null;
 		for (EventStructure eventStructure : eventStructures) {
 			if (r == null) {
 				r = eventStructure.getEventType();
@@ -52,7 +48,7 @@ public class EventStructure {
 		return r;
 	}
 
-	public String getEventType() {
+	public EventType getEventType() {
 		return eventType;
 	}
 

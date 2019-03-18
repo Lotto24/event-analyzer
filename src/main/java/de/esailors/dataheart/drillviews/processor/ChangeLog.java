@@ -6,8 +6,6 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import de.esailors.dataheart.drillviews.conf.Config;
-
 public class ChangeLog {
 
 	private static final Logger log = LogManager.getLogger(ChangeLog.class.getName());

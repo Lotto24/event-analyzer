@@ -16,52 +16,52 @@ import org.codehaus.jackson.map.ObjectMapper;
 public class TreeFactory {
 
 	private static TreeFactory instance;
-	
+
 	public static TreeFactory getInstance() {
-		if(instance == null) {
+		if (instance == null) {
 			instance = new TreeFactory();
 		}
 		return instance;
 	}
-	
+
 	private ObjectMapper mapper;
-	
+
 	private TreeFactory() {
 		mapper = new ObjectMapper();
 	}
-	
+
 	public Tree buildTreeFromJsonNode(JsonNode json, String name) {
-		if(!isNestedJson(json)) {
+		if (!isNestedJson(json)) {
 			throw new IllegalArgumentException("Received json that is not nested: " + json.toString());
 		}
-		
+
 		Tree r = new Tree(name);
-		
+
 		extendTreeWithJsonFields(r.getRootNode(), json, false);
-		
+
 		return r;
 	}
-	
+
 	private void extendTreeWithJsonFields(Node currentParent, JsonNode json, boolean prependParentName) {
 		Iterator<Entry<String, JsonNode>> fields = json.getFields();
-		while(fields.hasNext()) {
+		while (fields.hasNext()) {
 			Entry<String, JsonNode> field = fields.next();
 			String nodeId = "";
-			if(prependParentName) {
+			if (prependParentName) {
 				nodeId += currentParent.getId() + ".";
 			}
 			String nodeName = field.getKey();
 			nodeId += nodeName;
 			Node node = new Node(nodeId, nodeName);
 			currentParent.addChild(node);
-			
+
 			JsonNode fieldJson = field.getValue();
-			if(isNestedJson(fieldJson)) {
+			if (isNestedJson(fieldJson)) {
 				extendTreeWithJsonFields(node, fieldJson, true);
 			}
 		}
 	}
-	
+
 	public Tree buildTreeFromJsonString(String jsonString, String name) {
 		try {
 			return buildTreeFromJsonNode(mapper.readTree(jsonString), name);
@@ -69,7 +69,7 @@ public class TreeFactory {
 			throw new IllegalArgumentException("Not a json string: " + jsonString, e);
 		}
 	}
-	
+
 	public Tree buildTreeFromAvroSchema(Schema avroSchema) {
 		// make sure top level is a record
 		if (!isNestedAvroSchema(avroSchema)) {
@@ -77,8 +77,9 @@ public class TreeFactory {
 					"Unable to build a Tree for non nested Schema: " + avroSchema.toString());
 		}
 
-		// TODO would be nice to note which nodes are optional (for json this can only be done when merging two trees
-		
+		// TODO would be nice to note which nodes are optional (for json this can only
+		// be done when merging two trees
+
 		// either use the same name when comparing trees or exclude them from equals()
 		Tree r = new Tree(avroSchema.getFullName());
 
@@ -91,12 +92,12 @@ public class TreeFactory {
 
 		for (Field field : fields) {
 			String nodeId = "";
-			if(prependParentName) {
+			if (prependParentName) {
 				nodeId += currentParent.getId() + ".";
 			}
 			String nodeName = field.name();
 			nodeId += nodeName;
-			
+
 			Node node = new Node(nodeId, nodeName);
 			currentParent.addChild(node);
 
@@ -123,8 +124,8 @@ public class TreeFactory {
 			return r;
 		}
 		case MAP: {
-			// TODO implement map
-//			log.warn("Encountered avro type MAP");
+			// a map is technically nested, but we can not extract the nested fields from
+			// the schema, so we leave it as is for now
 		}
 		default:
 			return r;
@@ -150,8 +151,9 @@ public class TreeFactory {
 		case ARRAY: // we might be able to handle these nicer later, for now we use them as is
 			return false;
 		case MAP:
-			// TODO handle avro type map
-			throw new IllegalStateException("Handling of Avro type Map not implemented yet");
+			// a map is technically nested, but we can not extract the nested fields from
+			// the schema, so we leave it as is for now
+			return false;
 		case UNION: {
 			// we use unions a lot for nullable, for now we say a union is nested if any of
 			// it's children are nested
@@ -184,8 +186,8 @@ public class TreeFactory {
 			return false;
 		}
 	}
-	
-	private boolean isNestedJson(JsonNode json)  {
+
+	private boolean isNestedJson(JsonNode json) {
 		return json.isObject();
 	}
 

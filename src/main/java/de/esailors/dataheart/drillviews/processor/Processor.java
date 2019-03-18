@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.avro.Schema;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 import com.google.common.base.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
+import de.esailors.dataheart.drillviews.data.AvroSchema;
 import de.esailors.dataheart.drillviews.data.Event;
 import de.esailors.dataheart.drillviews.data.EventStructure;
 import de.esailors.dataheart.drillviews.data.EventType;
@@ -38,7 +38,7 @@ public class Processor {
 	private ChangeLog changeLog;
 
 	private Map<String, EventType> eventTypes = new HashMap<>();
-	private Map<String, Schema> avroSchemas = new HashMap<>();
+	private Map<String, AvroSchema> avroSchemas = new HashMap<>();
 
 	public Processor(Config config, GitUtil gitUtil) {
 		this.config = config;
@@ -59,6 +59,7 @@ public class Processor {
 			process(topic);
 		}
 		for (EventType eventType : eventTypes.values()) {
+			log.info("Processing " + eventType);
 			eventType.markInconsistencies();
 			updateAvroSchemaMap(eventType);
 			createDrillViews(eventType);
@@ -95,7 +96,7 @@ public class Processor {
 	private void writeAvroSchemas() {
 		// TODO check if it actually changes before persisting
 		for (String schemaHash : avroSchemas.keySet()) {
-			persister.persistAvroSchema(schemaHash, avroSchemas.get(schemaHash));
+			persister.persistAvroSchema(avroSchemas.get(schemaHash));
 		}
 
 	}
@@ -138,7 +139,7 @@ public class Processor {
 
 	private void updateAvroSchemaMap(EventType eventType) {
 
-		for (Entry<String, Schema> schemaEntry : eventType.getAvroSchemas().entrySet()) {
+		for (Entry<String, AvroSchema> schemaEntry : eventType.getAvroSchemas().entrySet()) {
 			String schemaHash = schemaEntry.getKey();
 			if (schemaHash != null) {
 				if (avroSchemas.get(schemaHash) != null

@@ -20,6 +20,7 @@ import org.codehaus.jackson.map.ObjectMapper;
 import com.google.common.base.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
+import de.esailors.dataheart.drillviews.data.AvroSchema;
 import de.esailors.dataheart.drillviews.data.Event;
 import de.esailors.dataheart.drillviews.data.EventStructure;
 import de.esailors.dataheart.drillviews.data.EventType;
@@ -154,7 +155,7 @@ public class Persister {
 		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY), changeSetFile,
 				changeSetContent);
 	}
-	
+
 	public void persistWarnings(ChangeLog changeLog) {
 		if (!changeLog.hasWarnings()) {
 			return;
@@ -167,7 +168,7 @@ public class Persister {
 		String changeSetFile = "warnings_" + formattedCurrentTime + ".md";
 
 		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY), changeSetFile,
-				changeSetContent);		
+				changeSetContent);
 	}
 
 	public void persistTopicReport(Topic topic) {
@@ -209,11 +210,11 @@ public class Persister {
 		return jsonInformation;
 	}
 
-	private Set<?> avroSchemaLinks(Set<String> avroSchemaHashes, String sourcePath) {
+	private Set<?> avroSchemaLinks(Collection<AvroSchema> avroSchemas, String sourcePath) {
 		Set<String> r = new HashSet<>();
-		for (String schemaHash : avroSchemaHashes) {
-			if (schemaHash != null) {
-				r.add(linkToAvroSchema(schemaHash, sourcePath));
+		for (AvroSchema avroSchema : avroSchemas) {
+			if (avroSchema != null) {
+				r.add(linkToAvroSchema(avroSchema, sourcePath));
 			} else {
 				r.add(null);
 			}
@@ -328,18 +329,20 @@ public class Persister {
 		eventTypeInformation += generateSubInformation("Event Structures",
 				eventStructureLinks(eventType.getEventStructures(), sourcePath));
 		eventTypeInformation += generateSubInformation("Avro Schemas",
-				avroSchemaLinks(eventType.getAvroSchemaHashes(), sourcePath));
+				avroSchemaLinks(eventType.getAvroSchemas().values(), sourcePath));
 		eventTypeInformation += generateSubInformation("Schema Versions", eventType.getSchemaVersions());
 		eventTypeInformation += generateSubInformation("Messages are avro", eventType.getMessagesAreAvro());
 
 		return eventTypeInformation;
 	}
 
-	public void persistAvroSchema(String schemaHash, Schema schema) {
-		String avroSchemaContent = JsonPrettyPrinter.prettyPrintJsonString(parseToJson(schema));
+	public void persistAvroSchema(AvroSchema avroSchema) {
+		// TODO rewrite this, now that we have AvroSchema class, add .md with more
+		// information and links and make use of eventStructure
+		String avroSchemaContent = JsonPrettyPrinter.prettyPrintJsonString(parseToJson(avroSchema.getSchema()));
 
 		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY),
-				fileNameForAvroSchema(schemaHash), avroSchemaContent);
+				fileNameForAvroSchema(avroSchema), avroSchemaContent);
 	}
 
 	public void persistEventStructures(EventType eventType) {
@@ -377,7 +380,7 @@ public class Persister {
 		}
 		case AVRO_SCHEMA: {
 			eventStructureContent += "* "
-					+ linkToAvroSchema(eventStructure.getSource().getSourceSchemaHash().get(), sourcePath) + "\n";
+					+ linkToAvroSchema(eventStructure.getSource().getSourceSchema().get(), sourcePath) + "\n";
 			break;
 		}
 		case STRUCTURE_MERGE: {
@@ -418,8 +421,8 @@ public class Persister {
 		return eventTypeName + ".md";
 	}
 
-	public String fileNameForAvroSchema(String schemaHash) {
-		return schemaHash + ".json";
+	public String fileNameForAvroSchema(AvroSchema avroSchema) {
+		return avroSchema.getSchemaHash() + ".json";
 	}
 
 	public String fileNameForEventStructure(EventStructure eventStructure) {
@@ -458,9 +461,9 @@ public class Persister {
 				outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY) + fileNameForDrillView(eventType));
 	}
 
-	private String linkToAvroSchema(String schemaHash, String sourcePath) {
-		return generateLink(schemaHash, sourcePath,
-				outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY) + fileNameForAvroSchema(schemaHash));
+	private String linkToAvroSchema(AvroSchema avroSchema, String sourcePath) {
+		return generateLink(avroSchema.getName(), sourcePath,
+				outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY) + fileNameForAvroSchema(avroSchema));
 	}
 
 	private String linkToEventStructureReport(EventStructure eventStructure, String sourcePath) {

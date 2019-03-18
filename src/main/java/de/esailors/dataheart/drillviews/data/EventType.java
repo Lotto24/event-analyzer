@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.avro.Schema;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -31,7 +30,7 @@ public class EventType {
 	private Set<EventStructure> eventStructures;
 
 	private Set<String> schemaVersions;
-	private Map<String, Schema> avroSchemas;
+	private Map<String, AvroSchema> avroSchemas;
 	private Set<Boolean> messagesAreAvro;
 
 	private List<String> reportMessages = new ArrayList<>();
@@ -40,7 +39,7 @@ public class EventType {
 		this.name = eventTypeName;
 		addSourceTopic(sourceTopic);
 		addEvents(events);
-		
+
 		// TODO somehow link to official eSailors/kafka-events repo
 		// https://srv-git-01-hh1.alinghi.tipp24.net/eSailors/kafka-events
 	}
@@ -71,14 +70,16 @@ public class EventType {
 		while (iterator.hasNext()) {
 			Event event = iterator.next();
 
-			eventStructures.add(new EventStructure(name, event));
+			eventStructures.add(new EventStructure(name, event, this));
 
-			messagesAreAvro.add(event.isAvroMessage());
-			avroSchemas.put(event.getAvroSchemaHash(), event.getAvroSchema());
-			schemaVersions.add(event.readSchemaVersion());
-			if (avroSchemas.get(event.getAvroSchemaHash()) != null
-					&& !avroSchemas.get(event.getAvroSchemaHash()).equals(event.getAvroSchema())) {
-				addMessageToReport("Found two different Avro schemas with the same hash: " + event.getAvroSchemaHash());
+			// TODO just changed how we behave when the message is not avro (no longer
+			// adding nulls)
+			boolean isAvroMessage = event.isAvroMessage();
+			messagesAreAvro.add(isAvroMessage);
+			if (isAvroMessage) {
+				AvroSchema avroSchema = new AvroSchema(event.getAvroSchemaHash(), event.getSchema(), this);
+				avroSchemas.put(event.getAvroSchemaHash(), avroSchema);
+				schemaVersions.add(event.readSchemaVersion());
 			}
 
 			if (firstEvent == null) {
@@ -119,6 +120,7 @@ public class EventType {
 			throw new IllegalStateException(
 					"Can't build combined event structure yet, call markInconsistencies() first");
 		}
+		// TODO this should take the Avro Schema(s) into account as well
 		if (eventStructures.isEmpty()) {
 			mergedEventStructure = Optional.absent();
 		} else {
@@ -134,11 +136,11 @@ public class EventType {
 	}
 
 	public void addEvents(Set<Event> events) {
-		for(Event event : events) {
+		for (Event event : events) {
 			addEvent(event);
 		}
 	}
-	
+
 	public void addEvent(Event event) {
 		String eventType = event.readEventType();
 		if (eventType == null) {
@@ -178,7 +180,7 @@ public class EventType {
 		return eventStructures;
 	}
 
-	public Map<String, Schema> getAvroSchemas() {
+	public Map<String, AvroSchema> getAvroSchemas() {
 		return avroSchemas;
 	}
 
@@ -186,7 +188,7 @@ public class EventType {
 		return avroSchemas.keySet();
 	}
 
-	public Collection<Schema> getMessageSchemas() {
+	public Collection<AvroSchema> getMessageSchemas() {
 		return avroSchemas.values();
 	}
 
