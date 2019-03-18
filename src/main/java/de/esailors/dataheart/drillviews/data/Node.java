@@ -14,12 +14,21 @@ public class Node {
 	// i.e. url
 	private String name;
 	private Map<String, Node> children;
+	// TODO properties currently experimental, only for avro now (not taken over in
+	// merges)
+	private Map<String, Object> properties = new HashMap<>();
 
 	public Node(String id, String name) {
 		this.id = id;
 		this.name = name;
-		// TODO would be nice to be able to set properties for nodes to contain
-		// additional information
+	}
+
+	public void addProperty(String name, Object property) {
+		properties.put(name, property);
+	}
+	
+	public boolean hasProperties() {
+		return !properties.isEmpty();
 	}
 
 	public Optional<Node> getChildByName(String childName) {
@@ -39,11 +48,11 @@ public class Node {
 		}
 		children.put(child.getId(), child);
 	}
-	
+
 	public String getId() {
 		return id;
 	}
-	
+
 	public String getName() {
 		return name;
 	}
@@ -61,9 +70,27 @@ public class Node {
 	public String toDot() {
 		StringBuilder r = new StringBuilder();
 		r.append("\"" + id + "\"");
-		if (hasChildren()) {
-			r.append(" [shape=record]");
+		
+		Set<String> customization = new HashSet<>();
+
+		if(hasProperties() ) {
+			String label = id + "\\n";
+			for(String property : properties.keySet()) {
+				label += property + "="  + properties.get(property) + "\\l";
+			}
+			customization.add("label=\""+label+"\"");
 		}
+		
+		if (hasChildren()) {
+//			r.append(" [shape=record]");
+			customization.add("shape=record");
+		}
+		
+		
+		if(!customization.isEmpty()) {
+			r.append(" [" + String.join(",", customization) + "]");
+		}
+		
 		r.append(";\n");
 		if (hasChildren()) {
 			r.append("subgraph \"cluster_" + id + "\" {\n");

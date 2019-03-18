@@ -56,10 +56,35 @@ public class TreeFactory {
 			currentParent.addChild(node);
 
 			JsonNode fieldJson = field.getValue();
+			node.addProperty("JSON_TYPE", getJsonType(fieldJson));
 			if (isNestedJson(fieldJson)) {
 				extendTreeWithJsonFields(node, fieldJson, true);
 			}
 		}
+	}
+
+	private String getJsonType(JsonNode json) {
+		// there must be a better way of doing this in jackson API
+		// TODO either way doesn't belong here
+		if (json.isArray()) {
+			return "array";
+		} else if (json.isBinary()) {
+			return "binary";
+		} else if (json.isBoolean()) {
+			return "boolean";
+		} else if (json.isFloatingPointNumber()) {
+			return "float";
+		} else if (json.isIntegralNumber()) {
+			return "integer";
+		} else if (json.isNull()) {
+			return "null";
+		} else if (json.isObject()) {
+			return "object";
+		} else if (json.isTextual()) {
+			return "string";
+		}
+
+		return "UNKNOWN";
 	}
 
 	public Tree buildTreeFromJsonString(String jsonString, String name) {
@@ -99,6 +124,7 @@ public class TreeFactory {
 			nodeId += nodeName;
 
 			Node node = new Node(nodeId, nodeName);
+			node.addProperty("AVRO_TYPE", field.schema().getType());
 			currentParent.addChild(node);
 
 			if (isNestedAvroSchema(field.schema())) {

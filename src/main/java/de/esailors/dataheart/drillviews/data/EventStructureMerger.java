@@ -54,7 +54,7 @@ public class EventStructureMerger {
 		if (isRootNode) {
 			// for root nodes we ignore the name for now
 			if(mergedNode.equalChildren(sourceNode)) {
-				
+				return;
 			}
 		} else if(mergedNode.equals(sourceNode)) {
 			// already equal
