@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.base.Optional;
@@ -16,45 +17,56 @@ public class Node {
 	private String id;
 	// i.e. url
 	private String name;
-	private Map<String, Node> children;
+	// id -> child Node
+	private Map<String, Node> children = new HashMap<>();
 	private Map<String, Object> properties = new HashMap<>();
+	private boolean isOptional;
 
 	public Node(String id, String name) {
 		this.id = id;
 		this.name = name;
+		this.isOptional = false;
+	}
+
+	public Node(Node toCopy) {
+		// copy constructor, copies children as well
+		this.id = toCopy.id;
+		this.name = toCopy.name;
+		this.isOptional = toCopy.isOptional;
+		this.properties.putAll(toCopy.properties);
+		for (Entry<String, Node> toCopyChildEntry : toCopy.children.entrySet()) {
+			children.put(toCopyChildEntry.getKey(), new Node(toCopyChildEntry.getValue()));
+		}
 	}
 
 	public void addProperty(String name, Object property) {
 		properties.put(name, property);
 	}
-	
+
 	public void addProperties(Map<String, Object> propertiesToAdd) {
 		properties.putAll(propertiesToAdd);
 	}
-	
+
 	public boolean hasProperties() {
 		return !properties.isEmpty();
 	}
-	
+
 	public Map<String, Object> getProperties() {
 		return properties;
 	}
 
-	public Optional<Node> getChildByName(String childName) {
-		if (children == null || children.get(childName) == null) {
+	public Optional<Node> getChildById(String childId) {
+		if (children == null || children.get(childId) == null) {
 			return Optional.absent();
 		}
-		return Optional.of(children.get(childName));
+		return Optional.of(children.get(childId));
 	}
 
 	public boolean hasChildren() {
-		return children != null;
+		return !children.isEmpty();
 	}
 
 	public void addChild(Node child) {
-		if (children == null) {
-			children = new HashMap<>();
-		}
 		children.put(child.getId(), child);
 	}
 
@@ -66,43 +78,50 @@ public class Node {
 		return name;
 	}
 
+	public boolean isOptional() {
+		return isOptional;
+	}
+
+	public void setOptional(boolean isOptional) {
+		this.isOptional = isOptional;
+	}
+
 	public Set<Node> getChildren() {
 		// values() can not have duplicates in our case, as they are mapped by name and
 		// name is part of equals check
-		if (children == null) {
-			return new HashSet<>();
-		} else {
-			return new HashSet<>(children.values());
-		}
+		return new HashSet<>(children.values());
 	}
 
 	public String toDot() {
 		StringBuilder r = new StringBuilder();
 		r.append("\"" + id + "\"");
-		
+
 		List<String> customization = new ArrayList<>();
 
-		if(hasProperties() ) {
+		if (hasProperties()) {
 			String label = id + "\\n";
-			
+
 			// sort the keys so it looks nicer
 			List<String> sortedPropertyList = new ArrayList<>(properties.keySet());
 			Collections.sort(sortedPropertyList);
-			for(String property : sortedPropertyList) {
-				label += property + "="  + properties.get(property) + "\\l";
+			for (String property : sortedPropertyList) {
+				label += property + "=" + properties.get(property) + "\\l";
 			}
-			customization.add("label=\""+label+"\"");
+			customization.add("label=\"" + label + "\"");
 		}
-		
+
 		if (hasChildren()) {
 			customization.add("shape=record");
 		}
-		
-		
-		if(!customization.isEmpty()) {
+
+		if (isOptional) {
+			customization.add("style=dotted");
+		}
+
+		if (!customization.isEmpty()) {
 			r.append(" [" + String.join(",", customization) + "]");
 		}
-		
+
 		r.append(";\n");
 		if (hasChildren()) {
 			r.append("subgraph \"cluster_" + id + "\" {\n");
@@ -125,15 +144,10 @@ public class Node {
 				return false;
 		} else if (!children.equals(otherNode.children))
 			return false;
-		if (properties == null) {
-			if (otherNode.properties != null)
-				return false;
-		} else if (!properties.equals(otherNode.properties))
+		if (isOptional != otherNode.isOptional)
 			return false;
 		return true;
 	}
-
-
 
 	@Override
 	public int hashCode() {
@@ -141,7 +155,6 @@ public class Node {
 		int result = 1;
 		result = prime * result + ((children == null) ? 0 : children.hashCode());
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
-		result = prime * result + ((properties == null) ? 0 : properties.hashCode());
 		return result;
 	}
 
@@ -164,14 +177,7 @@ public class Node {
 				return false;
 		} else if (!id.equals(other.id))
 			return false;
-		if (properties == null) {
-			if (other.properties != null)
-				return false;
-		} else if (!properties.equals(other.properties))
-			return false;
 		return true;
 	}
-
-
 
 }

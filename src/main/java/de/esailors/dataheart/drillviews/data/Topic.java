@@ -20,6 +20,7 @@ public class Topic {
 	private Set<Event> events = new HashSet<>();
 	private Set<Event> invalidEvents = new HashSet<>();
 	private List<String> reportMessages = new ArrayList<>();
+	private List<byte[]> brokenMessages = new ArrayList<>();
 
 	private Map<String, Set<Event>> eventTypeNames;
 
@@ -63,7 +64,7 @@ public class Topic {
 		if (eventTypeNames == null) {
 			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
 		}
-		return eventTypeNames.size() == 1 && invalidEvents.size() == 0;
+		return eventTypeNames.size() == 1 && invalidEvents.size() == 0 && brokenMessages.size() == 1;
 	}
 	
 	public void addEvent(Event event) {
@@ -101,6 +102,11 @@ public class Topic {
 	
 	public List<String> getReportMessages() {
 		return reportMessages;
+	}
+	
+	public void addBrokenMessage(byte[] message) {
+		brokenMessages.add(message);
+		addMessageToReport("Received a broken message: " + new String(message));
 	}
 
 	@Override

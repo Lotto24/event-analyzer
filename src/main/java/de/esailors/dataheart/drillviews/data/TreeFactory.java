@@ -144,16 +144,23 @@ public class TreeFactory {
 			int cnt = 0;
 			for(String enumSymbol : field.schema().getEnumSymbols()) {
 				cnt++;
-				node.addProperty(cnt + "-AVRO_ENUM_SYMBOL", enumSymbol);
+				node.addProperty("AVRO_ENUM_SYMBOL" + cnt, enumSymbol);
 			}
 		}
 		
-		// TODO handle "nullable as union" to mark optional nodes
+		// list union types and mark node as optional if union types contains NULL
 		if(fieldType.equals(Type.UNION)) {
 			int cnt = 0;
+			boolean sawNullType = false;
 			for(Schema unionSchema : field.schema().getTypes()) {
 				cnt++;
-				node.addProperty(cnt+"-AVRO_UNION_TYPE", unionSchema.getType());
+				node.addProperty("AVRO_UNION_TYPE-" + cnt, unionSchema.getType());
+				if(unionSchema.getType().equals(Type.NULL)) {
+					sawNullType = true;
+				}
+			}
+			if(sawNullType) {
+				node.setOptional(true);
 			}
 		}
 	}

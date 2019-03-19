@@ -61,16 +61,13 @@ public class MessageParser {
 		schemaCache = new HashMap<>();
 	}
 
-	public JsonNode parseMessage(byte[] message) {
+	public JsonNode parseMessage(byte[] message) throws IOException, UnknownSchemaException {
 
 		JsonNode extractedJson;
-		try {
-			extractedJson = messageToJson(message);
-			if (extractedJson == null) {
-				throw new IOException("Unable to extract json from message: " + new String(message));
-			}
-		} catch (UnknownSchemaException | IOException e) {
-			throw new IllegalStateException("Unable to handle message: " + Bytes.toString(message), e);
+
+		extractedJson = messageToJson(message);
+		if (extractedJson == null) {
+			throw new IOException("Unable to extract json from message: " + new String(message));
 		}
 
 		return extractedJson;
@@ -95,12 +92,14 @@ public class MessageParser {
 			log.debug("Schema found in internal cache");
 			return fromCache;
 		}
-		
-		// try fetching from consul directly - .. 
-		// why? well, i made a mistake which made it so the registry client failed for a specific hash
-		// so i implemented the fetching myself and then found my mistake, now i'll leave this in 
+
+		// try fetching from consul directly - ..
+		// why? well, i made a mistake which made it so the registry client failed for a
+		// specific hash
+		// so i implemented the fetching myself and then found my mistake, now i'll
+		// leave this in
 		Optional<Schema> schemaFromConsul = fetchSchemaFromConsul(schemaHash);
-		if(schemaFromConsul.isPresent()) {
+		if (schemaFromConsul.isPresent()) {
 			log.debug("Got schema direclty from Consul");
 			schemaCache.put(schemaHash, schemaFromConsul.get());
 			return schemaFromConsul.get();
@@ -118,7 +117,8 @@ public class MessageParser {
 	}
 
 	private Optional<Schema> fetchSchemaFromConsul(String schemaHash) {
-		String consulUrl = "http://" + config.CONSUL_HOST + ":" + config.CONSUL_PORT + "/v1/kv/avro-schemas/" + schemaHash;
+		String consulUrl = "http://" + config.CONSUL_HOST + ":" + config.CONSUL_PORT + "/v1/kv/avro-schemas/"
+				+ schemaHash;
 		log.debug("Fetching schema from Consul at: " + consulUrl);
 		try {
 			Content response = Request.Get(consulUrl).execute().returnContent();
@@ -132,7 +132,7 @@ public class MessageParser {
 			log.trace("Got avro schema String: " + avroSchemaString);
 			Schema schema = new Schema.Parser().parse(avroSchemaString);
 			return Optional.of(schema);
-			
+
 		} catch (IOException e) {
 			log.error("Error while fetching schema direclty from consul", e);
 			return Optional.empty();
@@ -166,7 +166,7 @@ public class MessageParser {
 
 		return stringToJsonNode(jsonString);
 	}
-	
+
 	public JsonNode stringToJsonNode(String jsonString) throws JsonProcessingException, IOException {
 		return jsonObjectMapper.readTree(jsonString);
 	}
@@ -179,11 +179,11 @@ public class MessageParser {
 
 		return schemaHash != null && !schemaHash.trim().startsWith("{");
 	}
-	
+
 	public String getAvroSchemaHashForMessage(byte[] message) {
 		return extractSchemaHashFromMessage(message);
 	}
-	
+
 	public Schema getSchemaForMessage(byte[] message) {
 		return schemaCache.get(extractSchemaHashFromMessage(message));
 	}

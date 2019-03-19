@@ -1,5 +1,7 @@
 package de.esailors.dataheart.drillviews.kafka;
 
+import java.io.IOException;
+
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.logging.log4j.LogManager;
@@ -8,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Event;
 import de.esailors.dataheart.drillviews.data.Topic;
+import de.esailors.dataheart.drillviews.exception.UnknownSchemaException;
 
 public class MessageProcessor {
 
@@ -28,8 +31,13 @@ public class MessageProcessor {
 			log.info("Received " + consumedRecords.count() + " messages for: " + topic);
 		}
 		for (ConsumerRecord<byte[], byte[]> record : consumedRecords) {
-			Event event = eventFactory.buildEvent(topic, record);
-			topic.addEvent(event);
+			try {
+				Event event = eventFactory.buildEvent(topic, record);
+				topic.addEvent(event);
+			} catch (IOException | UnknownSchemaException e) {
+				log.warn("Unable to process Kafka message to Event", e);
+				topic.addBrokenMessage(record.value());
+			}
 		}
 	}
 
