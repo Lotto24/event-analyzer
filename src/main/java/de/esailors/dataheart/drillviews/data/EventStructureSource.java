@@ -60,6 +60,7 @@ public class EventStructureSource {
 			break;
 		}
 		case MERGE: {
+			r += "_" + sourceStructures.size();
 			for (EventStructure sourceStructure : sourceStructures) {
 				r += "_" + sourceStructure.hashCode();
 			}

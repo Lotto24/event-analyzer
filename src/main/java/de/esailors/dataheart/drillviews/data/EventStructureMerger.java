@@ -51,9 +51,10 @@ public class EventStructureMerger {
 	}
 
 	private void mergeNodeInto(Node sourceNode, Node mergedNode, boolean isRootNode) {
+		mergedNode.addProperties(sourceNode.getProperties());
 		if (isRootNode) {
 			// for root nodes we ignore the name for now
-			if(mergedNode.equalChildren(sourceNode)) {
+			if(mergedNode.equalIgnoringId(sourceNode)) {
 				return;
 			}
 		} else if(mergedNode.equals(sourceNode)) {

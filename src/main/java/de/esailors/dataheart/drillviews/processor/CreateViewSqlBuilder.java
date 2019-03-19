@@ -28,7 +28,7 @@ public class CreateViewSqlBuilder {
 
 	public String generateDrillViewsFor(String viewName, EventStructure eventStructure) {
 
-		log.info("Generating create view statement from EventStructure from " + eventStructure.toString());
+		log.debug("Generating create view statement from EventStructure from " + eventStructure.toString());
 
 		StringBuilder viewBuilder = new StringBuilder();
 

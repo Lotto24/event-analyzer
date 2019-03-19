@@ -144,7 +144,7 @@ public class TreeFactory {
 			int cnt = 0;
 			for(String enumSymbol : field.schema().getEnumSymbols()) {
 				cnt++;
-				node.addProperty(cnt + "-ENUM_VALUE", enumSymbol);
+				node.addProperty(cnt + "-AVRO_ENUM_SYMBOL", enumSymbol);
 			}
 		}
 		
@@ -153,7 +153,7 @@ public class TreeFactory {
 			int cnt = 0;
 			for(Schema unionSchema : field.schema().getTypes()) {
 				cnt++;
-				node.addProperty(cnt+"-UNION_TYPE", unionSchema.getType());
+				node.addProperty(cnt+"-AVRO_UNION_TYPE", unionSchema.getType());
 			}
 		}
 	}

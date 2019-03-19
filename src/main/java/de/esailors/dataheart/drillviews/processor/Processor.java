@@ -191,7 +191,7 @@ public class Processor {
 
 		Optional<String> currentViewFromRepository = loadDrillViewFromRepository(eventType);
 		if (currentViewFromRepository.isPresent()) {
-			log.info("Found a view in local git repository");
+			log.debug("Found a view in local git repository");
 		} else {
 			log.info("No view found in local git repository");
 		}
@@ -267,7 +267,7 @@ public class Processor {
 			changeLog.addWarning("No events received for " + topic);
 		} else {
 			if (topic.isConsistent()) {
-				log.info("Consistency checks passed: " + topic);
+				log.debug("Consistency checks passed: " + topic);
 			} else {
 				changeLog.addWarning("Inconsistencies detected in " + topic);
 			}

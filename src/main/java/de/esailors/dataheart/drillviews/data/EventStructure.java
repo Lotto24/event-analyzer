@@ -31,8 +31,8 @@ public class EventStructure {
 			}
 		}
 		this.source = new EventStructureSource(eventStructures);
-		this.eventStructureTree = EventStructureMerger.getInstance().mergeEventStructures(eventType, eventStructures);
 		this.eventType = eventType;
+		this.eventStructureTree = EventStructureMerger.getInstance().mergeEventStructures(eventType, eventStructures);
 	}
 
 	public EventType getEventType() {

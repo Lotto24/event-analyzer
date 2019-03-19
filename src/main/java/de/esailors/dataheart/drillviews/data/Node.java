@@ -17,8 +17,6 @@ public class Node {
 	// i.e. url
 	private String name;
 	private Map<String, Node> children;
-	// TODO properties currently experimental, only for avro now (not taken over in
-	// merges)
 	private Map<String, Object> properties = new HashMap<>();
 
 	public Node(String id, String name) {
@@ -30,8 +28,16 @@ public class Node {
 		properties.put(name, property);
 	}
 	
+	public void addProperties(Map<String, Object> propertiesToAdd) {
+		properties.putAll(propertiesToAdd);
+	}
+	
 	public boolean hasProperties() {
 		return !properties.isEmpty();
+	}
+	
+	public Map<String, Object> getProperties() {
+		return properties;
 	}
 
 	public Optional<Node> getChildByName(String childName) {
@@ -109,7 +115,7 @@ public class Node {
 		return r.toString();
 	}
 
-	public boolean equalChildren(Node otherNode) {
+	public boolean equalIgnoringId(Node otherNode) {
 		if (this == otherNode)
 			return true;
 		if (otherNode == null)
@@ -119,8 +125,15 @@ public class Node {
 				return false;
 		} else if (!children.equals(otherNode.children))
 			return false;
+		if (properties == null) {
+			if (otherNode.properties != null)
+				return false;
+		} else if (!properties.equals(otherNode.properties))
+			return false;
 		return true;
 	}
+
+
 
 	@Override
 	public int hashCode() {
@@ -128,6 +141,7 @@ public class Node {
 		int result = 1;
 		result = prime * result + ((children == null) ? 0 : children.hashCode());
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((properties == null) ? 0 : properties.hashCode());
 		return result;
 	}
 
@@ -150,7 +164,14 @@ public class Node {
 				return false;
 		} else if (!id.equals(other.id))
 			return false;
+		if (properties == null) {
+			if (other.properties != null)
+				return false;
+		} else if (!properties.equals(other.properties))
+			return false;
 		return true;
 	}
+
+
 
 }
