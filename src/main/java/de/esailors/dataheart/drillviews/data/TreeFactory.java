@@ -124,7 +124,7 @@ public class TreeFactory {
 			nodeId += nodeName;
 
 			Node node = new Node(nodeId, nodeName);
-			node.addProperty("AVRO_TYPE", field.schema().getType());
+			addAvroFieldPropertiesToNode(field, node);
 			currentParent.addChild(node);
 
 			if (isNestedAvroSchema(field.schema())) {
@@ -133,6 +133,29 @@ public class TreeFactory {
 
 		}
 
+	}
+
+	private void addAvroFieldPropertiesToNode(Field field, Node node) {
+		Type fieldType = field.schema().getType();
+		node.addProperty("AVRO_TYPE", fieldType);
+		
+		// list enum values
+		if(fieldType.equals(Type.ENUM)) {
+			int cnt = 0;
+			for(String enumSymbol : field.schema().getEnumSymbols()) {
+				cnt++;
+				node.addProperty(cnt + "-ENUM_VALUE", enumSymbol);
+			}
+		}
+		
+		// TODO handle "nullable as union" to mark optional nodes
+		if(fieldType.equals(Type.UNION)) {
+			int cnt = 0;
+			for(Schema unionSchema : field.schema().getTypes()) {
+				cnt++;
+				node.addProperty(cnt+"-UNION_TYPE", unionSchema.getType());
+			}
+		}
 	}
 
 	private Set<Field> getNestedFieldsFromAvroSchema(Schema avroSchema) {

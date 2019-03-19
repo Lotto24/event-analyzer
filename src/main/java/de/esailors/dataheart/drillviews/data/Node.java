@@ -1,7 +1,10 @@
 package de.esailors.dataheart.drillviews.data;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -71,18 +74,21 @@ public class Node {
 		StringBuilder r = new StringBuilder();
 		r.append("\"" + id + "\"");
 		
-		Set<String> customization = new HashSet<>();
+		List<String> customization = new ArrayList<>();
 
 		if(hasProperties() ) {
 			String label = id + "\\n";
-			for(String property : properties.keySet()) {
+			
+			// sort the keys so it looks nicer
+			List<String> sortedPropertyList = new ArrayList<>(properties.keySet());
+			Collections.sort(sortedPropertyList);
+			for(String property : sortedPropertyList) {
 				label += property + "="  + properties.get(property) + "\\l";
 			}
 			customization.add("label=\""+label+"\"");
 		}
 		
 		if (hasChildren()) {
-//			r.append(" [shape=record]");
 			customization.add("shape=record");
 		}
 		

@@ -72,6 +72,8 @@ public class Processor {
 		writeEventTypeReport();
 		writeAvroSchemas();
 		writeChangeLog();
+		
+		// TODO add an index to all EventTypes to README.md for ease of navigation
 
 		addOutputToGitRepository();
 	}
