@@ -1,5 +1,7 @@
 package de.esailors.dataheart.drillviews.drill;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -8,12 +10,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import de.esailors.dataheart.drillviews.conf.Config;
+import de.esailors.dataheart.drillviews.data.EventType;
 
 public class DrillViews {
 
 	private static final Logger log = LogManager.getLogger(DrillViews.class.getName());
 
-	private Config config;
 	private DrillConnection drillConnection;
 
 	private String[] targetDatabases;
@@ -21,14 +23,39 @@ public class DrillViews {
 	private Map<String, Set<String>> existingTables;
 	
 
-	public DrillViews(Config config, DrillConnection drillConnection) {
-		log.debug("Initializing DrillViewGenerator");
-		this.config = config;
+	public DrillViews(DrillConnection drillConnection) {
 		this.drillConnection = drillConnection;
 
 		fetchDatabases();
 		initTargetDatabases();
 		fetchViewsInTargetDatabses();
+	}
+	
+	public long runDayCount(EventType eventType) {
+		String viewName = viewNameFor(eventType);
+		String database = Config.getInstance().DRILL_VIEW_DAY_DATABASE;
+		String countColumnLabel = "cnt";
+		String countQuery = "SELECT COUNT(*) as " + countColumnLabel + " FROM " + database + ".`" + viewName + "`";
+		ResultSet resultSet = drillConnection.query(countQuery);
+		try {
+			if(!resultSet.next()) {
+				throw new IllegalStateException("Unable to fetch first row of resultSet after count query: " + countQuery);
+			}
+			return resultSet.getLong(countColumnLabel);
+		} catch (SQLException e) {
+			throw new IllegalStateException("Unexpected SQLException after running day count query " + countQuery, e);
+		} finally {
+			try {
+				resultSet.close();
+			} catch (SQLException e) {
+				log.warn("Unable to close ResultSet after day count query", e);
+			}
+		}
+	}
+	
+	public String viewNameFor(EventType eventType) {
+		// TODO on live we find both 'AgeVerification' and 'ageVerification' -> unify
+		return eventType.getName();
 	}
 	
 	public boolean doesViewExist(String viewName) {
@@ -70,8 +97,8 @@ public class DrillViews {
 	}
 
 	private void initTargetDatabases() {
-		String[] targetDatabases = { config.DRILL_VIEW_ALL_DATABASE, config.DRILL_VIEW_DAY_DATABASE,
-				config.DRILL_VIEW_WEEK_DATABASE };
+		String[] targetDatabases = { Config.getInstance().DRILL_VIEW_ALL_DATABASE, Config.getInstance().DRILL_VIEW_DAY_DATABASE,
+				Config.getInstance().DRILL_VIEW_WEEK_DATABASE };
 		this.targetDatabases = targetDatabases;
 		ensureTargetDatabasesExist();
 	}

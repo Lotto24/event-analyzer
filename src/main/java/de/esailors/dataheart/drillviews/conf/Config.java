@@ -66,8 +66,13 @@ public class Config {
 
 	// git settings
 
+	private static final String GIT_ENABLED_KEY = "git.enabled";
+	private static final String GIT_AUTHENTICATION_METHOD_KEY = "git.authentication.method";
+	private static final String GIT_AUTHENTICATION_USER_KEY = "git.authentication.user";
+	private static final String GIT_AUTHENTICATION_PASSWORD_KEY = "git.authentication.password";
+	private static final String GIT_AUTHENTICATION_SSH_KEY_PATH_KEY = "git.authentication.sshkey.path";
+	
 	private static final String GIT_LOCAL_REPOSITORY_PATH_KEY = "git.local.repository.path";
-	private static final String GIT_SSH_KEY_PATH_KEY = "git.sshkey.path";
 	private static final String GIT_REPOSITORY_URI_KEY = "git.repository.uri";
 	private static final String GIT_BRANCH_KEY = "git.branch";
 	private static final String GIT_REMOTE_NAME_KEY = "git.remote";
@@ -130,9 +135,12 @@ public class Config {
 
 	// git settings
 	
+	public boolean GIT_ENABLED=false;
+	public String GIT_AUTHENTICATION_METHOD = "ssh"; // either ssh or http
+	public String GIT_AUTHENTICATION_USER = "svc-tde-adm"; // only needed for http
+	public String GIT_AUTHENTICATION_PASSWORD = "redacted"; // only needed for http
+	public String GIT_AUTHENTICATION_SSH_KEY_PATH = "/home/andre.mis/.ssh/team_id_rsa"; // only needed for ssh 
 	public String GIT_LOCAL_REPOSITORY_PATH = "git_repository/";
-
-	public String GIT_SSH_KEY_PATH = "/home/andre.mis/.ssh/team_id_rsa";
 	public String GIT_REPOSITORY_URI = "git@srv-git-01-hh1.alinghi.tipp24.net:andre-mis/drill-views.git";
 	public String GIT_BRANCH = "master";
 	public String GIT_REMOTE_NAME = "origin";
@@ -140,12 +148,25 @@ public class Config {
 	public String GIT_EMAIL_DEFAULT_USER = "drillviewgenerator";
 	public String GIT_EMAIL_DEFAULT_HOST = "esailors.de";
 
+	private static Config instance;
+	
+	public static void load(String configPath) {
+		instance = new Config(configPath);
+	}
+	
+	public static Config getInstance() {
+		if(instance == null) {
+			throw new IllegalStateException("Got asked for an instance of config before it was loaded, call Config.load() first");
+		}
+		return instance;
+	}
+	
 	// config internal fields
 
 	private String configFileName;
 	private Properties configProperties;
 
-	public Config(String configFileName) {
+	private Config(String configFileName) {
 		this.configFileName = configFileName;
 
 		try {
@@ -181,8 +202,12 @@ public class Config {
 	}
 
 	private void loadGitSettings() {
+		GIT_ENABLED = loadConfigBoolean(GIT_ENABLED_KEY);
+		GIT_AUTHENTICATION_METHOD = loadConfigString(GIT_AUTHENTICATION_METHOD_KEY);
+		GIT_AUTHENTICATION_USER = loadConfigString(GIT_AUTHENTICATION_USER_KEY);
+		GIT_AUTHENTICATION_PASSWORD = loadConfigString(GIT_AUTHENTICATION_PASSWORD_KEY);
+		GIT_AUTHENTICATION_SSH_KEY_PATH = loadConfigString(GIT_AUTHENTICATION_SSH_KEY_PATH_KEY);
 		GIT_LOCAL_REPOSITORY_PATH = loadConfigString(GIT_LOCAL_REPOSITORY_PATH_KEY);
-		GIT_SSH_KEY_PATH = loadConfigString(GIT_SSH_KEY_PATH_KEY);
 		GIT_REPOSITORY_URI = loadConfigString(GIT_REPOSITORY_URI_KEY);
 		GIT_BRANCH = loadConfigString(GIT_BRANCH_KEY);
 		GIT_REMOTE_NAME = loadConfigString(GIT_REMOTE_NAME_KEY);

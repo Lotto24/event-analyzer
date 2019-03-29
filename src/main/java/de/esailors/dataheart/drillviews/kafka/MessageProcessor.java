@@ -7,7 +7,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Event;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.exception.UnknownSchemaException;
@@ -16,12 +15,10 @@ public class MessageProcessor {
 
 	private static final Logger log = LogManager.getLogger(MessageProcessor.class.getName());
 
-	private Config config;
 	private EventFactory eventFactory;
 
-	public MessageProcessor(Config config) {
-		this.config = config;
-		this.eventFactory = new EventFactory(config);
+	public MessageProcessor() {
+		this.eventFactory = new EventFactory();
 	}
 
 	public void processRecords(Topic topic, ConsumerRecords<byte[], byte[]> consumedRecords) {

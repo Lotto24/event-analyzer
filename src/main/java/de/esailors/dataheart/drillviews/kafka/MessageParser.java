@@ -1,6 +1,7 @@
 package de.esailors.dataheart.drillviews.kafka;
 
 import java.io.IOException;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,7 +21,6 @@ import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.JsonProcessingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
-import com.adobe.xmp.impl.Base64;
 import com.google.common.net.HostAndPort;
 
 import de.esailors.avro.RegistryClient;
@@ -34,15 +34,11 @@ public class MessageParser {
 
 	private static final Logger log = LogManager.getLogger(MessageParser.class.getName());
 
-	private Config config;
-
 	private RegistryClient registryClient;
 	private Map<String, Schema> schemaCache;
 	private ObjectMapper jsonObjectMapper;
 
-	public MessageParser(Config config) {
-		this.config = config;
-
+	public MessageParser() {
 		initJackson();
 		initRegistryClient();
 		initSchemaCache();
@@ -53,7 +49,7 @@ public class MessageParser {
 	}
 
 	private void initRegistryClient() {
-		HostAndPort hostAndPort = HostAndPort.fromParts(config.CONSUL_HOST, config.CONSUL_PORT);
+		HostAndPort hostAndPort = HostAndPort.fromParts(Config.getInstance().CONSUL_HOST, Config.getInstance().CONSUL_PORT);
 		registryClient = RegistryClients.caching(RegistryClients.consul(Collections.singletonList(hostAndPort)));
 	}
 
@@ -75,8 +71,8 @@ public class MessageParser {
 	}
 
 	private GenericRecord decodeAvro(byte[] data, Schema schema) throws IOException {
-		BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(data, config.PROCESSOR_SCHEMA_HASH_LENGTH,
-				data.length - config.PROCESSOR_SCHEMA_HASH_LENGTH, null);
+		BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(data, Config.getInstance().PROCESSOR_SCHEMA_HASH_LENGTH,
+				data.length - Config.getInstance().PROCESSOR_SCHEMA_HASH_LENGTH, null);
 
 		SpecificDatumReader<GenericRecord> reader = new SpecificDatumReader<>(schema);
 
@@ -117,7 +113,7 @@ public class MessageParser {
 	}
 
 	private Optional<Schema> fetchSchemaFromConsul(String schemaHash) {
-		String consulUrl = "http://" + config.CONSUL_HOST + ":" + config.CONSUL_PORT + "/v1/kv/avro-schemas/"
+		String consulUrl = "http://" + Config.getInstance().CONSUL_HOST + ":" + Config.getInstance().CONSUL_PORT + "/v1/kv/avro-schemas/"
 				+ schemaHash;
 		log.debug("Fetching schema from Consul at: " + consulUrl);
 		try {
@@ -128,7 +124,7 @@ public class MessageParser {
 			JsonNode jsonNode;
 			jsonNode = mapper.readTree(jsonString);
 			String avroSchemaAsBase64 = jsonNode.get(0).findValue("Value").asText();
-			String avroSchemaString = Base64.decode(avroSchemaAsBase64);
+			String avroSchemaString = new String(Base64.getDecoder().decode(avroSchemaAsBase64));
 			log.trace("Got avro schema String: " + avroSchemaString);
 			Schema schema = new Schema.Parser().parse(avroSchemaString);
 			return Optional.of(schema);
@@ -190,7 +186,7 @@ public class MessageParser {
 
 	private String extractSchemaHashFromMessage(byte[] message) {
 		String schemaHash;
-		schemaHash = Bytes.toString(message, 0, config.PROCESSOR_SCHEMA_HASH_LENGTH);
+		schemaHash = Bytes.toString(message, 0, Config.getInstance().PROCESSOR_SCHEMA_HASH_LENGTH);
 		return schemaHash;
 	}
 

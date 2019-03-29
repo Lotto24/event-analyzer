@@ -1,14 +1,12 @@
 package de.esailors.dataheart.drillviews.processor;
 
 import java.io.File;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -22,31 +20,28 @@ import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.drill.DrillConnection;
 import de.esailors.dataheart.drillviews.drill.DrillViews;
-import de.esailors.dataheart.drillviews.git.GitUtil;
+import de.esailors.dataheart.drillviews.util.GitRepository;
 
 public class Processor {
 
 	private static final Logger log = LogManager.getLogger(Processor.class.getName());
 
-	private Config config;
-
 	private DrillConnection drillConnection;
 	private DrillViews drillViews;
 	private CreateViewSqlBuilder createViewSqlBuilder;
 	private Persister persister;
-	private GitUtil gitUtil;
+	private Optional<GitRepository> gitRepositoryOption;
 	private ChangeLog changeLog;
 
 	private Map<String, EventType> eventTypes = new HashMap<>();
 	private Map<String, AvroSchema> avroSchemas = new HashMap<>();
 
-	public Processor(Config config, GitUtil gitUtil) {
-		this.config = config;
-		this.gitUtil = gitUtil;
-		this.drillConnection = new DrillConnection(config);
-		this.createViewSqlBuilder = new CreateViewSqlBuilder(config);
-		this.drillViews = new DrillViews(config, drillConnection);
-		this.persister = new Persister(config);
+	public Processor(Optional<GitRepository> gitRepositoryOption) {
+		this.gitRepositoryOption = gitRepositoryOption;
+		this.drillConnection = new DrillConnection();
+		this.createViewSqlBuilder = new CreateViewSqlBuilder();
+		this.drillViews = new DrillViews(drillConnection);
+		this.persister = new Persister();
 		this.changeLog = new ChangeLog();
 	}
 
@@ -63,6 +58,8 @@ public class Processor {
 			markEventTypeInconsistencies(eventType);
 			updateAvroSchemaMap(eventType);
 			createDrillViews(eventType);
+			// TODO run count on newly created view for sanity checking and report
+//			runCountOnDrillView(eventType);
 			writeEventSamples(eventType);
 			writeEventStructures(eventType);
 		}
@@ -78,21 +75,34 @@ public class Processor {
 		addOutputToGitRepository();
 	}
 
+	private void runCountOnDrillView(EventType eventType) {
+		// TODO STOPPED HERE
+		long count = drillViews.runDayCount(eventType);
+		log.info("Count in day view for " + eventType + ": " + count);
+	}
+
 	private void addOutputToGitRepository() {
+		if(!gitRepositoryOption.isPresent()) {
+			log.info("Git disabled, not adding output to repository");
+			return;
+		}
+		
 		log.info("Adding process output to local git repository");
+		
+		GitRepository gitRepository = gitRepositoryOption.get();
 
 		// push everything that is written to disk also to git
-		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY));
-		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_SAMPLES_DIRECTORY));
-		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY));
-		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY));
-		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY));
-		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_EVENTSTRUCTURES_DIRECTORY));
-		gitUtil.addToRepository(persister.outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY));
+		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY));
+		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY));
+		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY));
+		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY));
+		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY));
+		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY));
+		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY));
 
 		// TODO output any kind of statistics / report? to git / readme + changelog
 
-		gitUtil.commitAndPush(persister.getFormattedCurrentTime());
+		gitRepository.commitAndPush(persister.getFormattedCurrentTime());
 	}
 
 	private void writeAvroSchemas() {
@@ -189,12 +199,19 @@ public class Processor {
 		// TODO compare and align generated views with those from drill
 		log.info("Preparing Drill view for " + eventType);
 
-		Optional<String> currentViewFromRepository = loadDrillViewFromRepository(eventType);
-		if (currentViewFromRepository.isPresent()) {
-			log.debug("Found a view in local git repository");
+		Optional<String> currentViewFromRepository;
+		if(gitRepositoryOption.isPresent()) {
+			currentViewFromRepository = gitRepositoryOption.get().loadFileFromRepository(Config.getInstance().OUTPUT_DRILL_DIRECTORY + File.separator + persister.fileNameForDrillView(eventType));
+			if (currentViewFromRepository.isPresent()) {
+				log.debug("Found a view in local git repository");
+			} else {
+				log.info("No view found in local git repository");
+			}
 		} else {
-			log.info("No view found in local git repository");
+			log.warn("Local git repository not enabled, unable to check if view changed");
+			currentViewFromRepository = Optional.absent();
 		}
+		
 
 		// generate drill views and execute them
 		Optional<EventStructure> mergedEventStructuredOption = eventType.getMergedEventStructured();
@@ -202,9 +219,10 @@ public class Processor {
 			throw new IllegalStateException(
 					"Topic does not provide a merged event structure even though it had an example event");
 		}
-		String viewFromCurrentRun = createViewSqlBuilder.generateDrillViewsFor(eventType.getName(), mergedEventStructuredOption.get());
+		String viewName = drillViews.viewNameFor(eventType);
+		String viewFromCurrentRun = createViewSqlBuilder.generateDrillViewsFor(viewName, mergedEventStructuredOption.get());
 
-		if (drillViews.doesViewExist(eventType.getName())) {
+		if (drillViews.doesViewExist(viewName)) {
 			log.debug("Drill view for " + eventType + " already exists");
 			// check if it's the same view and don't execute if it is
 			// compare with view from local git repository
@@ -220,43 +238,19 @@ public class Processor {
 			}
 
 		} else {
-			log.info("No Drill view exists yet for " + eventType);
+			log.debug("No Drill view exists yet for " + eventType);
 			changeLog.addChange("Genearting new Drill view for: " + eventType);
 		}
 
 		// execute create statement on Drill
 		try {
 			drillConnection.executeSqlStatements(viewFromCurrentRun);
-			// TODO run count on newly created view for sanity checking and report
 		} catch (SQLException e) {
 			throw new IllegalStateException("Error while executing create view SQL statement on Drill", e);
 		}
 
 		// write drill views to disk
 		persister.persistDrillView(eventType, viewFromCurrentRun);
-	}
-
-	private Optional<String> loadDrillViewFromRepository(EventType eventType) {
-
-		// TODO doesn't belong here
-
-		log.info("Loading drill view from local repository for " + eventType);
-
-		File drillViewFile = new File(config.GIT_LOCAL_REPOSITORY_PATH + File.separator + config.OUTPUT_DRILL_DIRECTORY
-				+ File.separator + persister.fileNameForDrillView(eventType));
-		if (!drillViewFile.exists() || !drillViewFile.canRead()) {
-			log.debug("Unable to load drill view from git repository as file either doesn't exist or can't be read at "
-					+ drillViewFile.getAbsolutePath());
-			return Optional.absent();
-		} else {
-			try {
-				return Optional.of(FileUtils.readFileToString(drillViewFile));
-			} catch (IOException e) {
-				log.warn("Unable to read drill view from local git repository even though the file exists at: "
-						+ drillViewFile.getAbsolutePath(), e);
-				return Optional.absent();
-			}
-		}
 	}
 
 	private void markTopicInconsistencies(Topic topic) {

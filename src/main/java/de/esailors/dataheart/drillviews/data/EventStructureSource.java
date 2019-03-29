@@ -64,6 +64,9 @@ public class EventStructureSource {
 			for (EventStructure sourceStructure : sourceStructures) {
 				r += "_" + sourceStructure.hashCode();
 			}
+			// TODO when there are a lot of different sourceStructures the returned name
+			// gets really long. as this is used as the filename of the rendered .dot plot
+			// this is causing issues
 			break;
 		}
 		}

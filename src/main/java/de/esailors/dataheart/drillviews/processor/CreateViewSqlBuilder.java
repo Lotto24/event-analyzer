@@ -13,44 +13,44 @@ public class CreateViewSqlBuilder {
 
 	private static final Logger log = LogManager.getLogger(CreateViewSqlBuilder.class.getName());
 
-
 	// internal
 	private static final String ROW_TIMESTAMP_ALIAS = "row_timestamp";
 	private static final String SUBSELECT_ALIAS = "e";
 	private static final String JSON_FIELD_ALIAS = "json";
 	private static final int IDENTATION = 4;
 
-	private Config config;
-
-	public CreateViewSqlBuilder(Config config) {
-		this.config = config;
+	public CreateViewSqlBuilder() {
 	}
 
 	public String generateDrillViewsFor(String viewName, EventStructure eventStructure) {
+
+		// TODO for nodes that are avro maps we need to select the complete blob as well
+		// because we do not know all the possible fields
 
 		log.debug("Generating create view statement from EventStructure from " + eventStructure.toString());
 
 		StringBuilder viewBuilder = new StringBuilder();
 
-		generateView(config.DRILL_VIEW_ALL_DATABASE, eventStructure, viewName, viewBuilder, null);
-		generateView(config.DRILL_VIEW_DAY_DATABASE, eventStructure, viewName, viewBuilder, "'-1' day");
-		generateView(config.DRILL_VIEW_WEEK_DATABASE, eventStructure, viewName, viewBuilder, "'-7' day");
+		generateView(Config.getInstance().DRILL_VIEW_ALL_DATABASE, eventStructure, viewName, viewBuilder, null);
+		generateView(Config.getInstance().DRILL_VIEW_DAY_DATABASE, eventStructure, viewName, viewBuilder, "'-1' day");
+		generateView(Config.getInstance().DRILL_VIEW_WEEK_DATABASE, eventStructure, viewName, viewBuilder, "'-7' day");
 
 		return viewBuilder.toString();
 	}
-	
-	private void generateView(String drillDatabase, EventStructure eventStructure, String viewName, StringBuilder viewBuilder, String timeLimit) {
+
+	private void generateView(String drillDatabase, EventStructure eventStructure, String viewName,
+			StringBuilder viewBuilder, String timeLimit) {
 		generateViewStart(drillDatabase, viewBuilder, viewName);
 
 		String fieldPrefix = SUBSELECT_ALIAS + "." + JSON_FIELD_ALIAS + ".";
 
 		Node rootNode = eventStructure.getEventStructureTree().getRootNode();
-		
+
 		generateSelectColumns(rootNode, viewBuilder, fieldPrefix, "");
 
 		generateViewEnd(viewBuilder, eventStructure.getEventType().getName().toUpperCase(), timeLimit);
 	}
-	
+
 	private void generateViewStart(String drillDatabase, StringBuilder viewBuilder, String viewName) {
 		viewBuilder.append("CREATE OR REPLACE VIEW ");
 		viewBuilder.append(drillDatabase);
@@ -70,12 +70,12 @@ public class CreateViewSqlBuilder {
 		viewBuilder.append(".row_key, 'UTF8'), '-') + 1, 10) AS BIGINT)) as ");
 		viewBuilder.append(ROW_TIMESTAMP_ALIAS);
 	}
-	
+
 	private void generateSelectColumns(Node node, StringBuilder viewBuilder, String fieldPrefix, String keyPrefix) {
 		Set<Node> children = node.getChildren();
-		for(Node child : children) {
+		for (Node child : children) {
 			String nodeName = child.getName();
-			if(child.hasChildren()) {
+			if (child.hasChildren()) {
 				// recursion
 				String newKeyPrefix = keyPrefix + nodeName + "_";
 				String newFieldPrefix = fieldPrefix + "`" + nodeName + "`.";
@@ -94,7 +94,6 @@ public class CreateViewSqlBuilder {
 		}
 	}
 
-	
 	private void generateViewEnd(StringBuilder viewBuilder, String eventType, String timeLimit) {
 		viewBuilder.append("\nFROM (\n");
 		viewBuilder.append(ident());
@@ -105,11 +104,11 @@ public class CreateViewSqlBuilder {
 		viewBuilder.append(ident());
 		viewBuilder.append(ident());
 		viewBuilder.append("CONVERT_FROM(");
-		viewBuilder.append(config.DRILL_VIEW_HBASE_TABLE);
+		viewBuilder.append(Config.getInstance().DRILL_VIEW_HBASE_TABLE);
 		viewBuilder.append(".");
-		viewBuilder.append(config.DRILL_VIEW_HBASE_COLUMN_FAMILY);
+		viewBuilder.append(Config.getInstance().DRILL_VIEW_HBASE_COLUMN_FAMILY);
 		viewBuilder.append(".");
-		viewBuilder.append(config.DRILL_VIEW_HBASE_JSON_FIELD);
+		viewBuilder.append(Config.getInstance().DRILL_VIEW_HBASE_JSON_FIELD);
 		viewBuilder.append(", 'JSON') AS ");
 		viewBuilder.append(JSON_FIELD_ALIAS);
 		viewBuilder.append("\n");
@@ -117,9 +116,9 @@ public class CreateViewSqlBuilder {
 		viewBuilder.append("FROM\n");
 		viewBuilder.append(ident());
 		viewBuilder.append(ident());
-		viewBuilder.append(config.DRILL_VIEW_HBASE_STORAGE_PLUGIN_NAME);
+		viewBuilder.append(Config.getInstance().DRILL_VIEW_HBASE_STORAGE_PLUGIN_NAME);
 		viewBuilder.append(".");
-		viewBuilder.append(config.DRILL_VIEW_HBASE_TABLE);
+		viewBuilder.append(Config.getInstance().DRILL_VIEW_HBASE_TABLE);
 		viewBuilder.append("\n");
 		viewBuilder.append(ident());
 		viewBuilder.append("WHERE\n");

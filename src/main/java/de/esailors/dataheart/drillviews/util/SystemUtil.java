@@ -1,4 +1,4 @@
-package de.esailors.dataheart.drillviews.git;
+package de.esailors.dataheart.drillviews.util;
 
 import java.io.BufferedReader;
 import java.io.IOException;

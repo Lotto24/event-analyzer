@@ -48,6 +48,8 @@ public class EventType {
 		// TODO this has gotten pretty big, probably a good idea to move this out of
 		// this class by now
 
+		// TODO check timestamps in seconds vs milliseconds
+		
 		// check consistency within topics
 		// - each topic only has avro / json - if avro always the same schema?
 		// - check JSON structure doesnt change (always the same event structure)
@@ -120,6 +122,8 @@ public class EventType {
 					"Can't build combined event structure yet, call markInconsistencies() first");
 		}
 		if (eventStructures.isEmpty()) {
+			// TODO can still build merged event structure from avro schema potentially
+			log.warn("Unable to build merged even structure due to missing events for " + this);
 			mergedEventStructure = Optional.absent();
 		} else {
 			mergedEventStructure = Optional.of(new EventStructure(this));
@@ -184,10 +188,16 @@ public class EventType {
 	}
 
 	public Set<String> getAvroSchemaHashes() {
+		if(avroSchemas == null) {
+			return null;
+		}
 		return avroSchemas.keySet();
 	}
 
 	public Collection<AvroSchema> getMessageSchemas() {
+		if(avroSchemas == null) {
+			return null;
+		}
 		return avroSchemas.values();
 	}
 

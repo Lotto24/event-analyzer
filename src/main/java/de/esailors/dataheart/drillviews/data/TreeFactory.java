@@ -102,9 +102,6 @@ public class TreeFactory {
 					"Unable to build a Tree for non nested Schema: " + avroSchema.toString());
 		}
 
-		// TODO would be nice to note which nodes are optional (for json this can only
-		// be done when merging two trees
-
 		// either use the same name when comparing trees or exclude them from equals()
 		Tree r = new Tree(avroSchema.getName());
 

@@ -21,10 +21,7 @@ public class DrillConnection {
 
 	private Connection connection;
 
-	private Config config;
-
-	public DrillConnection(Config config) {
-		this.config = config;
+	public DrillConnection() {
 		connection = connectToDrill();
 		initShutdownHook();
 	}
@@ -40,7 +37,7 @@ public class DrillConnection {
 	}
 	
 	public ResultSet query(String query) {
-		log.debug("Running query: " + query);
+		log.debug("Running Drill query: " + query);
 		try {
 			Statement statement = connection.createStatement();
 			return statement.executeQuery(query);
@@ -87,9 +84,9 @@ public class DrillConnection {
 
 	private Connection connectToDrill() {
 		try {
-			log.info("Connecting to Drill at: " + config.DRILL_JDBC_URL);
+			log.info("Connecting to Drill at: " + Config.getInstance().DRILL_JDBC_URL);
 			Class.forName(DRILL_JDBC_DRIVER_CLASS);
-			return DriverManager.getConnection(config.DRILL_JDBC_URL);
+			return DriverManager.getConnection(Config.getInstance().DRILL_JDBC_URL);
 		} catch (Exception e) {
 			log.error("Unable to open connection to drill", e);
 			throw new IllegalStateException("Unable to connect to drill", e);

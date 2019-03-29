@@ -13,8 +13,6 @@ public class Event {
 	
 	private static final Logger log = LogManager.getLogger(Event.class.getName());
 	
-	private Config config;
-	
 	private byte[] message;
 	private Topic topic;
 	private JsonNode eventJson;
@@ -22,9 +20,7 @@ public class Event {
 	private Schema schema;
 	private String avroSchemaHash;
 
-	public Event(Config config, byte[] message, Topic topic, JsonNode eventJson, boolean isAvroMessage, String avroSchemaHash, Schema schema) {
-		this.config = config;
-		
+	public Event(byte[] message, Topic topic, JsonNode eventJson, boolean isAvroMessage, String avroSchemaHash, Schema schema) {
 		this.message = message; 
 		this.topic = topic;
 		this.eventJson = eventJson;
@@ -35,19 +31,19 @@ public class Event {
 	
 	
 	public String readId() {
-		return fieldFromEvent(config.EVENT_FIELD_ID);
+		return fieldFromEvent(Config.getInstance().EVENT_FIELD_ID);
 	}
 	
 	public String readTimestamp() {
-		return fieldFromEvent(config.EVENT_FIELD_TIMESTAMP);
+		return fieldFromEvent(Config.getInstance().EVENT_FIELD_TIMESTAMP);
 	}
 	
 	public String readEventType() {
-		return fieldFromEvent(config.EVENT_FIELD_EVENT_TYPE);
+		return fieldFromEvent(Config.getInstance().EVENT_FIELD_EVENT_TYPE);
 	}
 
 	public String readSchemaVersion() {
-		return fieldFromEvent(config.EVENT_FIELD_VERSION);
+		return fieldFromEvent(Config.getInstance().EVENT_FIELD_VERSION);
 	}
 
 	public String fieldFromEvent(String field) {

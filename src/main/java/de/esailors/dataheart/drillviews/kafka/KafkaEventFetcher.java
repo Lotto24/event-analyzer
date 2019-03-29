@@ -27,15 +27,12 @@ public class KafkaEventFetcher {
 
 	private static Collection<String> topicsBlacklist;
 
-	private Config config;
 	private MessageProcessor eventProcessor;
 
 	private Consumer<byte[], byte[]> consumer;
 	private Set<Topic> topics = new HashSet<>();
 
-	public KafkaEventFetcher(Config config) {
-		this.config = config;
-
+	public KafkaEventFetcher() {
 		initConsumer();
 		initTopicList();
 		initMessageProcessor();
@@ -56,7 +53,8 @@ public class KafkaEventFetcher {
 
 	private void fetchEventsForTopic(Topic topic) {
 		prepareConsumerFor(topic);
-		ConsumerRecords<byte[], byte[]> consumedRecords = consumer.poll(config.KAFKA_CONSUMER_POLL_TIMEOUT);
+		// TODO try to fetch a bit more often until we have as many events as desired by config, only stopping after we have retried a couple of times
+		ConsumerRecords<byte[], byte[]> consumedRecords = consumer.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
 		eventProcessor.processRecords(topic, consumedRecords);
 	}
 
@@ -109,7 +107,7 @@ public class KafkaEventFetcher {
 	}
 
 	private void initMessageProcessor() {
-		this.eventProcessor = new MessageProcessor(config);
+		this.eventProcessor = new MessageProcessor();
 	}
 
 	private void initBlacklistTopics() {
@@ -125,16 +123,16 @@ public class KafkaEventFetcher {
 	}
 
 	private Properties initializeConsumerProperties() {
-		log.info("Creating Kafka consumer for: " + config.KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
+		log.info("Creating Kafka consumer for: " + Config.getInstance().KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
 		
 		Properties props = new Properties();
-		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, config.KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
-		props.put(ConsumerConfig.GROUP_ID_CONFIG, config.KAFKA_CONSUMER_GROUP_ID);
+		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
+		props.put(ConsumerConfig.GROUP_ID_CONFIG, Config.getInstance().KAFKA_CONSUMER_GROUP_ID);
 		props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
 		props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, config.KAFKA_CONSUMER_AUTO_OFFSET_RESET);
-		props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, config.KAFKA_CONSUMER_ENABLE_AUTO_COMMIT);
-		props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, config.KAFKA_CONSUMER_MAX_POLL_RECORDS);
+		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, Config.getInstance().KAFKA_CONSUMER_AUTO_OFFSET_RESET);
+		props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, Config.getInstance().KAFKA_CONSUMER_ENABLE_AUTO_COMMIT);
+		props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, Config.getInstance().KAFKA_CONSUMER_MAX_POLL_RECORDS);
 		return props;
 	}
 

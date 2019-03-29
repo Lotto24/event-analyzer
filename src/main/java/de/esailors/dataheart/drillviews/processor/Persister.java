@@ -26,7 +26,7 @@ import de.esailors.dataheart.drillviews.data.EventStructure;
 import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.data.TreePlotter;
-import de.esailors.dataheart.drillviews.git.SystemUtil;
+import de.esailors.dataheart.drillviews.util.SystemUtil;
 
 public class Persister {
 
@@ -35,13 +35,10 @@ public class Persister {
 
 	private static final Logger log = LogManager.getLogger(Persister.class.getName());
 
-	private Config config;
-
 	private ObjectMapper jsonObjectMapper;
 	private String formattedCurrentTime;
 
-	public Persister(Config config) {
-		this.config = config;
+	public Persister() {
 		this.jsonObjectMapper = new ObjectMapper();
 		formattedCurrentTime = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
 
@@ -49,20 +46,21 @@ public class Persister {
 	}
 
 	private void initOutputDirectories() {
-		wipeDirectory(config.OUTPUT_DIRECTORY);
+		wipeDirectory(Config.getInstance().OUTPUT_DIRECTORY);
 
-		ensureDirectoryExists(config.OUTPUT_DIRECTORY);
-		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_SAMPLES_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(config.OUTPUT_EVENTSTRUCTURES_DIRECTORY));
+		ensureDirectoryExists(Config.getInstance().OUTPUT_DIRECTORY);
+		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY));
+		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY));
+		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY));
+		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY));
+		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY));
+		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY));
+		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY));
 	}
 
 	private void wipeDirectory(String directoryPath) {
 		File directory = new File(directoryPath);
-		log.info("Wiping directory: " + directory.getAbsolutePath());
+		log.debug("Wiping directory: " + directory.getAbsolutePath());
 		if (!directory.exists()) {
 			return;
 		}
@@ -103,21 +101,21 @@ public class Persister {
 
 	public void persistDrillView(EventType eventType, String createStatement) {
 		log.info("Writing drill view to disc for " + eventType);
-		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY), fileNameForDrillView(eventType),
+		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY), fileNameForDrillView(eventType),
 				createStatement);
 	}
 
 	public String outputDirectoryPathFor(EventStructure eventStructure) {
-		return outputDirectoryPathFor(config.OUTPUT_EVENTSTRUCTURES_DIRECTORY) + eventStructure.getEventType().getName()
+		return outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY) + eventStructure.getEventType().getName()
 				+ File.separator;
 	}
 
 	public String outputDirectoryPathFor(AvroSchema avroSchema) {
-		return outputDirectoryPathFor(config.OUTPUT_AVROSCHEMAS_DIRECTORY) + avroSchema.getName() + File.separator;
+		return outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY) + avroSchema.getName() + File.separator;
 	}
 
 	public String outputDirectoryPathFor(String subPath) {
-		return config.OUTPUT_DIRECTORY + File.separator + subPath + File.separator;
+		return Config.getInstance().OUTPUT_DIRECTORY + File.separator + subPath + File.separator;
 	}
 
 	public void persistEventSamples(EventType eventType) {
@@ -131,11 +129,11 @@ public class Persister {
 //			eventSample += JsonPrettyPrinter.prettyPrintJsonString(event.getEventJson()) + "\n";
 			eventSample += event.getEventJson().toString() + "\n";
 			cnt++;
-			if (cnt >= config.OUTPUT_SAMPLES_COUNT) {
+			if (cnt >= Config.getInstance().OUTPUT_SAMPLES_COUNT) {
 				break;
 			}
 		}
-		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_SAMPLES_DIRECTORY),
+		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY),
 				fileNameForEventSamples(eventType), eventSample);
 
 	}
@@ -155,7 +153,7 @@ public class Persister {
 
 		String changeSetFile = "changelog_" + formattedCurrentTime + ".md";
 
-		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY), changeSetFile,
+		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY), changeSetFile,
 				changeSetContent);
 	}
 
@@ -170,13 +168,13 @@ public class Persister {
 
 		String changeSetFile = "warnings_" + formattedCurrentTime + ".md";
 
-		FileWriterUtil.writeFile(outputDirectoryPathFor(config.OUTPUT_CHANGELOGS_DIRECTORY), changeSetFile,
+		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY), changeSetFile,
 				changeSetContent);
 	}
 
 	public void persistTopicReport(Topic topic) {
 		log.info("Writing topic report for: " + topic.getName());
-		String sourcePath = outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY);
+		String sourcePath = outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY);
 
 		String reportContent = "# Topic report for: " + topic.getName() + "\n";
 		if (topic.isConsistent()) {
@@ -237,13 +235,13 @@ public class Persister {
 		}
 	}
 
-	private Set<String> eventTypeLinks(Set<EventType> eventTypes, String sourcePath) {
-		Set<String> r = new HashSet<>();
-		for (EventType eventType : eventTypes) {
-			r.add(linkToEventTypeReport(eventType, sourcePath));
-		}
-		return r;
-	}
+//	private Set<String> eventTypeLinks(Set<EventType> eventTypes, String sourcePath) {
+//		Set<String> r = new HashSet<>();
+//		for (EventType eventType : eventTypes) {
+//			r.add(linkToEventTypeReport(eventType, sourcePath));
+//		}
+//		return r;
+//	}
 
 	private Set<String> eventTypeLinksByName(Set<String> eventTypeNames, String sourcePath) {
 		Set<String> r = new HashSet<>();
@@ -279,8 +277,10 @@ public class Persister {
 	}
 
 	public void persistEventTypeReport(EventType eventType) {
-		String sourcePath = outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY);
+		String sourcePath = outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY);
 
+		// TODO add last seen
+		
 		String reportContent = "# EventType Report: " + eventType.getName() + "\n";
 
 		// consistency
@@ -295,7 +295,7 @@ public class Persister {
 		// source topics
 		reportContent += "### Found in the following topics:\n";
 		for (Topic topic : eventType.getSourceTopics()) {
-			reportContent += "* " + linkToTopicReport(topic, outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY))
+			reportContent += "* " + linkToTopicReport(topic, outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY))
 					+ "\n";
 		}
 
@@ -470,7 +470,7 @@ public class Persister {
 
 	private String linkToTopicReport(Topic topic, String sourcePath) {
 		return generateLink(topic.getName(), sourcePath,
-				outputDirectoryPathFor(config.OUTPUT_TOPIC_DIRECTORY) + fileNameForTopicReport(topic));
+				outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY) + fileNameForTopicReport(topic));
 	}
 
 	private String linkToEventTypeReport(EventType eventType, String sourcePath) {
@@ -478,18 +478,18 @@ public class Persister {
 	}
 
 	private String linkToEventTypeReportByName(String eventTypeName, String sourcePath) {
-		return generateLink(eventTypeName, sourcePath, outputDirectoryPathFor(config.OUTPUT_EVENTTYPE_DIRECTORY)
+		return generateLink(eventTypeName, sourcePath, outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY)
 				+ fileNameForEventTypeReportByName(eventTypeName));
 	}
 
 	private String linkToEventSamples(EventType eventType, String sourcePath) {
 		return generateLink("Event sample", sourcePath,
-				outputDirectoryPathFor(config.OUTPUT_SAMPLES_DIRECTORY) + fileNameForEventSamples(eventType));
+				outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY) + fileNameForEventSamples(eventType));
 	}
 
 	private String linkToDrillView(EventType eventType, String sourcePath) {
 		return generateLink("Drill view", sourcePath,
-				outputDirectoryPathFor(config.OUTPUT_DRILL_DIRECTORY) + fileNameForDrillView(eventType));
+				outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY) + fileNameForDrillView(eventType));
 	}
 
 	private String linkToAvroSchema(AvroSchema avroSchema, String sourcePath) {
@@ -523,7 +523,7 @@ public class Persister {
 		Path parent = Paths.get(parentPath).toAbsolutePath();
 		Path child = Paths.get(childPath).toAbsolutePath();
 		boolean r = child.startsWith(parent);
-		log.info("Checking if " + parent.toString() + " is parent of " + child.toString() + ": " + r);
+		log.debug("Checking if " + parent.toString() + " is parent of " + child.toString() + ": " + r);
 		return r;
 	}
 

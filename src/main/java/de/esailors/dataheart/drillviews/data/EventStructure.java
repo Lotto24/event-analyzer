@@ -13,7 +13,8 @@ public class EventStructure {
 	public EventStructure(Event sourceEvent, EventType eventType) {
 		this.source = new EventStructureSource(sourceEvent);
 		this.eventType = eventType;
-		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromJsonNode(sourceEvent.getEventJson(), eventType.getName());
+		this.eventStructureTree = TreeFactory.getInstance().buildTreeFromJsonNode(sourceEvent.getEventJson(),
+				eventType.getName());
 	}
 
 	public EventStructure(AvroSchema avroSchema) {
@@ -24,15 +25,16 @@ public class EventStructure {
 
 	public EventStructure(EventType eventType) {
 		// merged event structure
-		Set<EventStructure> eventStructures = new HashSet<>(eventType.getEventStructures());
-		if(eventType.getAvroSchemas() != null) {
-			for(AvroSchema avroSchema : eventType.getAvroSchemas().values()) {
-				eventStructures.add(avroSchema.getEventStructure());
+		Set<EventStructure> sourceEventStructures = new HashSet<>(eventType.getEventStructures());
+		if (eventType.getAvroSchemas() != null) {
+			for (AvroSchema avroSchema : eventType.getAvroSchemas().values()) {
+				sourceEventStructures.add(avroSchema.getEventStructure());
 			}
 		}
-		this.source = new EventStructureSource(eventStructures);
+		this.source = new EventStructureSource(sourceEventStructures);
 		this.eventType = eventType;
-		this.eventStructureTree = EventStructureMerger.getInstance().mergeEventStructures(eventType, eventStructures);
+		this.eventStructureTree = EventStructureMerger.getInstance().mergeEventStructures(eventType,
+				sourceEventStructures);
 	}
 
 	public EventType getEventType() {
@@ -47,6 +49,10 @@ public class EventStructure {
 		return eventStructureTree;
 	}
 
+	public String toDot() {
+		return eventStructureTree.toDot();
+	}
+
 	@Override
 	public String toString() {
 		return source.toString() + "_" + hashCode();
@@ -57,6 +63,8 @@ public class EventStructure {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((eventStructureTree == null) ? 0 : eventStructureTree.hashCode());
+		result = prime * result + ((eventType == null) ? 0 : eventType.hashCode());
+		result = prime * result + ((source == null) ? 0 : source.getType().hashCode());
 		return result;
 	}
 
@@ -74,11 +82,17 @@ public class EventStructure {
 				return false;
 		} else if (!eventStructureTree.equals(other.eventStructureTree))
 			return false;
+		if (eventType == null) {
+			if (other.eventType != null)
+				return false;
+		} else if (!eventType.equals(other.eventType))
+			return false;
+		if (source == null) {
+			if (other.source != null)
+				return false;
+		} else if (!source.getType().equals(other.source.getType()))
+			return false;
 		return true;
-	}
-
-	public String toDot() {
-		return eventStructureTree.toDot();
 	}
 
 }

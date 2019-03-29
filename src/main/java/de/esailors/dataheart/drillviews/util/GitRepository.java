@@ -1,4 +1,4 @@
-package de.esailors.dataheart.drillviews.git;
+package de.esailors.dataheart.drillviews.util;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,11 +22,13 @@ import org.eclipse.jgit.api.errors.TransportException;
 import org.eclipse.jgit.errors.NoWorkTreeException;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.transport.CredentialsProvider;
 import org.eclipse.jgit.transport.JschConfigSessionFactory;
 import org.eclipse.jgit.transport.OpenSshConfig.Host;
 import org.eclipse.jgit.transport.SshSessionFactory;
 import org.eclipse.jgit.transport.SshTransport;
 import org.eclipse.jgit.transport.Transport;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.util.FS;
 
 import com.google.common.base.Optional;
@@ -36,30 +38,61 @@ import com.jcraft.jsch.Session;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 
-public class GitUtil {
+public class GitRepository {
 
-	private static final Logger log = LogManager.getLogger(GitUtil.class.getName());
+	// authentication via ssh is not possible from livec (port not opened), we need
+	// to support http as well
+	public enum AuthenticationMethodType {
+		SSH, HTTP
+	}
 
-	private Config config;
+	private static final Logger log = LogManager.getLogger(GitRepository.class.getName());
 
+	private AuthenticationMethodType authenticationMethodType;
 	private File localGitRepositoryDirectory;
 	private SshSessionFactory sshSessionFactory;
 	private Git git;
 
-	public GitUtil(Config config) {
-		this.config = config;
-		
+	private CredentialsProvider credentialsProvider;
+
+	public GitRepository() {
+		initAuthenticationType();
 		initShutdownHook();
-		initSshSessionFactory();
 		initRepository();
+	}
+
+	private void initAuthenticationType() {
+		String authenticationMethodTypeConfigValue = Config.getInstance().GIT_AUTHENTICATION_METHOD;
+		switch (authenticationMethodTypeConfigValue.toUpperCase()) {
+		case "HTTP": {
+			authenticationMethodType = AuthenticationMethodType.HTTP;
+			initCredentialsProvider();
+			break;
+		}
+		case "SSH": {
+			authenticationMethodType = AuthenticationMethodType.SSH;
+			initSshSessionFactory();
+			break;
+		}
+		default: {
+			throw new IllegalStateException(
+					"Unknown config value for git authentication method, expecting either ssh or http - received: "
+							+ authenticationMethodTypeConfigValue);
+		}
+		}
+	}
+
+	private void initCredentialsProvider() {
+		this.credentialsProvider = new UsernamePasswordCredentialsProvider(Config.getInstance().GIT_AUTHENTICATION_USER, Config.getInstance().GIT_AUTHENTICATION_PASSWORD);
 	}
 
 	private void initRepository() {
 
-		localGitRepositoryDirectory = new File(config.GIT_LOCAL_REPOSITORY_PATH);
+		localGitRepositoryDirectory = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH);
 		log.info("Initializing git repository at " + localGitRepositoryDirectory.getAbsolutePath());
 		if (!localGitRepositoryDirectory.exists()) {
-			log.info("Git directory path is empty, cloning repository to: " + localGitRepositoryDirectory.getAbsolutePath());
+			log.info("Repository directory path is empty, cloning repository to: "
+					+ localGitRepositoryDirectory.getAbsolutePath());
 			cloneRepositoryToDirectory(localGitRepositoryDirectory);
 			return;
 		}
@@ -67,9 +100,10 @@ public class GitUtil {
 		// if the repository already exists locally do not delete it and clone new
 		// (unless it has local modifications) instead just pull update and reuse it
 
-		log.info("Git directroy path already exists, trying to reuse repository");
+		log.debug("Git directroy path already exists, trying to reuse repository");
 		// check if directory already is a repository
-		File existingDirectoryRepository = new File(localGitRepositoryDirectory.getAbsolutePath() + File.separator + ".git/");
+		File existingDirectoryRepository = new File(
+				localGitRepositoryDirectory.getAbsolutePath() + File.separator + ".git/");
 
 		if (existingDirectoryRepository.exists() && existingDirectoryRepository.isDirectory()) {
 
@@ -90,13 +124,16 @@ public class GitUtil {
 			}
 
 		} else {
-			throw new IllegalStateException("Local git repository path is not empty but also not a repository: " + config.GIT_LOCAL_REPOSITORY_PATH);
+			throw new IllegalStateException("Local git repository path is not empty but also not a repository: "
+					+ Config.getInstance().GIT_LOCAL_REPOSITORY_PATH);
 		}
 	}
 
 	private void pullFromRemote() {
 		log.info("Pulling changes from remote");
 		PullCommand pullCommand = git.pull();
+		pullCommand.setRemote(Config.getInstance().GIT_REMOTE_NAME);
+		pullCommand.setRemoteBranchName(Config.getInstance().GIT_BRANCH);
 		configureAuthentication(pullCommand);
 		try {
 			PullResult pullResult = pullCommand.call();
@@ -126,7 +163,7 @@ public class GitUtil {
 			String remoteHead = fetchRemoteHead();
 
 			if (localHead.equals(remoteHead)) {
-				log.info("Local HEAD and remote HEAD are equal, commits are in sync");
+				log.debug("Local HEAD and remote HEAD are equal, commits are in sync");
 				return true;
 			}
 
@@ -172,7 +209,7 @@ public class GitUtil {
 		Collection<Ref> remoteRefs = fetchRemoteRefs(true);
 		for (Ref ref : remoteRefs) {
 			log.debug("Got remote head ref: " + ref.toString());
-			if (ref.getName().equals("refs/heads/" + config.GIT_BRANCH)) {
+			if (ref.getName().equals("refs/heads/" + Config.getInstance().GIT_BRANCH)) {
 				return ref.getObjectId().getName();
 			}
 		}
@@ -191,7 +228,7 @@ public class GitUtil {
 
 	private void checkStatusIsUnmodified() throws GitAPIException {
 
-		log.info("Making sure local git repository does not have any kind of local modifications");
+		log.debug("Making sure local git repository does not have any kind of local modifications");
 
 		Status status = git.status().call();
 
@@ -224,12 +261,13 @@ public class GitUtil {
 
 	private void cloneRepositoryToDirectory(File gitDirectory) {
 		CloneCommand cloneCommand = Git.cloneRepository();
-		cloneCommand.setURI(config.GIT_REPOSITORY_URI);
-		cloneCommand.setBranch(config.GIT_BRANCH);
-		cloneCommand.setRemote(config.GIT_REMOTE_NAME);
+		cloneCommand.setURI(Config.getInstance().GIT_REPOSITORY_URI);
+		cloneCommand.setBranch(Config.getInstance().GIT_BRANCH);
+		cloneCommand.setRemote(Config.getInstance().GIT_REMOTE_NAME);
 		cloneCommand.setDirectory(gitDirectory);
 		configureAuthentication(cloneCommand);
 		try {
+			// TODO this is throwing a "Repository does
 			git = cloneCommand.call();
 		} catch (GitAPIException e) {
 			throw new IllegalStateException("Unable to clone git repo", e);
@@ -239,20 +277,20 @@ public class GitUtil {
 	private void close() {
 		if (git != null) {
 			try {
-				if(!git.status().call().isClean()) {
+				if (!git.status().call().isClean()) {
 					log.warn("About to close git repository but there are still local modifications");
 				}
 			} catch (NoWorkTreeException | GitAPIException e) {
 				log.warn("Unable to check git status", e);
 			}
 			git.close();
+			git = null;
 		}
 	}
 
 	private void initShutdownHook() {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
-				log.debug("Shutdown Hook triggered");
 				close();
 			}
 		});
@@ -263,8 +301,9 @@ public class GitUtil {
 		if (!fileToAdd.exists()) {
 			throw new IllegalArgumentException("Unable to add non existing path to repository: " + filePath);
 		}
-		String newlyAddedPath = localGitRepositoryDirectory.getAbsolutePath() + File.separatorChar + fileToAdd.getName();
-		log.info("Adding " + filePath + " to git repository: " + newlyAddedPath);
+		String newlyAddedPath = localGitRepositoryDirectory.getAbsolutePath() + File.separatorChar
+				+ fileToAdd.getName();
+		log.debug("Adding " + filePath + " to git repository: " + newlyAddedPath);
 		if (fileToAdd.isDirectory()) {
 			try {
 				File gitDirectorySubfolder = new File(newlyAddedPath);
@@ -290,16 +329,17 @@ public class GitUtil {
 
 	public void commitAndPush(String commitMessagePrefix) {
 		String commitMessage = commitMessagePrefix + " DrillViewGenerator commit";
-		log.info("Pushing changes to git: " + commitMessage);
+		log.debug("Pushing changes to git: " + commitMessage);
 		try {
 			// check if there even is anything to commit
-			if(git.status().call().isClean()) {
+			if (git.status().call().isClean()) {
 				log.info("No local modifications to commit");
 				return;
 			}
-			log.info("Commit local changes in git repository");
-			git.commit().setMessage(commitMessage).setAuthor(config.GIT_AUTHOR, gitEmailAddress()).call();
-			log.info("Pushing to git remote branch " + config.GIT_BRANCH + " at " + config.GIT_REPOSITORY_URI);
+			log.debug("Commit local changes in git repository");
+			git.commit().setMessage(commitMessage).setAuthor(Config.getInstance().GIT_AUTHOR, gitEmailAddress()).call();
+			log.info("Pushing to git remote branch " + Config.getInstance().GIT_BRANCH + " at "
+					+ Config.getInstance().GIT_REPOSITORY_URI);
 			configureAuthentication(git.push()).call();
 		} catch (GitAPIException e) {
 			throw new IllegalStateException("Unable to commit and push changes to git", e);
@@ -309,32 +349,43 @@ public class GitUtil {
 	private String gitEmailAddress() {
 		String emailUser;
 		Optional<String> localUser = SystemUtil.getCurrentUser();
-		if(localUser.isPresent()) {
+		if (localUser.isPresent()) {
 			emailUser = localUser.get();
 		} else {
-			emailUser = config.GIT_EMAIL_DEFAULT_USER;
+			emailUser = Config.getInstance().GIT_EMAIL_DEFAULT_USER;
 		}
 		String emailHost;
 		Optional<String> localHostname = SystemUtil.getLocalHostname();
-		if(localHostname.isPresent()) {
+		if (localHostname.isPresent()) {
 			emailHost = localHostname.get();
 		} else {
-			emailHost = config.GIT_EMAIL_DEFAULT_HOST;
+			emailHost = Config.getInstance().GIT_EMAIL_DEFAULT_HOST;
 		}
 		return emailUser + "@" + emailHost;
 	}
 
 	private TransportCommand<?, ?> configureAuthentication(TransportCommand<?, ?> transportCommand) {
 
-		// inspired by https://www.codeaffine.com/2014/12/09/jgit-authentication/
-
-		transportCommand.setTransportConfigCallback(new TransportConfigCallback() {
-			@Override
-			public void configure(Transport transport) {
-				SshTransport sshTransport = (SshTransport) transport;
-				sshTransport.setSshSessionFactory(sshSessionFactory);
-			}
-		});
+		switch(authenticationMethodType) {
+		case SSH: {
+			// inspired by https://www.codeaffine.com/2014/12/09/jgit-authentication/
+			transportCommand.setTransportConfigCallback(new TransportConfigCallback() {
+				@Override
+				public void configure(Transport transport) {
+					// only needed when using ssh authentication, not for http
+					if (transport instanceof SshTransport) {
+						SshTransport sshTransport = (SshTransport) transport;
+						sshTransport.setSshSessionFactory(sshSessionFactory);
+					}
+				}
+			});
+			break;
+		}
+		case HTTP: {
+			transportCommand.setCredentialsProvider(credentialsProvider);
+			break;
+		}
+		}
 
 		// for convenience
 		return transportCommand;
@@ -353,11 +404,33 @@ public class GitUtil {
 				// https://stackoverflow.com/questions/13686643/using-keys-with-jgit-to-access-a-git-repository-securely
 				JSch defaultJSch = super.createDefaultJSch(fs);
 				defaultJSch.removeAllIdentity();
-				defaultJSch.addIdentity(config.GIT_SSH_KEY_PATH);
+				defaultJSch.addIdentity(Config.getInstance().GIT_AUTHENTICATION_SSH_KEY_PATH);
 				return defaultJSch;
 			}
 
 		};
+	}
+
+	public Optional<String> loadFileFromRepository(String subPath) {
+
+		// TODO not finished
+
+		log.info("Loading from local repository: " + subPath);
+
+		File drillViewFile = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + subPath);
+		if (!drillViewFile.exists() || !drillViewFile.canRead()) {
+			log.debug("Unable to load drill view from git repository as file either doesn't exist or can't be read at "
+					+ drillViewFile.getAbsolutePath());
+			return Optional.absent();
+		} else {
+			try {
+				return Optional.of(FileUtils.readFileToString(drillViewFile));
+			} catch (IOException e) {
+				log.warn("Unable to read drill view from local git repository even though the file exists at: "
+						+ drillViewFile.getAbsolutePath(), e);
+				return Optional.absent();
+			}
+		}
 	}
 
 }

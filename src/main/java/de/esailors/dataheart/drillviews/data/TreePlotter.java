@@ -2,8 +2,8 @@ package de.esailors.dataheart.drillviews.data;
 
 import java.io.File;
 
-import de.esailors.dataheart.drillviews.git.SystemUtil;
 import de.esailors.dataheart.drillviews.processor.FileWriterUtil;
+import de.esailors.dataheart.drillviews.util.SystemUtil;
 
 public class TreePlotter {
 
