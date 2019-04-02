@@ -49,7 +49,7 @@ public class EventType {
 		// this class by now
 
 		// TODO check timestamps in seconds vs milliseconds
-		
+
 		// check consistency within topics
 		// - each topic only has avro / json - if avro always the same schema?
 		// - check JSON structure doesnt change (always the same event structure)
@@ -79,7 +79,8 @@ public class EventType {
 			if (isAvroMessage) {
 				String schemaVersion = event.readSchemaVersion();
 				schemaVersions.add(schemaVersion);
-				AvroSchema avroSchema = new AvroSchema(event.getAvroSchemaHash(), event.getSchema(), schemaVersion, this);
+				AvroSchema avroSchema = new AvroSchema(event.getAvroSchemaHash(), event.getSchema(), schemaVersion,
+						this);
 				avroSchemas.put(event.getAvroSchemaHash(), avroSchema);
 			}
 
@@ -122,7 +123,8 @@ public class EventType {
 					"Can't build combined event structure yet, call markInconsistencies() first");
 		}
 		if (eventStructures.isEmpty()) {
-			// TODO can still build merged event structure from avro schema potentially
+			// could theoretically still build merged event structure from avro schema
+			// potentially, but in practice we did not fetch a schema without an event
 			log.warn("Unable to build merged even structure due to missing events for " + this);
 			mergedEventStructure = Optional.absent();
 		} else {
@@ -188,14 +190,14 @@ public class EventType {
 	}
 
 	public Set<String> getAvroSchemaHashes() {
-		if(avroSchemas == null) {
+		if (avroSchemas == null) {
 			return null;
 		}
 		return avroSchemas.keySet();
 	}
 
 	public Collection<AvroSchema> getMessageSchemas() {
-		if(avroSchemas == null) {
+		if (avroSchemas == null) {
 			return null;
 		}
 		return avroSchemas.values();

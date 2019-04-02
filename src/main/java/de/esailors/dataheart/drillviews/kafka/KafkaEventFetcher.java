@@ -53,13 +53,19 @@ public class KafkaEventFetcher {
 
 	private void fetchEventsForTopic(Topic topic) {
 		prepareConsumerFor(topic);
-		// TODO try to fetch a bit more often until we have as many events as desired by config, only stopping after we have retried a couple of times
 		ConsumerRecords<byte[], byte[]> consumedRecords = consumer.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
+		int retries = 0;
+		while(consumedRecords.count() == 0 && retries < Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES) {
+			// try to fetch a bit more often until we have at least 1 record
+			retries++;
+			log.info(topic + " received no records, trying again: " + retries + " / " + Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES);
+			consumedRecords = consumer.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
+		}
 		eventProcessor.processRecords(topic, consumedRecords);
 	}
 
 	private void prepareConsumerFor(Topic topic) {
-		log.debug("Preparing for: " + topic);
+		log.debug("Preparing consumer for: " + topic);
 		// reset first
 		if (!consumer.subscription().isEmpty()) {
 			log.debug("Unsubscribing from all topics");

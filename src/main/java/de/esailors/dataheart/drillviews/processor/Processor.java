@@ -41,7 +41,7 @@ public class Processor {
 		this.drillConnection = new DrillConnection();
 		this.createViewSqlBuilder = new CreateViewSqlBuilder();
 		this.drillViews = new DrillViews(drillConnection);
-		this.persister = new Persister();
+		this.persister = new Persister(gitRepositoryOption);
 		this.changeLog = new ChangeLog();
 	}
 
@@ -106,7 +106,6 @@ public class Processor {
 	}
 
 	private void writeAvroSchemas() {
-		// TODO check if it actually changes before persisting
 		for (String schemaHash : avroSchemas.keySet()) {
 			persister.persistAvroSchema(avroSchemas.get(schemaHash));
 		}
@@ -114,8 +113,6 @@ public class Processor {
 	}
 
 	private void writeEventTypeReport() {
-		// TODO check if it actually changes before persisting
-
 		for (EventType eventType : eventTypes.values()) {
 			persister.persistEventTypeReport(eventType);
 		}
@@ -185,7 +182,6 @@ public class Processor {
 	}
 
 	private void writeTopicReport(Topic topic) {
-		// TODO check local git repository if report even changed
 		persister.persistTopicReport(topic);
 	}
 

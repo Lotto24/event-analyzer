@@ -1,6 +1,8 @@
 package de.esailors.dataheart.drillviews.data;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class EventStructure {
@@ -25,7 +27,7 @@ public class EventStructure {
 
 	public EventStructure(EventType eventType) {
 		// merged event structure
-		Set<EventStructure> sourceEventStructures = new HashSet<>(eventType.getEventStructures());
+		List<EventStructure> sourceEventStructures = new ArrayList<>(eventType.getEventStructures());
 		if (eventType.getAvroSchemas() != null) {
 			for (AvroSchema avroSchema : eventType.getAvroSchemas().values()) {
 				sourceEventStructures.add(avroSchema.getEventStructure());
@@ -64,7 +66,15 @@ public class EventStructure {
 		int result = 1;
 		result = prime * result + ((eventStructureTree == null) ? 0 : eventStructureTree.hashCode());
 		result = prime * result + ((eventType == null) ? 0 : eventType.hashCode());
-		result = prime * result + ((source == null) ? 0 : source.getType().hashCode());
+		// we don't want to use the whole EventStructureSource, mostly because we try to
+		// avoid defining equality for this. but the source type should be taken into
+		// account, as we still want to merge properties between JSON and Avro
+		// structures. Enums hashCode however is not stable (delegates to
+		// Object.hashCode() which is memory address dependent). but we want this
+		// hashCode to be stable in the sense that different runs will give the same
+		// hashCode for the same abstract event structure and source. thus we take the
+		// string representation of the Enum here
+		result = prime * result + ((source == null) ? 0 : source.getType().toString().hashCode());
 		return result;
 	}
 

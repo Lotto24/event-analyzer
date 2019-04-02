@@ -57,12 +57,11 @@ public class Config {
 
 	private static final String KAFKA_CONSUMER_BOOTSTRAP_SERVERS_KEY = "kafka.consumer.bootstrapserver";
 	private static final String KAFKA_CONSUMER_GROUP_ID_KEY = "kafka.consumer.group_id";
-
 	private static final String KAFKA_CONSUMER_POLL_TIMEOUT_KEY = "kafka.consumer.poll.timeout";
-
 	private static final String KAFKA_CONSUMER_AUTO_OFFSET_RESET_KEY = "kafka.consumer.auto_offset_reset";
 	private static final String KAFKA_CONSUMER_ENABLE_AUTO_COMMIT_KEY = "kafka.consumer.enable_autocommit";
 	private static final String KAFKA_CONSUMER_MAX_POLL_RECORDS_KEY = "kafka.consumer.max_poll_records";
+	private static final String KAFKA_CONSUMER_EMPTY_POLL_RETRIES_KEY = "kafka.consumer.emptypoll.retries";
 
 	// git settings
 
@@ -132,6 +131,7 @@ public class Config {
 	public String KAFKA_CONSUMER_AUTO_OFFSET_RESET = "earliest";
 	public boolean KAFKA_CONSUMER_ENABLE_AUTO_COMMIT = false;
 	public int KAFKA_CONSUMER_MAX_POLL_RECORDS = 10;
+	public int KAFKA_CONSUMER_EMPTY_POLL_RETRIES = 3;
 
 	// git settings
 	
@@ -257,12 +257,11 @@ public class Config {
 	private void loadKafkaSettings() {
 		KAFKA_CONSUMER_BOOTSTRAP_SERVERS = loadConfigString(KAFKA_CONSUMER_BOOTSTRAP_SERVERS_KEY);
 		KAFKA_CONSUMER_GROUP_ID = loadConfigString(KAFKA_CONSUMER_GROUP_ID_KEY);
-
 		KAFKA_CONSUMER_POLL_TIMEOUT = loadConfigInteger(KAFKA_CONSUMER_POLL_TIMEOUT_KEY);
-
 		KAFKA_CONSUMER_AUTO_OFFSET_RESET = loadConfigString(KAFKA_CONSUMER_AUTO_OFFSET_RESET_KEY);
 		KAFKA_CONSUMER_ENABLE_AUTO_COMMIT = loadConfigBoolean(KAFKA_CONSUMER_ENABLE_AUTO_COMMIT_KEY);
 		KAFKA_CONSUMER_MAX_POLL_RECORDS = loadConfigInteger(KAFKA_CONSUMER_MAX_POLL_RECORDS_KEY);
+		KAFKA_CONSUMER_EMPTY_POLL_RETRIES = loadConfigInteger(KAFKA_CONSUMER_EMPTY_POLL_RETRIES_KEY);
 	}
 
 	private boolean loadConfigBoolean(String configKey) {

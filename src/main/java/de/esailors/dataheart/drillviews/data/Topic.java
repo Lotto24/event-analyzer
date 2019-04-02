@@ -42,7 +42,7 @@ public class Topic {
 			}
 			addEventForEventType(readEventType, event);
 		}
-		if (invalidEvents.size() > 1) {
+		if (invalidEvents.size() > 0) {
 			addMessageToReport("Invalid events detected in: " + this);
 		}
 		if(sawEventsWithoutEventType) {

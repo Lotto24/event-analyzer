@@ -25,7 +25,7 @@ import de.esailors.dataheart.drillviews.data.Event;
 import de.esailors.dataheart.drillviews.data.EventStructure;
 import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Topic;
-import de.esailors.dataheart.drillviews.data.TreePlotter;
+import de.esailors.dataheart.drillviews.util.GitRepository;
 import de.esailors.dataheart.drillviews.util.SystemUtil;
 
 public class Persister {
@@ -35,10 +35,12 @@ public class Persister {
 
 	private static final Logger log = LogManager.getLogger(Persister.class.getName());
 
+	private Optional<GitRepository> gitRepositoryOption;
 	private ObjectMapper jsonObjectMapper;
 	private String formattedCurrentTime;
 
-	public Persister() {
+	public Persister(Optional<GitRepository> gitRepositoryOption) {
+		this.gitRepositoryOption = gitRepositoryOption;
 		this.jsonObjectMapper = new ObjectMapper();
 		formattedCurrentTime = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
 
@@ -101,17 +103,18 @@ public class Persister {
 
 	public void persistDrillView(EventType eventType, String createStatement) {
 		log.info("Writing drill view to disc for " + eventType);
-		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY), fileNameForDrillView(eventType),
-				createStatement);
+		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY),
+				fileNameForDrillView(eventType), createStatement);
 	}
 
 	public String outputDirectoryPathFor(EventStructure eventStructure) {
-		return outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY) + eventStructure.getEventType().getName()
-				+ File.separator;
+		return outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY)
+				+ eventStructure.getEventType().getName() + File.separator;
 	}
 
 	public String outputDirectoryPathFor(AvroSchema avroSchema) {
-		return outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY) + avroSchema.getName() + File.separator;
+		return outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY) + avroSchema.getName()
+				+ File.separator;
 	}
 
 	public String outputDirectoryPathFor(String subPath) {
@@ -153,8 +156,8 @@ public class Persister {
 
 		String changeSetFile = "changelog_" + formattedCurrentTime + ".md";
 
-		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY), changeSetFile,
-				changeSetContent);
+		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY),
+				changeSetFile, changeSetContent);
 	}
 
 	public void persistWarnings(ChangeLog changeLog) {
@@ -168,8 +171,8 @@ public class Persister {
 
 		String changeSetFile = "warnings_" + formattedCurrentTime + ".md";
 
-		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY), changeSetFile,
-				changeSetContent);
+		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY),
+				changeSetFile, changeSetContent);
 	}
 
 	public void persistTopicReport(Topic topic) {
@@ -280,7 +283,7 @@ public class Persister {
 		String sourcePath = outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY);
 
 		// TODO add last seen
-		
+
 		String reportContent = "# EventType Report: " + eventType.getName() + "\n";
 
 		// consistency
@@ -295,7 +298,8 @@ public class Persister {
 		// source topics
 		reportContent += "### Found in the following topics:\n";
 		for (Topic topic : eventType.getSourceTopics()) {
-			reportContent += "* " + linkToTopicReport(topic, outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY))
+			reportContent += "* "
+					+ linkToTopicReport(topic, outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY))
 					+ "\n";
 		}
 
@@ -344,10 +348,10 @@ public class Persister {
 
 		// avro schema report
 		String reportContent = "# Avro Schema: " + avroSchema.getSchema().getName() + "\n";
-		
+
 		reportContent += "### Full name:\n";
 		reportContent += "* " + avroSchema.getFullSchemaName() + "\n";
-		
+
 		reportContent += "### Schema Version:\n";
 		reportContent += "* " + avroSchema.getSchemaVersion() + "\n";
 
@@ -359,14 +363,14 @@ public class Persister {
 		persistEventStructure(avroSchema.getEventStructure());
 		reportContent += "### Event Structure:\n";
 		reportContent += "* " + linkToEventStructureReport(avroSchema.getEventStructure(), sourcePath) + "\n";
-		
+
 		// avro schema json
 		String avroSchemaJson = JsonPrettyPrinter.prettyPrintJsonString(parseToJson(avroSchema.getSchema()));
 		String avroSchemaJsonFile = fileNameForAvroSchemaJson(avroSchema);
 		FileWriterUtil.writeFile(sourcePath, avroSchemaJsonFile, avroSchemaJson);
 		reportContent += "### Schema JSON:\n";
 		reportContent += "* " + linkToAvroSchemaJson(avroSchema, sourcePath) + "\n";
-		
+
 		// write to disk
 		FileWriterUtil.writeFile(sourcePath, fileNameForAvroSchemaReport(avroSchema), reportContent);
 	}
@@ -385,9 +389,8 @@ public class Persister {
 	public void persistEventStructure(EventStructure eventStructure) {
 		// first write .dot and render as .png
 		String sourcePath = outputDirectoryPathFor(eventStructure);
-		TreePlotter.getInstance().plotTree(eventStructure.getEventStructureTree(), sourcePath,
-				fileNameForEventStructureDot(eventStructure), sourcePath,
-				fileNameForEventStructurePlot(eventStructure));
+
+		plotTree(eventStructure);
 
 		// make an .md for this event structure
 		String eventStructureContent = "# Event Structure: " + eventStructure.toString() + "\n";
@@ -396,7 +399,7 @@ public class Persister {
 		eventStructureContent += "* " + linkToEventTypeReport(eventStructure.getEventType(), sourcePath) + "\n";
 
 		eventStructureContent += "### Plot\n";
-		eventStructureContent += eventStructurePicture(eventStructure, sourcePath) + "\n";
+		eventStructureContent += eventStructurePlot(eventStructure, sourcePath) + "\n";
 
 		eventStructureContent += "### Source: " + eventStructure.getSource().getType() + "\n";
 		switch (eventStructure.getSource().getType()) {
@@ -423,7 +426,46 @@ public class Persister {
 		FileWriterUtil.writeFile(sourcePath, fileNameForEventStructure(eventStructure), eventStructureContent);
 	}
 
-	private String eventStructurePicture(EventStructure eventStructure, String sourcePath) {
+	private void plotTree(EventStructure eventStructure) {
+
+		String dotFileName = fileNameForEventStructureDot(eventStructure);
+
+		String dotContent = eventStructure.getEventStructureTree().toDot();
+		if (gitRepositoryOption.isPresent()) {
+			// check if .dot changed from git repository, if not don't render it again
+			String dotFileSubPath = Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY + File.separator
+					+ eventStructure.getEventType().getName() + File.separator + dotFileName;
+			Optional<String> existingDotContentOption = gitRepositoryOption.get()
+					.loadFileFromRepository(dotFileSubPath);
+			if (existingDotContentOption.isPresent()) {
+				if (existingDotContentOption.get().equals(dotContent)) {
+					log.info("Event structure plot did not change, skipping rendering for " + eventStructure);
+					return;
+				}
+				log.info("Event structure plot has changed, rerendering " + eventStructure);
+			} else {
+				log.debug("Event structure not found in local git repository");
+			}
+		} else {
+			log.debug("Local git repository disabled, unable to check if event structure has changed");
+		}
+
+		doPlotTree(eventStructure, dotContent, dotFileName, fileNameForEventStructurePlot(eventStructure));
+	}
+
+	private void doPlotTree(EventStructure eventStructure, String dotContent, String dotFileName, String pngFileName) {
+
+		String dotFileFolder = outputDirectoryPathFor(eventStructure);
+		String plotFileFolder = outputDirectoryPathFor(eventStructure);
+
+		FileWriterUtil.writeFile(dotFileFolder, dotFileName, dotContent);
+		String renderDotCommand = "dot -Tpng " + dotFileFolder + File.separator + dotFileName + " -o" + plotFileFolder
+				+ File.separator + pngFileName;
+
+		SystemUtil.executeCommand(renderDotCommand);
+	}
+
+	private String eventStructurePlot(EventStructure eventStructure, String sourcePath) {
 		return "!" + generateLink(eventStructure.toString(), sourcePath,
 				outputDirectoryPathFor(eventStructure) + fileNameForEventStructurePlot(eventStructure));
 	}
@@ -478,13 +520,15 @@ public class Persister {
 	}
 
 	private String linkToEventTypeReportByName(String eventTypeName, String sourcePath) {
-		return generateLink(eventTypeName, sourcePath, outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY)
-				+ fileNameForEventTypeReportByName(eventTypeName));
+		return generateLink(eventTypeName, sourcePath,
+				outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY)
+						+ fileNameForEventTypeReportByName(eventTypeName));
 	}
 
 	private String linkToEventSamples(EventType eventType, String sourcePath) {
 		return generateLink("Event sample", sourcePath,
-				outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY) + fileNameForEventSamples(eventType));
+				outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY)
+						+ fileNameForEventSamples(eventType));
 	}
 
 	private String linkToDrillView(EventType eventType, String sourcePath) {
@@ -496,7 +540,7 @@ public class Persister {
 		return generateLink(avroSchema.getName(), sourcePath,
 				outputDirectoryPathFor(avroSchema) + fileNameForAvroSchemaReport(avroSchema));
 	}
-	
+
 	private String linkToAvroSchemaJson(AvroSchema avroSchema, String sourcePath) {
 		return generateLink(avroSchema.getName(), sourcePath,
 				outputDirectoryPathFor(avroSchema) + fileNameForAvroSchemaJson(avroSchema));

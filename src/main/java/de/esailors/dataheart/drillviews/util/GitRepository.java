@@ -83,7 +83,8 @@ public class GitRepository {
 	}
 
 	private void initCredentialsProvider() {
-		this.credentialsProvider = new UsernamePasswordCredentialsProvider(Config.getInstance().GIT_AUTHENTICATION_USER, Config.getInstance().GIT_AUTHENTICATION_PASSWORD);
+		this.credentialsProvider = new UsernamePasswordCredentialsProvider(Config.getInstance().GIT_AUTHENTICATION_USER,
+				Config.getInstance().GIT_AUTHENTICATION_PASSWORD);
 	}
 
 	private void initRepository() {
@@ -267,7 +268,6 @@ public class GitRepository {
 		cloneCommand.setDirectory(gitDirectory);
 		configureAuthentication(cloneCommand);
 		try {
-			// TODO this is throwing a "Repository does
 			git = cloneCommand.call();
 		} catch (GitAPIException e) {
 			throw new IllegalStateException("Unable to clone git repo", e);
@@ -366,7 +366,7 @@ public class GitRepository {
 
 	private TransportCommand<?, ?> configureAuthentication(TransportCommand<?, ?> transportCommand) {
 
-		switch(authenticationMethodType) {
+		switch (authenticationMethodType) {
 		case SSH: {
 			// inspired by https://www.codeaffine.com/2014/12/09/jgit-authentication/
 			transportCommand.setTransportConfigCallback(new TransportConfigCallback() {
@@ -413,23 +413,27 @@ public class GitRepository {
 
 	public Optional<String> loadFileFromRepository(String subPath) {
 
-		// TODO not finished
+		log.debug("Loading file from local repository: " + subPath);
 
-		log.info("Loading from local repository: " + subPath);
-
-		File drillViewFile = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + subPath);
-		if (!drillViewFile.exists() || !drillViewFile.canRead()) {
-			log.debug("Unable to load drill view from git repository as file either doesn't exist or can't be read at "
-					+ drillViewFile.getAbsolutePath());
+		File fileToLoad = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + subPath);
+		if (!fileToLoad.exists()) {
+			log.debug("Unable to load file from git repository as file doesn't exist at "
+					+ fileToLoad.getAbsolutePath());
 			return Optional.absent();
-		} else {
-			try {
-				return Optional.of(FileUtils.readFileToString(drillViewFile));
-			} catch (IOException e) {
-				log.warn("Unable to read drill view from local git repository even though the file exists at: "
-						+ drillViewFile.getAbsolutePath(), e);
-				return Optional.absent();
-			}
+		}
+		
+		if (!fileToLoad.canRead()) {
+			log.debug("Unable to load file from git repository as file can't be read at "
+					+ fileToLoad.getAbsolutePath());
+			return Optional.absent();
+		}
+
+		try {
+			return Optional.of(FileUtils.readFileToString(fileToLoad));
+		} catch (IOException e) {
+			log.warn("Unable to read file from local git repository even though the file exists at: "
+					+ fileToLoad.getAbsolutePath(), e);
+			return Optional.absent();
 		}
 	}
 

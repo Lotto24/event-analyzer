@@ -74,7 +74,7 @@ public class Main {
 					log.warn("Unable to shutdown log4j2");
 
 				// logger not usable anymore
-				System.out.println("Done.");
+				System.out.println("Done");
 			}
 		});
 	}
