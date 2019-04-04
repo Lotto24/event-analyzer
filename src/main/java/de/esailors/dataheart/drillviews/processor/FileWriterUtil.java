@@ -49,5 +49,10 @@ public class FileWriterUtil {
 			}
 		}
 	}
+	
+	public static File getFileFromResources(String path) {
+		ClassLoader classLoader = FileWriterUtil.class.getClassLoader();
+		return new File(classLoader.getResource(path).getFile());
+	}
 
 }

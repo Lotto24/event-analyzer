@@ -1,10 +1,12 @@
 package de.esailors.dataheart.drillviews.data;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.List;
 
 import com.google.common.base.Optional;
+
+import oadd.org.apache.commons.lang.StringUtils;
 
 public class EventStructureMerger {
 
@@ -21,19 +23,26 @@ public class EventStructureMerger {
 	}
 
 	public Tree mergeEventStructures(EventType eventType, Collection<EventStructure> sourceStructures) {
-		Set<Tree> sourceTrees = new HashSet<>();
+		List<Tree> sourceTrees = new ArrayList<>();
 		for (EventStructure sourceStructure : sourceStructures) {
 			sourceTrees.add(sourceStructure.getEventStructureTree());
 		}
-		return mergeTrees(eventType.getName(), sourceTrees);
+		return mergeTrees(eventType.getName(), sourceTrees, sourceStructures);
 	}
 
-	public Tree mergeTrees(String treeName, Set<Tree> sourceTrees) {
+	public Tree mergeTrees(String treeName, List<Tree> sourceTrees, Collection<EventStructure> sourceStructures) {
 		if (sourceTrees == null || sourceTrees.isEmpty()) {
 			throw new IllegalArgumentException("Need to be given at least 1 tree to do a merge");
 		}
 
 		Tree mergedTree = new Tree(treeName);
+		
+		mergedTree.getRootNode().addProperty("MERGED_SOURCE", "");
+		int cnt = 0;
+		for(EventStructure sourceStructure : sourceStructures) {
+			cnt++;
+			mergedTree.getRootNode().addProperty("SOURCE_" + StringUtils.leftPad("" + cnt, 2), sourceStructure.toString());
+		}
 
 		boolean markOptionality = false;
 		for (Tree sourceTree : sourceTrees) {

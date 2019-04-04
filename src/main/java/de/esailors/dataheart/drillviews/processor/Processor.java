@@ -70,9 +70,13 @@ public class Processor {
 		writeAvroSchemas();
 		writeChangeLog();
 		
-		// TODO add an index to all EventTypes to README.md for ease of navigation
+		updateReadme();
 
 		addOutputToGitRepository();
+	}
+
+	private void updateReadme() {
+		persister.updateReadme(eventTypes);
 	}
 
 	private void runCountOnDrillView(EventType eventType) {
@@ -99,6 +103,7 @@ public class Processor {
 		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY));
 		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY));
 		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY));
+		gitRepository.addToRepository(persister.outputDirectoryPathForReadme() + persister.fileNameForReadme());
 
 		// TODO output any kind of statistics / report? to git / readme + changelog
 
@@ -197,7 +202,7 @@ public class Processor {
 
 		Optional<String> currentViewFromRepository;
 		if(gitRepositoryOption.isPresent()) {
-			currentViewFromRepository = gitRepositoryOption.get().loadFileFromRepository(Config.getInstance().OUTPUT_DRILL_DIRECTORY + File.separator + persister.fileNameForDrillView(eventType));
+			currentViewFromRepository = gitRepositoryOption.get().loadFile(Config.getInstance().OUTPUT_DRILL_DIRECTORY + File.separator + persister.fileNameForDrillView(eventType));
 			if (currentViewFromRepository.isPresent()) {
 				log.debug("Found a view in local git repository");
 			} else {

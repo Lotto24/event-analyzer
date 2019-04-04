@@ -36,6 +36,8 @@ public class TreeFactory {
 		}
 
 		Tree r = new Tree(name);
+		
+		r.getRootNode().addProperty("EVENT_SOURCE", "");
 
 		extendTreeWithJsonFields(r.getRootNode(), json, false);
 
@@ -56,7 +58,11 @@ public class TreeFactory {
 			currentParent.addChild(node);
 
 			JsonNode fieldJson = field.getValue();
-			node.addProperty("JSON_TYPE", getJsonType(fieldJson));
+			String jsonType = getJsonType(fieldJson);
+			node.addProperty("JSON_TYPE", jsonType);
+			if(jsonType.equals("null")) {
+				node.setOptional(true);
+			}
 			if (isNestedJson(fieldJson)) {
 				extendTreeWithJsonFields(node, fieldJson, true);
 			}
@@ -65,7 +71,7 @@ public class TreeFactory {
 
 	private String getJsonType(JsonNode json) {
 		// there must be a better way of doing this in jackson API
-		// TODO either way doesn't belong here
+		// TODO either way doesn't belong here and should be an enum
 		if (json.isArray()) {
 			return "array";
 		} else if (json.isBinary()) {
@@ -104,6 +110,7 @@ public class TreeFactory {
 
 		// either use the same name when comparing trees or exclude them from equals()
 		Tree r = new Tree(avroSchema.getName());
+		r.getRootNode().addProperty("AVRO_SOURCE", "");
 
 		extendTreeWithAvroFields(r.getRootNode(), avroSchema.getFields(), false);
 

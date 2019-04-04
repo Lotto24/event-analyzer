@@ -55,7 +55,9 @@ public class EventStructureSource {
 		String r = getType().toString();
 		switch (type) {
 		case EVENT: {
-			r += "_" + sourceEvent.readEventType() + "_" + sourceEvent.readSchemaVersion();
+			Optional<String> readEventType = sourceEvent.readEventType();
+			Optional<String> readSchemaVersion = sourceEvent.readSchemaVersion();
+			r += "_" + (readEventType.isPresent() ? readEventType.get() : "UNKNOWN_EVENT_TYPE") + "_" + (readSchemaVersion.isPresent() ? readSchemaVersion.get() : "UNKNOWN_SCHEMA_VERSION");
 			break;
 		}
 		case AVRO: {

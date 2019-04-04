@@ -32,6 +32,7 @@ public class EventType {
 	private Set<String> schemaVersions;
 	private Map<String, AvroSchema> avroSchemas;
 	private Set<Boolean> messagesAreAvro;
+	private Set<TimestampType> timestampTypes;
 
 	private List<String> reportMessages = new ArrayList<>();
 
@@ -66,6 +67,7 @@ public class EventType {
 		schemaVersions = new HashSet<>();
 		messagesAreAvro = new HashSet<>();
 		avroSchemas = new HashMap<>();
+		timestampTypes = new HashSet<>();
 
 		Event firstEvent = null;
 		Iterator<Event> iterator = getEvents().iterator();
@@ -73,12 +75,23 @@ public class EventType {
 			Event event = iterator.next();
 
 			eventStructures.add(new EventStructure(event, this));
+			
+			Optional<String> schemaVersionOption = event.readSchemaVersion();
+			String schemaVersion = schemaVersionOption.isPresent() ? schemaVersionOption.get() : null;
+			// TODO this is not nice, either mark these as invalid or continue using
+			// Optional
+			schemaVersions.add(schemaVersion);
+			
+			Optional<TimestampType> timestampTypeOption = event.determineTimestampType();
+			if(!timestampTypeOption.isPresent()) {
+				throw new IllegalStateException("Detected event without a timestamp in (" + this + "), expect all invalid events to be filtered out on Topic level already: " + new String(event.getMessage()));
+			}
+			timestampTypes.add(timestampTypeOption.get());
+			
 
 			boolean isAvroMessage = event.isAvroMessage();
 			messagesAreAvro.add(isAvroMessage);
 			if (isAvroMessage) {
-				String schemaVersion = event.readSchemaVersion();
-				schemaVersions.add(schemaVersion);
 				AvroSchema avroSchema = new AvroSchema(event.getAvroSchemaHash(), event.getSchema(), schemaVersion,
 						this);
 				avroSchemas.put(event.getAvroSchemaHash(), avroSchema);
@@ -104,17 +117,19 @@ public class EventType {
 		if (avroSchemas.size() > 1) {
 			addMessageToReport("Mixed Avro schemas within the same topic: " + this);
 		}
+		if(timestampTypes.size() > 1) {
+			addMessageToReport("Mixed timestamp types within the same topic: " + this);
+		}
 
 	}
 
 	public boolean isConsistent() {
-		if (eventStructures == null || messagesAreAvro == null || avroSchemas == null || schemaVersions == null) {
+		if (eventStructures == null || messagesAreAvro == null || avroSchemas == null || schemaVersions == null || timestampTypes == null) {
 			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
 		}
-		// eventStructures.size() == 1 &&
 		// TODO maybe add a check to see if different event structures are "compatible"
 		// with another
-		return messagesAreAvro.size() == 1 && avroSchemas.keySet().size() == 1 && schemaVersions.size() == 1;
+		return messagesAreAvro.size() == 1 && avroSchemas.keySet().size() <= 1 && schemaVersions.size() == 1 && timestampTypes.size() == 1;
 	}
 
 	public void buildMergedEventStructure() {
@@ -147,12 +162,14 @@ public class EventType {
 	}
 
 	public void addEvent(Event event) {
-		String eventType = event.readEventType();
-		if (eventType == null) {
+		Optional<String> eventTypeOption = event.readEventType();
+		if (!eventTypeOption.isPresent()) {
 			throw new IllegalArgumentException("Received an event without an event type for: " + this);
-		} else if (!eventType.equals(name)) {
+		}
+		String eventType = eventTypeOption.get();
+		if (!eventType.equals(name)) {
 			throw new IllegalArgumentException(
-					"Received an event that does not share my event type name: event (" + eventType + ") me: " + this);
+					"Received an event that does not share my event type name: event: " + eventType + ", me: " + this);
 		}
 
 		events.add(event);
@@ -187,6 +204,10 @@ public class EventType {
 
 	public Map<String, AvroSchema> getAvroSchemas() {
 		return avroSchemas;
+	}
+	
+	public Set<TimestampType> getTimestampTypes() {
+		return timestampTypes;
 	}
 
 	public Set<String> getAvroSchemaHashes() {

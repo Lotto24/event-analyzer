@@ -7,10 +7,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 
+import com.google.common.base.Optional;
+
 import de.esailors.dataheart.drillviews.conf.Config;
 
 public class Event {
 	
+	private static final int TIMESTAMP_LENGTH_MILLISECONDS_THRESHOLD = 12;
+
 	private static final Logger log = LogManager.getLogger(Event.class.getName());
 	
 	private byte[] message;
@@ -28,31 +32,42 @@ public class Event {
 		this.schema = schema;
 		this.avroSchemaHash = avroSchemaHash;
 	}
+
+	public Optional<TimestampType> determineTimestampType() {
+		Optional<String> readTimestamp = readTimestamp();
+		if(!readTimestamp.isPresent()) {
+			return Optional.absent();
+		}
+		if(readTimestamp.get().length() < TIMESTAMP_LENGTH_MILLISECONDS_THRESHOLD) {
+			return Optional.of(TimestampType.SECONDS);
+		} else {
+			return Optional.of(TimestampType.MILLISECONDS);
+		}
+	}
 	
-	
-	public String readId() {
+	public Optional<String> readId() {
 		return fieldFromEvent(Config.getInstance().EVENT_FIELD_ID);
 	}
 	
-	public String readTimestamp() {
+	public Optional<String> readTimestamp() {
 		return fieldFromEvent(Config.getInstance().EVENT_FIELD_TIMESTAMP);
 	}
 	
-	public String readEventType() {
+	public Optional<String> readEventType() {
 		return fieldFromEvent(Config.getInstance().EVENT_FIELD_EVENT_TYPE);
 	}
 
-	public String readSchemaVersion() {
+	public Optional<String> readSchemaVersion() {
 		return fieldFromEvent(Config.getInstance().EVENT_FIELD_VERSION);
 	}
 
-	public String fieldFromEvent(String field) {
+	public Optional<String> fieldFromEvent(String field) {
 		JsonNode jsonNode = getEventJson().get(field);
 		if (jsonNode == null) {
 			log.warn("Field not found for '" + field + "' in: " + this);
-			return null;
+			return Optional.absent();
 		}
-		return jsonNode.asText();
+		return Optional.of(jsonNode.asText());
 	}
 
 	public byte[] getMessage() {
@@ -105,7 +120,5 @@ public class Event {
 	public String toString() {
 		return "Event [topic=" + topic + "]";
 	}
-	
-	
 
 }

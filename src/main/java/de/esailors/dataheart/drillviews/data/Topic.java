@@ -10,6 +10,8 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.google.common.base.Optional;
+
 public class Topic {
 
 	private static final Logger log = LogManager.getLogger(Topic.class.getName());
@@ -33,20 +35,32 @@ public class Topic {
 		
 		// TODO check for other kinds of invalidity and make a Cause enum/class
 		boolean sawEventsWithoutEventType = false;
+		boolean sawEventsWithoutTimestamp = false;
 		for(Event event : events) {
-			String readEventType = event.readEventType();
-			if(readEventType == null) {
+			Optional<String> readEventTypeOption = event.readEventType();
+			if(!readEventTypeOption.isPresent()) {
 				invalidEvents.add(event);
 				sawEventsWithoutEventType = true;
 				continue;
 			}
-			addEventForEventType(readEventType, event);
+			
+			Optional<String> readTimestampOption = event.readTimestamp();
+			if(!readTimestampOption.isPresent()) {
+				invalidEvents.add(event);
+				sawEventsWithoutTimestamp = true;
+				continue;
+			}
+			
+			addEventForEventType(readEventTypeOption.get(), event);
 		}
 		if (invalidEvents.size() > 0) {
 			addMessageToReport("Invalid events detected in: " + this);
 		}
 		if(sawEventsWithoutEventType) {
 			addMessageToReport("Event without eventType detected in: " + this);
+		}
+		if(sawEventsWithoutTimestamp) {
+			addMessageToReport("Event without timestamp detected in: " + this);
 		}
 		if (eventTypeNames.size() > 1) {
 			addMessageToReport("Mixed EventTypes within the same topic: " + this);
@@ -64,7 +78,7 @@ public class Topic {
 		if (eventTypeNames == null) {
 			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
 		}
-		return eventTypeNames.size() == 1 && invalidEvents.size() == 0 && brokenMessages.size() == 1;
+		return eventTypeNames.size() == 1 && invalidEvents.size() == 0 && brokenMessages.size() == 0;
 	}
 	
 	public void addEvent(Event event) {

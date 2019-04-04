@@ -2,7 +2,10 @@ package de.esailors.dataheart.drillviews.util;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
@@ -411,20 +414,20 @@ public class GitRepository {
 		};
 	}
 
-	public Optional<String> loadFileFromRepository(String subPath) {
+	public Optional<String> loadFile(String subPath) {
 
 		log.debug("Loading file from local repository: " + subPath);
 
 		File fileToLoad = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + subPath);
 		if (!fileToLoad.exists()) {
-			log.debug("Unable to load file from git repository as file doesn't exist at "
-					+ fileToLoad.getAbsolutePath());
+			log.debug(
+					"Unable to load file from git repository as file doesn't exist at " + fileToLoad.getAbsolutePath());
 			return Optional.absent();
 		}
-		
+
 		if (!fileToLoad.canRead()) {
-			log.debug("Unable to load file from git repository as file can't be read at "
-					+ fileToLoad.getAbsolutePath());
+			log.debug(
+					"Unable to load file from git repository as file can't be read at " + fileToLoad.getAbsolutePath());
 			return Optional.absent();
 		}
 
@@ -435,6 +438,21 @@ public class GitRepository {
 					+ fileToLoad.getAbsolutePath(), e);
 			return Optional.absent();
 		}
+	}
+
+	public List<String> listFiles(String directoryPath) {
+
+		List<String> r = new ArrayList<>();
+
+		File directory = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + directoryPath);
+		log.debug("Listing files in local git repository at: " + directory.getAbsolutePath());
+		if (!directory.exists() || !directory.isDirectory()) {
+			log.error("Was supposed to list files from non-existing directory: " + directoryPath);
+			return r;
+		}
+
+		Collections.addAll(r, directory.list());
+		return r;
 	}
 
 }
