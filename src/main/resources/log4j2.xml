@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Configuration status="warn" shutdownHook="disable">
 	<Properties>
-		<Property name="basePath">log</Property>
+		<Property name="baseDir">log</Property>
+		<Property name="baseFileName">drillviews</Property>
 	</Properties>
 
 	<Appenders>
 		<RollingFile name="fileLogger"
-			fileName="${basePath}/drillviews.log"
-			filePattern="${basePath}/drillviews-%d{yyyy-MM-dd}.log">
+			fileName="${baseDir}/${baseFileName}.log"
+			filePattern="${baseDir}/${baseFileName}-%d{yyyy-MM-dd}.log.gz">
 			<PatternLayout>
 				<pattern>[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n
 				</pattern>
@@ -16,6 +17,12 @@
 				<TimeBasedTriggeringPolicy interval="1"
 					modulate="true" />
 			</Policies>
+			<DefaultRolloverStrategy>
+				<Delete basePath="${baseDir}">
+					<IfFileName glob="${baseFileName}-*.log.gz" />
+					<IfAccumulatedFileCount exceeds="10" />
+				</Delete>
+			</DefaultRolloverStrategy>
 		</RollingFile>
 
 		<Console name="console" target="SYSTEM_OUT">
