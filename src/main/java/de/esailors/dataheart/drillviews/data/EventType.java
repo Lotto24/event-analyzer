@@ -29,32 +29,27 @@ public class EventType {
 
 	private Set<EventStructure> eventStructures;
 
-	private Set<String> schemaVersions;
+	private Set<Optional<String>> schemaVersions;
 	private Map<String, AvroSchema> avroSchemas;
 	private Set<Boolean> messagesAreAvro;
 	private Set<TimestampType> timestampTypes;
 
 	private List<String> reportMessages = new ArrayList<>();
+	
+	private Optional<Long> drillViewCountOption = Optional.absent();
 
 	public EventType(String eventTypeName, Topic sourceTopic, Set<Event> events) {
 		this.name = eventTypeName;
 		addSourceTopic(sourceTopic);
 		addEvents(events);
-
-		// TODO somehow link to official eSailors/kafka-events repo
-		// https://srv-git-01-hh1.alinghi.tipp24.net/eSailors/kafka-events
 	}
 
 	public void markInconsistencies() {
-		// TODO this has gotten pretty big, probably a good idea to move this out of
-		// this class by now
-
-		// TODO check timestamps in seconds vs milliseconds
-
 		// check consistency within topics
 		// - each topic only has avro / json - if avro always the same schema?
 		// - check JSON structure doesnt change (always the same event structure)
 		// - always the same event Type in each topic
+		// - timestamps always milliseconds, not in seconds
 
 		if (getEvents().size() < 2) {
 			addMessageToReport("Can't properly check event consistency because I did not get enough events for: " + this
@@ -77,10 +72,7 @@ public class EventType {
 			eventStructures.add(new EventStructure(event, this));
 			
 			Optional<String> schemaVersionOption = event.readSchemaVersion();
-			String schemaVersion = schemaVersionOption.isPresent() ? schemaVersionOption.get() : null;
-			// TODO this is not nice, either mark these as invalid or continue using
-			// Optional
-			schemaVersions.add(schemaVersion);
+			schemaVersions.add(schemaVersionOption);
 			
 			Optional<TimestampType> timestampTypeOption = event.determineTimestampType();
 			if(!timestampTypeOption.isPresent()) {
@@ -92,7 +84,7 @@ public class EventType {
 			boolean isAvroMessage = event.isAvroMessage();
 			messagesAreAvro.add(isAvroMessage);
 			if (isAvroMessage) {
-				AvroSchema avroSchema = new AvroSchema(event.getAvroSchemaHash(), event.getSchema(), schemaVersion,
+				AvroSchema avroSchema = new AvroSchema(event.getAvroSchemaHash(), event.getSchema(), schemaVersionOption,
 						this);
 				avroSchemas.put(event.getAvroSchemaHash(), avroSchema);
 			}
@@ -105,9 +97,6 @@ public class EventType {
 
 		}
 
-		if (eventStructures.size() > 1) {
-			addMessageToReport("Mixed EventStructures within the same topic: " + this);
-		}
 		if (schemaVersions.size() > 1) {
 			addMessageToReport("Mixed Schema Versions within the same topic: " + this);
 		}
@@ -120,6 +109,9 @@ public class EventType {
 		if(timestampTypes.size() > 1) {
 			addMessageToReport("Mixed timestamp types within the same topic: " + this);
 		}
+		if(timestampTypes.contains(TimestampType.SECONDS)) {
+			addMessageToReport("Timestamp in seconds instead of milliseconds detected in: " + this);
+		}
 
 	}
 
@@ -127,9 +119,7 @@ public class EventType {
 		if (eventStructures == null || messagesAreAvro == null || avroSchemas == null || schemaVersions == null || timestampTypes == null) {
 			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
 		}
-		// TODO maybe add a check to see if different event structures are "compatible"
-		// with another
-		return messagesAreAvro.size() == 1 && avroSchemas.keySet().size() <= 1 && schemaVersions.size() == 1 && timestampTypes.size() == 1;
+		return messagesAreAvro.size() == 1 && avroSchemas.keySet().size() <= 1 && schemaVersions.size() == 1 && timestampTypes.size() == 1 && !timestampTypes.contains(TimestampType.SECONDS);
 	}
 
 	public void buildMergedEventStructure() {
@@ -194,7 +184,7 @@ public class EventType {
 		return messagesAreAvro;
 	}
 
-	public Set<String> getSchemaVersions() {
+	public Set<Optional<String>> getSchemaVersions() {
 		return schemaVersions;
 	}
 
@@ -243,6 +233,14 @@ public class EventType {
 
 	public String getName() {
 		return name;
+	}
+	
+	public Optional<Long> getDrillViewCountOption() {
+		return drillViewCountOption;
+	}
+
+	public void setDrillViewCount(long drillViewCount) {
+		drillViewCountOption = Optional.of(drillViewCount);
 	}
 
 	@Override

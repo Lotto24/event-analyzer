@@ -33,7 +33,6 @@ public class Topic {
 	public void markInconsistencies() {
 		eventTypeNames = new HashMap<>();
 		
-		// TODO check for other kinds of invalidity and make a Cause enum/class
 		boolean sawEventsWithoutEventType = false;
 		boolean sawEventsWithoutTimestamp = false;
 		for(Event event : events) {

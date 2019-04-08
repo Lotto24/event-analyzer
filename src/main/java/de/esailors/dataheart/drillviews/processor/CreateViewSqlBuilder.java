@@ -24,9 +24,6 @@ public class CreateViewSqlBuilder {
 
 	public String generateDrillViewsFor(String viewName, EventStructure eventStructure) {
 
-		// TODO for nodes that are avro maps we need to select the complete blob as well
-		// because we do not know all the possible fields
-
 		log.debug("Generating create view statement from EventStructure from " + eventStructure.toString());
 
 		StringBuilder viewBuilder = new StringBuilder();

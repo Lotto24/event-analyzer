@@ -54,7 +54,6 @@ public class DrillViews {
 	}
 	
 	public String viewNameFor(EventType eventType) {
-		// TODO on live we find both 'AgeVerification' and 'ageVerification' -> unify
 		return eventType.getName();
 	}
 	

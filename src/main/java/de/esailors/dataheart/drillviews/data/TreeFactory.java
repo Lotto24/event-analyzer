@@ -13,6 +13,9 @@ import org.apache.avro.Schema.Type;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 
+import de.esailors.dataheart.drillviews.util.JsonUtil;
+import de.esailors.dataheart.drillviews.util.JsonUtil.JsonType;
+
 public class TreeFactory {
 
 	private static TreeFactory instance;
@@ -37,7 +40,7 @@ public class TreeFactory {
 
 		Tree r = new Tree(name);
 		
-		r.getRootNode().addProperty("EVENT_SOURCE", "");
+		r.getRootNode().addProperty("SOURCE", "EVENT");
 
 		extendTreeWithJsonFields(r.getRootNode(), json, false);
 
@@ -58,39 +61,15 @@ public class TreeFactory {
 			currentParent.addChild(node);
 
 			JsonNode fieldJson = field.getValue();
-			String jsonType = getJsonType(fieldJson);
-			node.addProperty("JSON_TYPE", jsonType);
-			if(jsonType.equals("null")) {
+			JsonType jsonType = JsonUtil.getJsonType(fieldJson);
+			node.addProperty("JSON_TYPE", jsonType.toString());
+			if(jsonType.equals(JsonType.NULL)) {
 				node.setOptional(true);
 			}
 			if (isNestedJson(fieldJson)) {
 				extendTreeWithJsonFields(node, fieldJson, true);
 			}
 		}
-	}
-
-	private String getJsonType(JsonNode json) {
-		// there must be a better way of doing this in jackson API
-		// TODO either way doesn't belong here and should be an enum
-		if (json.isArray()) {
-			return "array";
-		} else if (json.isBinary()) {
-			return "binary";
-		} else if (json.isBoolean()) {
-			return "boolean";
-		} else if (json.isFloatingPointNumber()) {
-			return "float";
-		} else if (json.isIntegralNumber()) {
-			return "integer";
-		} else if (json.isNull()) {
-			return "null";
-		} else if (json.isObject()) {
-			return "object";
-		} else if (json.isTextual()) {
-			return "string";
-		}
-
-		return "UNKNOWN";
 	}
 
 	public Tree buildTreeFromJsonString(String jsonString, String name) {
@@ -110,7 +89,7 @@ public class TreeFactory {
 
 		// either use the same name when comparing trees or exclude them from equals()
 		Tree r = new Tree(avroSchema.getName());
-		r.getRootNode().addProperty("AVRO_SOURCE", "");
+		r.getRootNode().addProperty("SOURCE", "AVRO");
 
 		extendTreeWithAvroFields(r.getRootNode(), avroSchema.getFields(), false);
 
@@ -141,24 +120,20 @@ public class TreeFactory {
 
 	private void addAvroFieldPropertiesToNode(Field field, Node node) {
 		Type fieldType = field.schema().getType();
-		node.addProperty("AVRO_TYPE", fieldType);
+		node.addProperty("AVRO_TYPE", fieldType.toString());
 		
 		// list enum values
 		if(fieldType.equals(Type.ENUM)) {
-			int cnt = 0;
 			for(String enumSymbol : field.schema().getEnumSymbols()) {
-				cnt++;
-				node.addProperty("AVRO_ENUM_SYMBOL" + cnt, enumSymbol);
+				node.addProperty("AVRO_ENUM_SYMBOL", enumSymbol);
 			}
 		}
 		
 		// list union types and mark node as optional if union types contains NULL
 		if(fieldType.equals(Type.UNION)) {
-			int cnt = 0;
 			boolean sawNullType = false;
 			for(Schema unionSchema : field.schema().getTypes()) {
-				cnt++;
-				node.addProperty("AVRO_UNION_TYPE-" + cnt, unionSchema.getType());
+				node.addProperty("AVRO_UNION_TYPE", unionSchema.getType().toString());
 				if(unionSchema.getType().equals(Type.NULL)) {
 					sawNullType = true;
 				}
@@ -186,8 +161,8 @@ public class TreeFactory {
 		case MAP: {
 			// a map is technically nested, but we can not extract the nested fields from
 			// the schema, so we leave it as is for now
-			// TODO maybe mark this in the node, when we merge avro EventStructure with the
-			// regular one its more clear
+			// we mark this in the node, when we merge avro EventStructure with the
+			// regular one so its more clear
 		}
 		default:
 			return r;

@@ -2,15 +2,17 @@ package de.esailors.dataheart.drillviews.data;
 
 import org.apache.avro.Schema;
 
+import com.google.common.base.Optional;
+
 public class AvroSchema {
 
 	private String schemaHash;
 	private Schema schema;
-	private String schemaVersion; // read from schema, can be null
+	private Optional<String> schemaVersion; // read from schema, can be null
 	private EventType eventType;
 	private EventStructure eventStructure;
 
-	public AvroSchema(String schemaHash, Schema schema, String schemaVersion, EventType eventType) {
+	public AvroSchema(String schemaHash, Schema schema, Optional<String> schemaVersion, EventType eventType) {
 		this.schemaHash = schemaHash;
 		this.eventType = eventType;
 		this.schema = schema;
@@ -19,7 +21,6 @@ public class AvroSchema {
 	}
 
 	public String getName() {
-//		return schema.getFullName() + "_" + schemaHash;
 		return schemaHash;
 	}
 	
@@ -28,7 +29,7 @@ public class AvroSchema {
 	}
 	
 	
-	public String getSchemaVersion() {
+	public Optional<String> getSchemaVersion() {
 		return schemaVersion;
 	}
 

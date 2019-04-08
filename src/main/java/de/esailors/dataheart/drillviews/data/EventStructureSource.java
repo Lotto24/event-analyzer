@@ -61,7 +61,8 @@ public class EventStructureSource {
 			break;
 		}
 		case AVRO: {
-			r += "_" + sourceSchema.getSchema().getName() + "_" + sourceSchema.getSchemaVersion();
+			Optional<String> schemaVersionOption = sourceSchema.getSchemaVersion();
+			r += "_" + sourceSchema.getSchema().getName() + "_" + (schemaVersionOption.isPresent() ? schemaVersionOption.get() : "UNKNOWN_SCHEMA_VERSION");
 			break;
 		}
 		case MERGE: {

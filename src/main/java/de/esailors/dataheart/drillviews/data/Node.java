@@ -1,7 +1,6 @@
 package de.esailors.dataheart.drillviews.data;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -11,6 +10,8 @@ import java.util.Set;
 
 import com.google.common.base.Optional;
 
+import de.esailors.dataheart.drillviews.util.CollectionUtil;
+
 public class Node {
 
 	// i.e. parterinfo.trackinginfo.url
@@ -19,7 +20,7 @@ public class Node {
 	private String name;
 	// id -> child Node
 	private Map<String, Node> children = new HashMap<>();
-	private Map<String, Object> properties = new HashMap<>();
+	private Map<String, Set<String>> properties = new HashMap<>();
 	private boolean isOptional;
 
 	public Node(String id, String name) {
@@ -39,19 +40,31 @@ public class Node {
 		}
 	}
 
-	public void addProperty(String name, Object property) {
-		properties.put(name, property);
+	public void addProperty(String name, String property) {
+		if(properties.get(name) == null) {
+			properties.put(name, new HashSet<>());
+		}
+		properties.get(name).add(property);
+	}
+	
+	public void addPropertySet(String name, Set<String> propertiesToAdd) {
+		if(properties.get(name) == null) {
+			properties.put(name, new HashSet<>());
+		}
+		properties.get(name).addAll(propertiesToAdd);
 	}
 
-	public void addProperties(Map<String, Object> propertiesToAdd) {
-		properties.putAll(propertiesToAdd);
+	public void addProperties(Map<String, Set<String>> propertiesToAdd) {
+		for(String name : propertiesToAdd.keySet()) {
+			addPropertySet(name, propertiesToAdd.get(name));
+		}
 	}
 
 	public boolean hasProperties() {
 		return !properties.isEmpty();
 	}
 
-	public Map<String, Object> getProperties() {
+	public Map<String, Set<String>> getProperties() {
 		return properties;
 	}
 
@@ -102,10 +115,9 @@ public class Node {
 			String label = id + "\\n";
 
 			// sort the keys so it looks nicer
-			List<String> sortedPropertyList = new ArrayList<>(properties.keySet());
-			Collections.sort(sortedPropertyList);
+			List<String> sortedPropertyList = CollectionUtil.toSortedList(properties.keySet());
 			for (String property : sortedPropertyList) {
-				label += property + "=" + properties.get(property) + "\\l";
+				label += property + "=" + String.join(", ", CollectionUtil.toSortedList(properties.get(property))) + "\\l";
 			}
 			customization.add("label=\"" + label + "\"");
 		}

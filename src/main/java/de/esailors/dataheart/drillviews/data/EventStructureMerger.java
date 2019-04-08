@@ -6,8 +6,6 @@ import java.util.List;
 
 import com.google.common.base.Optional;
 
-import oadd.org.apache.commons.lang.StringUtils;
-
 public class EventStructureMerger {
 
 	private static EventStructureMerger instance;
@@ -37,11 +35,9 @@ public class EventStructureMerger {
 
 		Tree mergedTree = new Tree(treeName);
 		
-		mergedTree.getRootNode().addProperty("MERGED_SOURCE", "");
-		int cnt = 0;
+		mergedTree.getRootNode().addProperty("SOURCE", "MERGE");
 		for(EventStructure sourceStructure : sourceStructures) {
-			cnt++;
-			mergedTree.getRootNode().addProperty("SOURCE_" + StringUtils.leftPad("" + cnt, 2), sourceStructure.toString());
+			mergedTree.getRootNode().addProperty("SOURCE_STRUCTURE", sourceStructure.toString());
 		}
 
 		boolean markOptionality = false;

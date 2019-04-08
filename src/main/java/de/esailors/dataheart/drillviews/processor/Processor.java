@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -58,21 +59,22 @@ public class Processor {
 			markEventTypeInconsistencies(eventType);
 			updateAvroSchemaMap(eventType);
 			createDrillViews(eventType);
-			// TODO run count on newly created view for sanity checking and report
-//			runCountOnDrillView(eventType);
+			runCountOnDrillView(eventType);
 			writeEventSamples(eventType);
 			writeEventStructures(eventType);
+			writeEventTypeReport(eventType);
 		}
 
-		// TODO fields report? maybe overkill but sounds cool
-
-		writeEventTypeReport();
 		writeAvroSchemas();
 		writeChangeLog();
-		
+
 		updateReadme();
 
 		addOutputToGitRepository();
+	}
+
+	private void writeEventTypeReport(EventType eventType) {
+		persister.persistEventTypeReport(eventType);
 	}
 
 	private void updateReadme() {
@@ -80,32 +82,35 @@ public class Processor {
 	}
 
 	private void runCountOnDrillView(EventType eventType) {
-		// TODO STOPPED HERE
-		long count = drillViews.runDayCount(eventType);
-		log.info("Count in day view for " + eventType + ": " + count);
+		// run count on newly created view for sanity checking and report / statistics
+		long drillViewCount = drillViews.runDayCount(eventType);
+		log.info("Count in day view for " + eventType + ": " + drillViewCount);
+		eventType.setDrillViewCount(drillViewCount);
 	}
 
 	private void addOutputToGitRepository() {
-		if(!gitRepositoryOption.isPresent()) {
+		if (!gitRepositoryOption.isPresent()) {
 			log.info("Git disabled, not adding output to repository");
 			return;
 		}
-		
+
 		log.info("Adding process output to local git repository");
-		
+
 		GitRepository gitRepository = gitRepositoryOption.get();
 
 		// push everything that is written to disk also to git
 		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY));
 		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY));
 		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY));
-		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY));
-		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY));
-		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY));
-		gitRepository.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY));
+		gitRepository
+				.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY));
+		gitRepository
+				.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY));
+		gitRepository.addToRepository(
+				persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY));
+		gitRepository
+				.addToRepository(persister.outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY));
 		gitRepository.addToRepository(persister.outputDirectoryPathForReadme() + persister.fileNameForReadme());
-
-		// TODO output any kind of statistics / report? to git / readme + changelog
 
 		gitRepository.commitAndPush(persister.getFormattedCurrentTime());
 	}
@@ -115,12 +120,6 @@ public class Processor {
 			persister.persistAvroSchema(avroSchemas.get(schemaHash));
 		}
 
-	}
-
-	private void writeEventTypeReport() {
-		for (EventType eventType : eventTypes.values()) {
-			persister.persistEventTypeReport(eventType);
-		}
 	}
 
 	private void writeChangeLog() {
@@ -133,7 +132,6 @@ public class Processor {
 		if (!changeLog.hasChanges()) {
 			log.info("No major changes detected");
 		} else {
-			// TODO add last n changelogs to README.md in reverse chronological order
 			persister.persistChanges(changeLog);
 		}
 	}
@@ -191,18 +189,32 @@ public class Processor {
 	}
 
 	private void writeEventSamples(EventType eventType) {
-		// TODO check local git repository if we already have enough example events (for
-		// this schemaVersion) and don't persist more if we already do
+		if (gitRepositoryOption.isPresent()) {
+			// check local git repository if we already have enough example events
+			Optional<String> existingSamplesOption = gitRepositoryOption.get()
+					.loadFile(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY + File.separator
+							+ persister.fileNameForEventSamples(eventType));
+			if (existingSamplesOption.isPresent()) {
+				String existingSamples = existingSamplesOption.get();
+				int existingSampleCount = StringUtils.countMatches(existingSamples, "\n");
+				if (existingSampleCount >= Config.getInstance().OUTPUT_SAMPLES_COUNT) {
+					log.info("Already have enough event samples, skipping persisting samples for " + eventType);
+					return;
+				}
+			}
+
+		}
 		persister.persistEventSamples(eventType);
 	}
 
 	private void createDrillViews(EventType eventType) {
-		// TODO compare and align generated views with those from drill
+		// compare and align generated views with those from drill
 		log.info("Preparing Drill view for " + eventType);
 
 		Optional<String> currentViewFromRepository;
-		if(gitRepositoryOption.isPresent()) {
-			currentViewFromRepository = gitRepositoryOption.get().loadFile(Config.getInstance().OUTPUT_DRILL_DIRECTORY + File.separator + persister.fileNameForDrillView(eventType));
+		if (gitRepositoryOption.isPresent()) {
+			currentViewFromRepository = gitRepositoryOption.get().loadFile(Config.getInstance().OUTPUT_DRILL_DIRECTORY
+					+ File.separator + persister.fileNameForDrillView(eventType));
 			if (currentViewFromRepository.isPresent()) {
 				log.debug("Found a view in local git repository");
 			} else {
@@ -212,7 +224,6 @@ public class Processor {
 			log.warn("Local git repository not enabled, unable to check if view changed");
 			currentViewFromRepository = Optional.absent();
 		}
-		
 
 		// generate drill views and execute them
 		Optional<EventStructure> mergedEventStructuredOption = eventType.getMergedEventStructured();
@@ -221,7 +232,8 @@ public class Processor {
 					"Topic does not provide a merged event structure even though it had an example event");
 		}
 		String viewName = drillViews.viewNameFor(eventType);
-		String viewFromCurrentRun = createViewSqlBuilder.generateDrillViewsFor(viewName, mergedEventStructuredOption.get());
+		String viewFromCurrentRun = createViewSqlBuilder.generateDrillViewsFor(viewName,
+				mergedEventStructuredOption.get());
 
 		if (drillViews.doesViewExist(viewName)) {
 			log.debug("Drill view for " + eventType + " already exists");
@@ -234,7 +246,6 @@ public class Processor {
 					return;
 				} else {
 					changeLog.addChange("Drill view changed for " + eventType);
-					// TODO use git diff to see changes
 				}
 			}
 

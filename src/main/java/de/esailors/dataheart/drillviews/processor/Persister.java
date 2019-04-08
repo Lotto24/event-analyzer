@@ -30,15 +30,13 @@ import de.esailors.dataheart.drillviews.data.EventStructure;
 import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.util.GitRepository;
+import de.esailors.dataheart.drillviews.util.JsonUtil;
 import de.esailors.dataheart.drillviews.util.SystemUtil;
 
 public class Persister {
 
-	// TODO might want to extract markdown specifics to utility class, and/or
-	// separate report generation from path handling
-
 	private static final Logger log = LogManager.getLogger(Persister.class.getName());
-	
+
 	private static final String README_FILE = "README.md";
 	private static final String README_TEMPLATE_FILE = "README.md.template";
 
@@ -123,15 +121,16 @@ public class Persister {
 		return outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY) + avroSchema.getName()
 				+ File.separator;
 	}
-	
+
 	public String outputDirectoryPathForReadme() {
 		return outputDirectoryPathFor("");
 	}
 
 	public String outputDirectoryPathFor(String subPath) {
-		return Config.getInstance().OUTPUT_DIRECTORY + File.separator + subPath + (subPath.isEmpty() ? "" : File.separator);
+		return Config.getInstance().OUTPUT_DIRECTORY + File.separator + subPath
+				+ (subPath.isEmpty() ? "" : File.separator);
 	}
-	
+
 	public void persistEventSamples(EventType eventType) {
 		if (eventType.getEvents().size() == 0) {
 			log.debug("No events received to write samples for in: " + eventType);
@@ -155,9 +154,6 @@ public class Persister {
 		if (!changeLog.hasChanges()) {
 			return;
 		}
-		// TODO more of a placeholder for now
-		// changeSet should be part of README and update in descending chronological
-		// order with nice markdown formatting
 		String changeSetContent = "## " + formattedCurrentTime + " ChangeLog:\n\n";
 		for (String message : changeLog.getChanges()) {
 			changeSetContent += "* " + message + "\n";
@@ -213,14 +209,14 @@ public class Persister {
 		reportContent += "* **" + topic.getPartitionCount() + "** Topic Partitions\n";
 
 		reportContent += lastUpdateMarker();
-		
+
 		FileWriterUtil.writeFile(sourcePath, fileNameForTopicReport(topic), reportContent);
 	}
 
 	private String generateJsonInformation(String name, JsonNode json) {
 		String jsonInformation = "#### " + name + ": \n";
 		jsonInformation += "```javascript\n";
-		jsonInformation += JsonPrettyPrinter.prettyPrintJsonString(json);
+		jsonInformation += JsonUtil.prettyPrintJsonString(json);
 		jsonInformation += "\n```\n";
 		return jsonInformation;
 	}
@@ -269,7 +265,20 @@ public class Persister {
 		String topicInformation = "* **" + items.size() + "** " + type + "\n";
 		if (items.size() > 0) {
 			for (Object item : items) {
-				topicInformation += "  * " + (item == null ? "null" : item.toString()) + "\n";
+				topicInformation += "  * ";
+				if(item == null) {
+					topicInformation += "";
+				} else if (item instanceof Optional) {
+					Optional<?> option = (Optional<?>)item;
+					if(option.isPresent()) {
+						topicInformation += option.get();
+					} else {
+						topicInformation += "ABSENT";
+					}
+				} else {
+					topicInformation += item.toString();
+				}
+				topicInformation += "\n";
 			}
 		} else {
 			topicInformation += "  * _none detected_\n";
@@ -286,15 +295,19 @@ public class Persister {
 
 		String reportContent = "# EventType Report: " + eventType.getName() + "\n";
 
+		reportContent += lastUpdateMarker();
+
+		reportContent += "#### Analyzed Events: " + eventType.getEvents().size() + "\n\n";
+		Optional<Long> drillViewCountOption = eventType.getDrillViewCountOption();
+		reportContent += "#### Drill View Count: " + (drillViewCountOption.isPresent() ? drillViewCountOption.get() : "UNKNOWN") + "\n\n";
+
 		// consistency
 		if (eventType.isConsistent()) {
-			reportContent += "### EventType was consistent\n\n";
+			reportContent += "#### EventType was consistent\n\n";
 		} else {
 			reportContent += "### EventType was **NOT** consistent!\n\n";
 		}
-
-		reportContent += "#### Analyzed events: " + eventType.getEvents().size() + "\n\n";
-
+		
 		// report messages
 		if (!eventType.getReportMessages().isEmpty()) {
 			reportContent += "### Report messages:\n";
@@ -313,7 +326,7 @@ public class Persister {
 		}
 
 		reportContent += generateEventTypeInformation(eventType, sourcePath);
-		
+
 		// source topics
 		reportContent += "### Found in the following topics:\n";
 		for (Topic topic : eventType.getSourceTopics()) {
@@ -327,8 +340,6 @@ public class Persister {
 		reportContent += "* " + linkToEventSamples(eventType, sourcePath) + "\n";
 		reportContent += "* " + linkToDrillView(eventType, sourcePath) + "\n";
 
-		reportContent += lastUpdateMarker();
-		
 		// write report to disk
 		FileWriterUtil.writeFile(sourcePath, fileNameForEventTypeReport(eventType), reportContent);
 	}
@@ -356,7 +367,9 @@ public class Persister {
 		reportContent += "* " + avroSchema.getFullSchemaName() + "\n";
 
 		reportContent += "### Schema Version:\n";
-		reportContent += "* " + avroSchema.getSchemaVersion() + "\n";
+		Optional<String> schemaVersionOption = avroSchema.getSchemaVersion();
+		reportContent += "* " + (schemaVersionOption.isPresent() ? schemaVersionOption.get() : "UNKNOWN_SCHEMA_VERSION")
+				+ "\n";
 
 		// event type
 		reportContent += "### Event Type:\n";
@@ -368,14 +381,14 @@ public class Persister {
 		reportContent += "* " + linkToEventStructureReport(avroSchema.getEventStructure(), sourcePath) + "\n";
 
 		// avro schema json
-		String avroSchemaJson = JsonPrettyPrinter.prettyPrintJsonString(parseToJson(avroSchema.getSchema()));
+		String avroSchemaJson = JsonUtil.prettyPrintJsonString(parseToJson(avroSchema.getSchema()));
 		String avroSchemaJsonFile = fileNameForAvroSchemaJson(avroSchema);
 		FileWriterUtil.writeFile(sourcePath, avroSchemaJsonFile, avroSchemaJson);
 		reportContent += "### Schema JSON:\n";
 		reportContent += "* " + linkToAvroSchemaJson(avroSchema, sourcePath) + "\n";
 
 		reportContent += lastUpdateMarker();
-		
+
 		// write to disk
 		FileWriterUtil.writeFile(sourcePath, fileNameForAvroSchemaReport(avroSchema), reportContent);
 	}
@@ -429,7 +442,7 @@ public class Persister {
 		}
 
 		eventStructureContent += lastUpdateMarker();
-		
+
 		FileWriterUtil.writeFile(sourcePath, fileNameForEventStructure(eventStructure), eventStructureContent);
 	}
 
@@ -442,8 +455,7 @@ public class Persister {
 			// check if .dot changed from git repository, if not don't render it again
 			String dotFileSubPath = Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY + File.separator
 					+ eventStructure.getEventType().getName() + File.separator + dotFileName;
-			Optional<String> existingDotContentOption = gitRepositoryOption.get()
-					.loadFile(dotFileSubPath);
+			Optional<String> existingDotContentOption = gitRepositoryOption.get().loadFile(dotFileSubPath);
 			if (existingDotContentOption.isPresent()) {
 				if (existingDotContentOption.get().equals(dotContent)) {
 					log.debug("Event structure plot did not change, skipping rendering for " + eventStructure);
@@ -471,49 +483,55 @@ public class Persister {
 
 		SystemUtil.executeCommand(renderDotCommand);
 	}
-	
+
 	public void updateReadme(Map<String, EventType> eventTypes) {
 		log.info("Updating readme");
-		
+
 		String sourcePath = outputDirectoryPathForReadme();
-		
+
 		// add an index to all EventTypes to README.md for ease of navigation
 		File readmeTemplate = FileWriterUtil.getFileFromResources(README_TEMPLATE_FILE);
-		if(!readmeTemplate.exists()) {
-			throw new IllegalStateException("Missing readme template in resources: " + readmeTemplate.getAbsolutePath());
+		if (!readmeTemplate.exists()) {
+			throw new IllegalStateException(
+					"Missing readme template in resources: " + readmeTemplate.getAbsolutePath());
 		}
 		String readmeContent;
 		try {
 			readmeContent = FileUtils.readFileToString(readmeTemplate);
 		} catch (IOException e) {
-			throw new IllegalStateException("Unable to read readme template from resources at: " + readmeTemplate.getAbsolutePath());
+			throw new IllegalStateException(
+					"Unable to read readme template from resources at: " + readmeTemplate.getAbsolutePath());
 		}
-		
+
 		List<String> eventTypesIndex = new ArrayList<>(eventTypes.keySet());
-		
-		// we should also link to event type reports that are already existing but not part of the current run
+
+		// we should also link to event type reports that are already existing but not
+		// part of the current run
 		if (gitRepositoryOption.isPresent()) {
-			List<String> reportsFromRepository = gitRepositoryOption.get().listFiles(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY);
-			for(String reportFromRepository : reportsFromRepository) {
-				// extract event type name from filename (remove .md extension), and unify with eventTypesIndex 
+			List<String> reportsFromRepository = gitRepositoryOption.get()
+					.listFiles(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY);
+			for (String reportFromRepository : reportsFromRepository) {
+				// extract event type name from filename (remove .md extension), and unify with
+				// eventTypesIndex
 				log.debug("Found existing event type report in repository: " + reportFromRepository);
 				String eventTypeName = reportFromRepository.substring(0, reportFromRepository.lastIndexOf("."));
 				log.debug("Extracted eventTypeName: " + eventTypeName);
-				if(!eventTypesIndex.contains(eventTypeName)) {
-					log.info("Adding older event type report that was not part of current run to readme index: " + eventTypeName);
+				if (!eventTypesIndex.contains(eventTypeName)) {
+					log.debug("Adding older event type report that was not part of current run to readme index: "
+							+ eventTypeName);
 					eventTypesIndex.add(eventTypeName);
 				}
 			}
 		}
 		Collections.sort(eventTypesIndex);
-		
+
 		readmeContent += "### Event Types\n";
-		for(String eventTypeName : eventTypesIndex) {
+		for (String eventTypeName : eventTypesIndex) {
 			readmeContent += "* " + linkToEventTypeReportByName(eventTypeName, sourcePath) + "\n";
 		}
-		
+
 		readmeContent += lastUpdateMarker();
-		
+
 		// write to disk
 		FileWriterUtil.writeFile(sourcePath, fileNameForReadme(), readmeContent);
 	}
@@ -566,7 +584,7 @@ public class Persister {
 	public String fileNameForEventStructurePlot(EventStructure eventStructure) {
 		return eventStructure.toString() + ".png";
 	}
-	
+
 	public String fileNameForReadme() {
 		return README_FILE;
 	}
