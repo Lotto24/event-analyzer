@@ -49,10 +49,6 @@ public class EventStructure {
 		return eventStructureTree;
 	}
 
-	public String toDot() {
-		return eventStructureTree.toDot();
-	}
-
 	@Override
 	public String toString() {
 		return source.toString() + "_" + hashCode();

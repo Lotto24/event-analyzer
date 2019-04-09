@@ -43,15 +43,4 @@ public class Tree {
 		return true;
 	}
 	
-	public String toDot() {
-		StringBuilder r = new StringBuilder();
-		
-		r.append("digraph G { \n");
-		r.append("rankdir=LR; \n");
-		r.append(rootNode.toDot());
-		r.append("} \n");
-		
-		return r.toString();
-	}
-
 }

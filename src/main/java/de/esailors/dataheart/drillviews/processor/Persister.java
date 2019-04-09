@@ -107,8 +107,8 @@ public class Persister {
 	}
 
 	public void persistDrillView(EventType eventType, String createStatement) {
-		log.info("Writing drill view to disc for " + eventType);
-		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY),
+		log.debug("Writing drill view to disc for " + eventType);
+		FileUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY),
 				fileNameForDrillView(eventType), createStatement);
 	}
 
@@ -145,7 +145,7 @@ public class Persister {
 				break;
 			}
 		}
-		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY),
+		FileUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY),
 				fileNameForEventSamples(eventType), eventSample);
 	}
 
@@ -161,7 +161,7 @@ public class Persister {
 
 		String changeSetFile = "changelog_" + formattedCurrentTime + ".md";
 
-		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY),
+		FileUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY),
 				changeSetFile, changeSetContent);
 	}
 
@@ -176,12 +176,12 @@ public class Persister {
 
 		String changeSetFile = "warnings_" + formattedCurrentTime + ".md";
 
-		FileWriterUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY),
+		FileUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY),
 				changeSetFile, changeSetContent);
 	}
 
 	public void persistTopicReport(Topic topic) {
-		log.info("Writing topic report for: " + topic.getName());
+		log.debug("Writing topic report for: " + topic.getName());
 		String sourcePath = outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY);
 
 		String reportContent = "# Topic report for: " + topic.getName() + "\n";
@@ -210,7 +210,7 @@ public class Persister {
 
 		reportContent += lastUpdateMarker();
 
-		FileWriterUtil.writeFile(sourcePath, fileNameForTopicReport(topic), reportContent);
+		FileUtil.writeFile(sourcePath, fileNameForTopicReport(topic), reportContent);
 	}
 
 	private String generateJsonInformation(String name, JsonNode json) {
@@ -341,7 +341,7 @@ public class Persister {
 		reportContent += "* " + linkToDrillView(eventType, sourcePath) + "\n";
 
 		// write report to disk
-		FileWriterUtil.writeFile(sourcePath, fileNameForEventTypeReport(eventType), reportContent);
+		FileUtil.writeFile(sourcePath, fileNameForEventTypeReport(eventType), reportContent);
 	}
 
 	private String generateEventTypeInformation(EventType eventType, String sourcePath) {
@@ -383,14 +383,14 @@ public class Persister {
 		// avro schema json
 		String avroSchemaJson = JsonUtil.prettyPrintJsonString(parseToJson(avroSchema.getSchema()));
 		String avroSchemaJsonFile = fileNameForAvroSchemaJson(avroSchema);
-		FileWriterUtil.writeFile(sourcePath, avroSchemaJsonFile, avroSchemaJson);
+		FileUtil.writeFile(sourcePath, avroSchemaJsonFile, avroSchemaJson);
 		reportContent += "### Schema JSON:\n";
 		reportContent += "* " + linkToAvroSchemaJson(avroSchema, sourcePath) + "\n";
 
 		reportContent += lastUpdateMarker();
 
 		// write to disk
-		FileWriterUtil.writeFile(sourcePath, fileNameForAvroSchemaReport(avroSchema), reportContent);
+		FileUtil.writeFile(sourcePath, fileNameForAvroSchemaReport(avroSchema), reportContent);
 	}
 
 	public void persistEventStructures(EventType eventType) {
@@ -443,14 +443,14 @@ public class Persister {
 
 		eventStructureContent += lastUpdateMarker();
 
-		FileWriterUtil.writeFile(sourcePath, fileNameForEventStructure(eventStructure), eventStructureContent);
+		FileUtil.writeFile(sourcePath, fileNameForEventStructure(eventStructure), eventStructureContent);
 	}
 
 	private void plotTree(EventStructure eventStructure) {
 
 		String dotFileName = fileNameForEventStructureDot(eventStructure);
 
-		String dotContent = eventStructure.getEventStructureTree().toDot();
+		String dotContent = new Dotter(eventStructure).generateDot();
 		if (gitRepositoryOption.isPresent()) {
 			// check if .dot changed from git repository, if not don't render it again
 			String dotFileSubPath = Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY + File.separator
@@ -477,7 +477,7 @@ public class Persister {
 		String dotFileFolder = outputDirectoryPathFor(eventStructure);
 		String plotFileFolder = outputDirectoryPathFor(eventStructure);
 
-		FileWriterUtil.writeFile(dotFileFolder, dotFileName, dotContent);
+		FileUtil.writeFile(dotFileFolder, dotFileName, dotContent);
 		String renderDotCommand = "dot -Tpng " + dotFileFolder + File.separator + dotFileName + " -o" + plotFileFolder
 				+ File.separator + pngFileName;
 
@@ -490,18 +490,6 @@ public class Persister {
 		String sourcePath = outputDirectoryPathForReadme();
 
 		// add an index to all EventTypes to README.md for ease of navigation
-		File readmeTemplate = FileWriterUtil.getFileFromResources(README_TEMPLATE_FILE);
-		if (!readmeTemplate.exists()) {
-			throw new IllegalStateException(
-					"Missing readme template in resources: " + readmeTemplate.getAbsolutePath());
-		}
-		String readmeContent;
-		try {
-			readmeContent = FileUtils.readFileToString(readmeTemplate);
-		} catch (IOException e) {
-			throw new IllegalStateException(
-					"Unable to read readme template from resources at: " + readmeTemplate.getAbsolutePath());
-		}
 
 		List<String> eventTypesIndex = new ArrayList<>(eventTypes.keySet());
 
@@ -525,6 +513,7 @@ public class Persister {
 		}
 		Collections.sort(eventTypesIndex);
 
+		String readmeContent = FileUtil.loadFromResources(README_TEMPLATE_FILE);
 		readmeContent += "### Event Types\n";
 		for (String eventTypeName : eventTypesIndex) {
 			readmeContent += "* " + linkToEventTypeReportByName(eventTypeName, sourcePath) + "\n";
@@ -533,7 +522,7 @@ public class Persister {
 		readmeContent += lastUpdateMarker();
 
 		// write to disk
-		FileWriterUtil.writeFile(sourcePath, fileNameForReadme(), readmeContent);
+		FileUtil.writeFile(sourcePath, fileNameForReadme(), readmeContent);
 	}
 
 	private String lastUpdateMarker() {

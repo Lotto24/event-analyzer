@@ -65,7 +65,7 @@ public class EventStructureMerger {
 			mergedNode.setOptional(true);
 		}
 		if (isRootNode) {
-			// for root nodes we ignore the name for now
+			// for root nodes we ignore the name/id
 			if (mergedNode.equalIgnoringId(sourceNode)) {
 				return;
 			}

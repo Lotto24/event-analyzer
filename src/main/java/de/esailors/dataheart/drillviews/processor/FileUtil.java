@@ -4,12 +4,13 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class FileWriterUtil {
+public class FileUtil {
 
-	private static final Logger log = LogManager.getLogger(FileWriterUtil.class.getName());
+	private static final Logger log = LogManager.getLogger(FileUtil.class.getName());
 
 	public static void writeFile(String folder, String fileName, String content) {
 		File viewFolder = new File(folder);
@@ -50,9 +51,13 @@ public class FileWriterUtil {
 		}
 	}
 	
-	public static File getFileFromResources(String path) {
-		ClassLoader classLoader = FileWriterUtil.class.getClassLoader();
-		return new File(classLoader.getResource(path).getFile());
+	public static String loadFromResources(String path) {
+		ClassLoader classLoader = FileUtil.class.getClassLoader();
+		try {
+			return IOUtils.toString(classLoader.getResourceAsStream(path));
+		} catch (IOException e) {
+			throw new IllegalStateException("Unable to load from resources: " + path, e);
+		}
 	}
 
 }

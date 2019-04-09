@@ -21,6 +21,7 @@ import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.drill.DrillConnection;
 import de.esailors.dataheart.drillviews.drill.DrillViews;
+import de.esailors.dataheart.drillviews.util.CollectionUtil;
 import de.esailors.dataheart.drillviews.util.GitRepository;
 
 public class Processor {
@@ -54,7 +55,7 @@ public class Processor {
 		for (Topic topic : topics) {
 			process(topic);
 		}
-		for (EventType eventType : eventTypes.values()) {
+		for (EventType eventType : CollectionUtil.toSortedList(eventTypes.values())) {
 			log.info("Processing " + eventType);
 			markEventTypeInconsistencies(eventType);
 			updateAvroSchemaMap(eventType);
@@ -83,9 +84,14 @@ public class Processor {
 
 	private void runCountOnDrillView(EventType eventType) {
 		// run count on newly created view for sanity checking and report / statistics
-		long drillViewCount = drillViews.runDayCount(eventType);
-		log.info("Count in day view for " + eventType + ": " + drillViewCount);
-		eventType.setDrillViewCount(drillViewCount);
+		Optional<Long> drillViewCountOption = drillViews.runDayCount(eventType);
+		if(drillViewCountOption.isPresent()) {
+			long drillViewCount = drillViewCountOption.get();
+			log.info("Count in day view for " + eventType + ": " + drillViewCount);
+			eventType.setDrillViewCount(drillViewCount);
+		} else {
+			changeLog.addWarning("Unable to determine count via drill view of " + eventType);
+		}
 	}
 
 	private void addOutputToGitRepository() {
@@ -218,7 +224,7 @@ public class Processor {
 			if (currentViewFromRepository.isPresent()) {
 				log.debug("Found a view in local git repository");
 			} else {
-				log.info("No view found in local git repository");
+				log.debug("No view found in local git repository");
 			}
 		} else {
 			log.warn("Local git repository not enabled, unable to check if view changed");

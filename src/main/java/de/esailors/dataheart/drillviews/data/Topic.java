@@ -12,7 +12,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.common.base.Optional;
 
-public class Topic {
+public class Topic implements Comparable<Topic> {
 
 	private static final Logger log = LogManager.getLogger(Topic.class.getName());
 
@@ -150,6 +150,11 @@ public class Topic {
 	@Override
 	public String toString() {
 		return "Topic '" + topicName + "'";
+	}
+
+	@Override
+	public int compareTo(Topic o) {
+		return topicName.compareTo(o.topicName);
 	}
 
 }

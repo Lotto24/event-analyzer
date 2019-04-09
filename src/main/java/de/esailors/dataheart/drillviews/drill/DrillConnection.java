@@ -36,23 +36,31 @@ public class DrillConnection {
 		}
 	}
 	
-	public ResultSet query(String query) {
+	public ResultSet query(String query) throws SQLException {
 		log.debug("Running Drill query: " + query);
-		try {
+//		try {
 			Statement statement = connection.createStatement();
 			return statement.executeQuery(query);
-		} catch (Exception e) {
-			log.error("Unable to open connection to drill", e);
-			throw new IllegalStateException("Unable to execute query: " + query, e);
-		}
+//		} catch (Exception e) {
+//			log.error("Unable to open connection to drill", e);
+//			throw new IllegalStateException("Unable to execute query: " + query, e);
+//		}
 	}
 	
 	public Set<String> listDatabases() {
-		return resultSetToStringSet(query("SHOW DATABASES"));
+		try {
+			return resultSetToStringSet(query("SHOW DATABASES"));
+		} catch (SQLException e) {
+			throw new IllegalStateException("Unable to list databases", e);
+		}
 	}
 	
 	public Set<String> listTablesinDatabase(String database) {
-		return resultSetToStringSet(query("SHOW TABLES FROM " + database), 1);
+		try {
+			return resultSetToStringSet(query("SHOW TABLES FROM " + database), 1);
+		} catch (SQLException e) {
+			throw new IllegalStateException("Unable to list tables in database: " + database, e);
+		}
 	}
 	
 	public void logResultSet(ResultSet resultSet) {

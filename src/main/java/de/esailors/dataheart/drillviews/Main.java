@@ -41,8 +41,9 @@ public class Main {
 		// - extract markdown specifics to separate class and
 		// - refactor persister to separate report generation from path handling
 		// - for nodes that are Avro MAPS we need to select the whole blob in views
-		// - refactor dotting of EventStructures to separate class
 		// - persist event samples separately for each event structure
+		// - persist event structure plots somewhere more suitable than git
+		// - when pulling from git only fetch the branch we actually work on
 
 		initLog4j();
 

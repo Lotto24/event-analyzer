@@ -20,6 +20,7 @@ import org.apache.logging.log4j.Logger;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Topic;
+import de.esailors.dataheart.drillviews.util.CollectionUtil;
 
 public class KafkaEventFetcher {
 
@@ -40,9 +41,12 @@ public class KafkaEventFetcher {
 	}
 
 	public Set<Topic> fetchEvents() {
-		log.info("Consuming events from Kafka");
+		log.info("Starting to consume events from Kafka");
 		long consumeStart = System.currentTimeMillis();
-		for (Topic topic : topics) {
+		int cnt = 0;
+		for (Topic topic : CollectionUtil.toSortedList(topics)) {
+			cnt++;
+			log.info(cnt + " / " + topics.size() + ": " + topic.toString());
 			fetchEventsForTopic(topic);
 		}
 		long consumeEnd = System.currentTimeMillis();
@@ -58,7 +62,7 @@ public class KafkaEventFetcher {
 		while(consumedRecords.count() == 0 && retries < Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES) {
 			// try to fetch a bit more often until we have at least 1 record
 			retries++;
-			log.info(topic + " received no records, trying again: " + retries + " / " + Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES);
+			log.debug(topic + " received no records, trying again: " + retries + " / " + Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES);
 			consumedRecords = consumer.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
 		}
 		eventProcessor.processRecords(topic, consumedRecords);
@@ -81,6 +85,8 @@ public class KafkaEventFetcher {
 
 		consumer.assign(partitions);
 
+		// TODO poll each partition individually instead of "retrying on empty poll"
+		
 		// forcefully reset offset to 0
 		consumer.assignment().forEach(topicPartition -> {
 			consumer.seek(topicPartition, 0);
@@ -101,7 +107,7 @@ public class KafkaEventFetcher {
 			String msg = " * " + topicName + ": ";
 			if (topicsBlacklist.contains(topicName)) {
 				msg += "IGNORED";
-				log.debug(msg);
+				log.info(msg);
 				continue;
 			}
 			topics.add(new Topic(topicName));

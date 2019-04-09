@@ -14,7 +14,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.common.base.Optional;
 
-public class EventType {
+public class EventType implements Comparable<EventType> {
 
 	private static final Logger log = LogManager.getLogger(EventType.class.getName());
 
@@ -271,6 +271,11 @@ public class EventType {
 		} else if (!name.equals(other.name))
 			return false;
 		return true;
+	}
+
+	@Override
+	public int compareTo(EventType o) {
+		return name.compareTo(o.name);
 	}
 
 }

@@ -9,6 +9,8 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.google.common.base.Optional;
+
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.EventType;
 
@@ -21,7 +23,6 @@ public class DrillViews {
 	private String[] targetDatabases;
 	private Set<String> databases;
 	private Map<String, Set<String>> existingTables;
-	
 
 	public DrillViews(DrillConnection drillConnection) {
 		this.drillConnection = drillConnection;
@@ -30,37 +31,42 @@ public class DrillViews {
 		initTargetDatabases();
 		fetchViewsInTargetDatabses();
 	}
-	
-	public long runDayCount(EventType eventType) {
+
+	public Optional<Long> runDayCount(EventType eventType) {
 		String viewName = viewNameFor(eventType);
 		String database = Config.getInstance().DRILL_VIEW_DAY_DATABASE;
 		String countColumnLabel = "cnt";
 		String countQuery = "SELECT COUNT(*) as " + countColumnLabel + " FROM " + database + ".`" + viewName + "`";
-		ResultSet resultSet = drillConnection.query(countQuery);
+		ResultSet resultSet = null;
 		try {
-			if(!resultSet.next()) {
-				throw new IllegalStateException("Unable to fetch first row of resultSet after count query: " + countQuery);
+			resultSet = drillConnection.query(countQuery);
+			if (!resultSet.next()) {
+				log.error("Unable to fetch first row of resultSet after count query: " + countQuery);
+				return Optional.absent();
 			}
-			return resultSet.getLong(countColumnLabel);
+			return Optional.of(resultSet.getLong(countColumnLabel));
 		} catch (SQLException e) {
-			throw new IllegalStateException("Unexpected SQLException after running day count query " + countQuery, e);
+			log.error("Unexpected SQLException after running day count query " + countQuery, e);
+			return Optional.absent();
 		} finally {
 			try {
-				resultSet.close();
+				if (resultSet != null) {
+					resultSet.close();
+				}
 			} catch (SQLException e) {
 				log.warn("Unable to close ResultSet after day count query", e);
 			}
 		}
 	}
-	
+
 	public String viewNameFor(EventType eventType) {
 		return eventType.getName();
 	}
-	
+
 	public boolean doesViewExist(String viewName) {
 		log.debug("Checking if view exists already in Drill: " + viewName);
-		for(String database : existingTables.keySet()) {
-			if(existingTables.get(database).contains(viewName)) {
+		for (String database : existingTables.keySet()) {
+			if (existingTables.get(database).contains(viewName)) {
 				log.debug("Found view " + viewName + "in database: " + database);
 				return true;
 			}
@@ -68,7 +74,7 @@ public class DrillViews {
 		log.info("View does not exist yet: " + viewName);
 		return false;
 	}
-	
+
 	private void fetchDatabases() {
 		log.debug("Fetching databases from Drill");
 		databases = drillConnection.listDatabases();
@@ -87,21 +93,21 @@ public class DrillViews {
 	private Set<String> fetchTablesFromTargetDatabase(String targetDatabase) {
 		log.debug("Fetching views in " + targetDatabase);
 		Set<String> tables = drillConnection.listTablesinDatabase(targetDatabase);
-		
-		for(String table : tables) {
+
+		for (String table : tables) {
 			log.debug("Found table: " + table);
 		}
-		
+
 		return tables;
 	}
 
 	private void initTargetDatabases() {
-		String[] targetDatabases = { Config.getInstance().DRILL_VIEW_ALL_DATABASE, Config.getInstance().DRILL_VIEW_DAY_DATABASE,
-				Config.getInstance().DRILL_VIEW_WEEK_DATABASE };
+		String[] targetDatabases = { Config.getInstance().DRILL_VIEW_ALL_DATABASE,
+				Config.getInstance().DRILL_VIEW_DAY_DATABASE, Config.getInstance().DRILL_VIEW_WEEK_DATABASE };
 		this.targetDatabases = targetDatabases;
 		ensureTargetDatabasesExist();
 	}
-	
+
 	private void ensureTargetDatabasesExist() {
 		for (String targetDatabase : targetDatabases) {
 			ensureDatabaseExists(targetDatabase);

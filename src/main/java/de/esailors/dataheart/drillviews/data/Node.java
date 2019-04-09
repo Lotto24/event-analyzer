@@ -1,16 +1,12 @@
 package de.esailors.dataheart.drillviews.data;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.base.Optional;
-
-import de.esailors.dataheart.drillviews.util.CollectionUtil;
 
 public class Node {
 
@@ -103,47 +99,6 @@ public class Node {
 		// values() can not have duplicates in our case, as they are mapped by name and
 		// name is part of equals check
 		return new HashSet<>(children.values());
-	}
-
-	public String toDot() {
-		StringBuilder r = new StringBuilder();
-		r.append("\"" + id + "\"");
-
-		List<String> customization = new ArrayList<>();
-
-		if (hasProperties()) {
-			String label = id + "\\n";
-
-			// sort the keys so it looks nicer
-			List<String> sortedPropertyList = CollectionUtil.toSortedList(properties.keySet());
-			for (String property : sortedPropertyList) {
-				label += property + "=" + String.join(", ", CollectionUtil.toSortedList(properties.get(property))) + "\\l";
-			}
-			customization.add("label=\"" + label + "\"");
-		}
-
-		if (hasChildren()) {
-			customization.add("shape=record");
-		}
-
-		if (isOptional) {
-			customization.add("style=dotted");
-		}
-
-		if (!customization.isEmpty()) {
-			r.append(" [" + String.join(",", customization) + "]");
-		}
-
-		r.append(";\n");
-		if (hasChildren()) {
-			r.append("subgraph \"cluster_" + id + "\" {\n");
-			for (Node child : children.values()) {
-				r.append(child.toDot());
-				r.append("\"" + id + "\" -> \"" + child.getId() + "\";\n");
-			}
-			r.append("}\n");
-		}
-		return r.toString();
 	}
 
 	public boolean equalIgnoringId(Node otherNode) {
