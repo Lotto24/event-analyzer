@@ -51,34 +51,6 @@ public class Dotter {
 		decreaseIndentationLevel();
 		appendLine("];");
 
-//		List<String> customization = new ArrayList<>();
-//
-//		if (node.hasProperties()) {
-//			String label = node.getId() + "\\n";
-//
-//			// sort the keys so it looks nicer
-//			List<String> sortedPropertyList = CollectionUtil.toSortedList(node.getProperties().keySet());
-//			for (String property : sortedPropertyList) {
-//				label += property + "="
-//						+ String.join(", ", CollectionUtil.toSortedList(node.getProperties().get(property))) + "\\l";
-//			}
-//			customization.add("label=\"" + label + "\"");
-//		}
-//
-//		if (node.hasChildren()) {
-//			customization.add("shape=record");
-//		}
-//
-//		if (node.isOptional()) {
-//			customization.add("style=dotted");
-//		}
-//
-//		if (!customization.isEmpty()) {
-//			append(" [" + String.join(",", customization) + "]");
-//		}
-//
-//		append(";\n");
-
 		if (node.hasChildren()) {
 			appendLine("subgraph \"cluster_" + node.getId() + "\" {");
 			for (Node child : node.getChildren()) {
@@ -91,6 +63,12 @@ public class Dotter {
 
 	private void appendNodeProperties(Node node) {
 		int rowNumber = 0;
+		
+		if (node.isOptional()) {
+			appendTableRow("OPTIONAL", "true");
+			rowNumber++;
+		}
+		
 		if (!node.getId().equals(node.getName())) {
 			appendTableRow("PATH", node.getId());
 			rowNumber++;
