@@ -68,7 +68,7 @@ if (!project.properties.containsKey("nexus_user")) {
 uploadArchives {
     repositories.mavenDeployer {
         pom.groupId = project.group
-        pom.artifactId = "consul-kafka-spark-example"
+        pom.artifactId = "event-analyser"
         pom.version = project.version
         repository(url: "http://codebase.office.tipp24.de:8081/nexus/content/repositories/services-os-release") {
             authentication(userName: project.nexus_user, password: project.nexus_passwd)
