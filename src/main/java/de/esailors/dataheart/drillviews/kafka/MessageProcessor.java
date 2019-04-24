@@ -29,6 +29,11 @@ public class MessageProcessor {
 		
 		log.info("Received " + consumedRecords.count() + " messages for: " + topic);
 		for (ConsumerRecord<byte[], byte[]> record : consumedRecords) {
+			if(record.value() == null) {
+				log.warn("Reveived record with value: null");
+				topic.addBrokenMessage(null);
+				continue;
+			}
 			try {
 				Event event = eventFactory.buildEvent(topic, record);
 				topic.addEvent(event);

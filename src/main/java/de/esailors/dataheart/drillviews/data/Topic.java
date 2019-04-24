@@ -32,42 +32,42 @@ public class Topic implements Comparable<Topic> {
 
 	public void markInconsistencies() {
 		eventTypeNames = new HashMap<>();
-		
+
 		boolean sawEventsWithoutEventType = false;
 		boolean sawEventsWithoutTimestamp = false;
-		for(Event event : events) {
+		for (Event event : events) {
 			Optional<String> readEventTypeOption = event.readEventType();
-			if(!readEventTypeOption.isPresent()) {
+			if (!readEventTypeOption.isPresent()) {
 				invalidEvents.add(event);
 				sawEventsWithoutEventType = true;
 				continue;
 			}
-			
+
 			Optional<String> readTimestampOption = event.readTimestamp();
-			if(!readTimestampOption.isPresent()) {
+			if (!readTimestampOption.isPresent()) {
 				invalidEvents.add(event);
 				sawEventsWithoutTimestamp = true;
 				continue;
 			}
-			
+
 			addEventForEventType(readEventTypeOption.get(), event);
 		}
 		if (invalidEvents.size() > 0) {
 			addMessageToReport("Invalid events detected in: " + this);
 		}
-		if(sawEventsWithoutEventType) {
+		if (sawEventsWithoutEventType) {
 			addMessageToReport("Event without eventType detected in: " + this);
 		}
-		if(sawEventsWithoutTimestamp) {
+		if (sawEventsWithoutTimestamp) {
 			addMessageToReport("Event without timestamp detected in: " + this);
 		}
 		if (eventTypeNames.size() > 1) {
 			addMessageToReport("Mixed EventTypes within the same topic: " + this);
 		}
 	}
-	
+
 	private void addEventForEventType(String eventTypeName, Event event) {
-		if(eventTypeNames.get(eventTypeName) == null) {
+		if (eventTypeNames.get(eventTypeName) == null) {
 			eventTypeNames.put(eventTypeName, new HashSet<>());
 		}
 		eventTypeNames.get(eventTypeName).add(event);
@@ -79,7 +79,7 @@ public class Topic implements Comparable<Topic> {
 		}
 		return eventTypeNames.size() == 1 && invalidEvents.size() == 0 && brokenMessages.size() == 0;
 	}
-	
+
 	public void addEvent(Event event) {
 		events.add(event);
 	}
@@ -87,7 +87,7 @@ public class Topic implements Comparable<Topic> {
 	public Set<Event> getEvents() {
 		return events;
 	}
-	
+
 	public Set<Event> getInvalidEvents() {
 		return invalidEvents;
 	}
@@ -112,14 +112,19 @@ public class Topic implements Comparable<Topic> {
 		log.warn("Topic report message: " + message);
 		reportMessages.add(message);
 	}
-	
+
 	public List<String> getReportMessages() {
 		return reportMessages;
 	}
-	
+
 	public void addBrokenMessage(byte[] message) {
 		brokenMessages.add(message);
-		addMessageToReport("Received a broken message: " + new String(message));
+		if (message != null) {
+			addMessageToReport("Received a broken message: " + new String(message));
+		} else {
+			addMessageToReport("Received a null message");
+		}
+		
 	}
 
 	@Override
