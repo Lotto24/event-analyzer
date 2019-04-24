@@ -5,3 +5,6 @@ target
 log
 out
 analysis_repository
+.idea
+.gradle
+build
