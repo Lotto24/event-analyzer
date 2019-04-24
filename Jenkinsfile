@@ -1,4 +1,5 @@
-@Library("pipeline-library") _
+@Library("jenkins-library-boomerang") _
+@Library("cara-tests") __
 
 def projectName = "event-analyzer"
 def changes = new pipeline.common.Scm(this)
