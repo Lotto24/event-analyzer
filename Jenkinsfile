@@ -86,7 +86,7 @@ pipeline {
               echo "Just uploading the new SNAPSHOT version"
               sh """
                 git remote set-url origin git@srv-git-01-hh1.alinghi.tipp24.net:data-engineering/event-analyzer.git
-                ./gradlew clean build uploadArchive -x findbugsMain -x findbugsTest -x checkStyleMain -x checkStyleTest
+                ./gradlew clean build uploadArchive
                 """
             }
           }
