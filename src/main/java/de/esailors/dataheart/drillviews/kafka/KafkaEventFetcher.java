@@ -57,12 +57,14 @@ public class KafkaEventFetcher {
 
 	private void fetchEventsForTopic(Topic topic) {
 		prepareConsumerFor(topic);
-		ConsumerRecords<byte[], byte[]> consumedRecords = consumer.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
+		ConsumerRecords<byte[], byte[]> consumedRecords = consumer
+				.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
 		int retries = 0;
-		while(consumedRecords.count() == 0 && retries < Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES) {
+		while (consumedRecords.count() == 0 && retries < Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES) {
 			// try to fetch a bit more often until we have at least 1 record
 			retries++;
-			log.debug(topic + " received no records, trying again: " + retries + " / " + Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES);
+			log.debug(topic + " received no records, trying again: " + retries + " / "
+					+ Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES);
 			consumedRecords = consumer.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
 		}
 		eventProcessor.processRecords(topic, consumedRecords);
@@ -86,7 +88,7 @@ public class KafkaEventFetcher {
 		consumer.assign(partitions);
 
 		// TODO poll each partition individually instead of "retrying on empty poll"
-		
+
 		// forcefully reset offset to 0
 		consumer.assignment().forEach(topicPartition -> {
 			consumer.seek(topicPartition, 0);
@@ -105,6 +107,11 @@ public class KafkaEventFetcher {
 
 		for (String topicName : topicNames.keySet()) {
 			String msg = " * " + topicName + ": ";
+			// additionally to hardcoded list from initBlacklistTopics() we ignore all topic
+			// names that start with an underscore
+			if (topicName.startsWith("_")) {
+				topicsBlacklist.add(topicName);
+			}
 			if (topicsBlacklist.contains(topicName)) {
 				msg += "IGNORED";
 				log.info(msg);
@@ -124,7 +131,6 @@ public class KafkaEventFetcher {
 
 	private void initBlacklistTopics() {
 		topicsBlacklist = new HashSet<String>();
-		topicsBlacklist.add("__consumer_offsets");
 		topicsBlacklist.add("avro_schema");
 
 		log.debug("Blacklisted topics: " + topicsBlacklist.size());
@@ -136,7 +142,7 @@ public class KafkaEventFetcher {
 
 	private Properties initializeConsumerProperties() {
 		log.info("Creating Kafka consumer for: " + Config.getInstance().KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
-		
+
 		Properties props = new Properties();
 		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
 		props.put(ConsumerConfig.GROUP_ID_CONFIG, Config.getInstance().KAFKA_CONSUMER_GROUP_ID);
