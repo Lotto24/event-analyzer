@@ -41,9 +41,9 @@ dependencies {
     compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.2'
     compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.2'
     compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.11.2'
-    compile(group: 'org.apache.drill.exec', name: 'drill-jdbc-all', version: '1.14.0') {
-        exclude(module: 'log4j-over-slf4j')
-    }
+    compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.11.2'
+    
+    compile group: 'org.apache.drill.exec', name: 'drill-jdbc-all', version: '1.14.0'
     compile group: 'org.apache.calcite', name: 'calcite-core', version: '1.16.0'
     compile group: 'org.kohsuke', name: 'libpam4j', version: '1.8'
     compile group: 'org.apache.kafka', name: 'kafka_2.12', version: '1.1.0'
@@ -53,8 +53,14 @@ dependencies {
     compile group: 'org.eclipse.jgit', name: 'org.eclipse.jgit', version: '5.2.1.201812262042-r'
     compile group: 'com.google.guava', name: 'guava', version: '18.0'
     compile group: 'org.apache.hbase', name: 'hbase-client', version:'1.4.4'
+    compile group: 'org.apache.hive', name: 'hive-jdbc', version:'2.1.0'
 }
 
+configurations.all {
+   exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+   exclude group: 'ch.qos.logback', module: 'logback-classic'
+   exclude group: 'org.slf4j', module: 'log4j-over-slf4j'
+}
 
 
 project.ext.baseVersion = project.version.replace("-SNAPSHOT", "")

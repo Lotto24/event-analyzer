@@ -40,7 +40,7 @@ public class TreeFactory {
 
 		Tree r = new Tree(name);
 		
-		r.getRootNode().addProperty("SOURCE", "EVENT");
+		r.getRootNode().addProperty(NodePropertyType.SOURCE, "EVENT");
 
 		extendTreeWithJsonFields(r.getRootNode(), json, false);
 
@@ -62,7 +62,7 @@ public class TreeFactory {
 
 			JsonNode fieldJson = field.getValue();
 			JsonType jsonType = JsonUtil.getJsonType(fieldJson);
-			node.addProperty("JSON_TYPE", jsonType.toString());
+			node.addProperty(NodePropertyType.JSON_TYPE, jsonType.toString());
 			if(jsonType.equals(JsonType.NULL)) {
 				node.setOptional(true);
 			}
@@ -89,7 +89,7 @@ public class TreeFactory {
 
 		// either use the same name when comparing trees or exclude them from equals()
 		Tree r = new Tree(avroSchema.getName());
-		r.getRootNode().addProperty("SOURCE", "AVRO");
+		r.getRootNode().addProperty(NodePropertyType.SOURCE, "AVRO");
 
 		extendTreeWithAvroFields(r.getRootNode(), avroSchema.getFields(), false);
 
@@ -120,12 +120,12 @@ public class TreeFactory {
 
 	private void addAvroFieldPropertiesToNode(Field field, Node node) {
 		Type fieldType = field.schema().getType();
-		node.addProperty("AVRO_TYPE", fieldType.toString());
+		node.addProperty(NodePropertyType.AVRO_TYPE, fieldType.toString());
 		
 		// list enum values
 		if(fieldType.equals(Type.ENUM)) {
 			for(String enumSymbol : field.schema().getEnumSymbols()) {
-				node.addProperty("AVRO_ENUM_SYMBOL", enumSymbol);
+				node.addProperty(NodePropertyType.AVRO_ENUM_SYMBOL, enumSymbol);
 			}
 		}
 		
@@ -133,7 +133,7 @@ public class TreeFactory {
 		if(fieldType.equals(Type.UNION)) {
 			boolean sawNullType = false;
 			for(Schema unionSchema : field.schema().getTypes()) {
-				node.addProperty("AVRO_UNION_TYPE", unionSchema.getType().toString());
+				node.addProperty(NodePropertyType.AVRO_UNION_TYPE, unionSchema.getType().toString());
 				if(unionSchema.getType().equals(Type.NULL)) {
 					sawNullType = true;
 				}

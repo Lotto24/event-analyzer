@@ -122,7 +122,7 @@ public class KafkaEventFetcher {
 			log.debug(msg);
 
 		}
-		log.info("Topics to process: " + topicNames.size());
+		log.info("Topics discovered: " + topicNames.size());
 	}
 
 	private void initMessageProcessor() {

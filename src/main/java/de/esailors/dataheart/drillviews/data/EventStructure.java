@@ -2,6 +2,9 @@ package de.esailors.dataheart.drillviews.data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
+import com.google.common.base.Optional;
 
 public class EventStructure {
 
@@ -31,10 +34,26 @@ public class EventStructure {
 				sourceEventStructures.add(avroSchema.getEventStructure());
 			}
 		}
+		Optional<EventStructure> deserializedEventStructureOption = eventType.getDeserializedEventStructureOption();
+		if (deserializedEventStructureOption.isPresent()) {
+			sourceEventStructures.add(deserializedEventStructureOption.get());
+		}
 		this.source = new EventStructureSource(sourceEventStructures);
 		this.eventType = eventType;
 		this.eventStructureTree = EventStructureMerger.getInstance().mergeEventStructures(eventType,
 				sourceEventStructures);
+	}
+
+	public EventStructure(EventType eventType, Tree deserializedTree) {
+		this.source = new EventStructureSource();
+		this.eventType = eventType;
+		this.eventStructureTree = deserializedTree;
+	}
+
+	public Set<String> getSourceStructureNames() {
+		// read source structures from root node properties to not miss structures from
+		// deserialized older sources
+		return getEventStructureTree().getRootNode().getProperty(NodePropertyType.SOURCE_STRUCTURE);
 	}
 
 	public EventType getEventType() {

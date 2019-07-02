@@ -245,7 +245,6 @@ public class GitRepository {
 		checkStatusIsUnmodified("Modified", status.getModified());
 		checkStatusIsUnmodified("Removed", status.getRemoved());
 		checkStatusIsUnmodified("Untracked", status.getUntracked());
-		checkStatusIsUnmodified("UntrackedFolder", status.getUntrackedFolders());
 
 		// yaya I just found this convenience method later
 		if (!status.isClean()) {
@@ -414,11 +413,15 @@ public class GitRepository {
 		};
 	}
 
+	public String filePathInRepository(String subPath) {
+		return Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + subPath;
+	}
+	
 	public Optional<String> loadFile(String subPath) {
 
 		log.debug("Loading file from local repository: " + subPath);
 
-		File fileToLoad = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + subPath);
+		File fileToLoad = new File(filePathInRepository(subPath));
 		if (!fileToLoad.exists()) {
 			log.debug(
 					"Unable to load file from git repository as file doesn't exist at " + fileToLoad.getAbsolutePath());
@@ -444,7 +447,7 @@ public class GitRepository {
 
 		List<String> r = new ArrayList<>();
 
-		File directory = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + directoryPath);
+		File directory = new File(filePathInRepository(directoryPath));
 		log.debug("Listing files in local git repository at: " + directory.getAbsolutePath());
 		if (!directory.exists() || !directory.isDirectory()) {
 			log.error("Was supposed to list files from non-existing directory: " + directoryPath);

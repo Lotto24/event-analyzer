@@ -1,9 +1,9 @@
 package de.esailors.dataheart.drillviews.processor;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.ObjectOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.avro.Schema;
-import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
@@ -27,6 +26,7 @@ import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.AvroSchema;
 import de.esailors.dataheart.drillviews.data.Event;
 import de.esailors.dataheart.drillviews.data.EventStructure;
+import de.esailors.dataheart.drillviews.data.EventStructureSource;
 import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.util.GitRepository;
@@ -37,98 +37,44 @@ public class Persister {
 
 	private static final Logger log = LogManager.getLogger(Persister.class.getName());
 
-	private static final String README_FILE = "README.md";
 	private static final String README_TEMPLATE_FILE = "README.md.template";
 
 	private Optional<GitRepository> gitRepositoryOption;
+	private PersisterPaths persisterPaths;
 	private ObjectMapper jsonObjectMapper;
 	private String formattedCurrentTime;
 
-	public Persister(Optional<GitRepository> gitRepositoryOption) {
+	public Persister(Optional<GitRepository> gitRepositoryOption, PersisterPaths persisterPaths) {
 		this.gitRepositoryOption = gitRepositoryOption;
+		this.persisterPaths = persisterPaths;
 		this.jsonObjectMapper = new ObjectMapper();
 		formattedCurrentTime = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
 
-		initOutputDirectories();
-	}
-
-	private void initOutputDirectories() {
-		wipeDirectory(Config.getInstance().OUTPUT_DIRECTORY);
-
-		ensureDirectoryExists(Config.getInstance().OUTPUT_DIRECTORY);
-		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY));
-		ensureDirectoryExists(outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY));
-	}
-
-	private void wipeDirectory(String directoryPath) {
-		File directory = new File(directoryPath);
-		log.debug("Wiping directory: " + directory.getAbsolutePath());
-		if (!directory.exists()) {
-			return;
-		}
-		if (!directory.isDirectory()) {
-			throw new IllegalArgumentException(
-					"Got asked to wipe a path that exists but is not a directory: " + directoryPath);
-		}
-
-		// only wipe directories that are somewhere within working directory to avoi
-		// absolute mayhem
-		Optional<String> workingDirectoryOption = SystemUtil.getWorkingDirectory();
-		if (!workingDirectoryOption.isPresent()) {
-			throw new IllegalStateException("Unable to determine working directory, refusing to wipe directory");
-		}
-		String workingDirectoryPath = workingDirectoryOption.get();
-		if (!isParentOf(workingDirectoryPath, directory.getAbsolutePath())) {
-			throw new IllegalArgumentException("Was asked to wipe a directory (" + directory.getAbsolutePath()
-					+ ") that is not part of current working directory: " + workingDirectoryPath);
-		}
-
-		try {
-			FileUtils.forceDelete(directory);
-		} catch (IOException e) {
-			throw new IllegalStateException("Unable to wipe directory: " + directory.getAbsolutePath(), e);
-		}
-	}
-
-	private void ensureDirectoryExists(String directoryPath) {
-		File outputDirectory = new File(directoryPath);
-		if (!outputDirectory.exists()) {
-			try {
-				FileUtils.forceMkdir(outputDirectory);
-			} catch (IOException e) {
-				throw new IllegalStateException("Unable to create directory at " + outputDirectory.getAbsolutePath());
-			}
-		}
+		persisterPaths.initOutputDirectories();
 	}
 
 	public void persistDrillView(EventType eventType, String createStatement) {
 		log.debug("Writing drill view to disc for " + eventType);
-		FileUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY),
-				fileNameForDrillView(eventType), createStatement);
+		FileUtil.writeFile(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY),
+				persisterPaths.fileNameForDrillView(eventType), createStatement);
 	}
 
-	public String outputDirectoryPathFor(EventStructure eventStructure) {
-		return outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY)
-				+ eventStructure.getEventType().getName() + File.separator;
+	public void persistHiveView(EventType eventType, String createStatement) {
+		log.debug("Writing hive view to disc for " + eventType);
+		FileUtil.writeFile(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_HIVE_DIRECTORY),
+				persisterPaths.fileNameForHiveView(eventType), createStatement);
 	}
 
-	public String outputDirectoryPathFor(AvroSchema avroSchema) {
-		return outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY) + avroSchema.getName()
-				+ File.separator;
+	public void persistDwhTable(EventType eventType, String ddl) {
+		log.debug("Writing DWH table to disc for " + eventType);
+		FileUtil.writeFile(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_DWH_TABLES_DIRECTORY),
+				persisterPaths.fileNameForDwhTable(eventType), ddl);
 	}
-
-	public String outputDirectoryPathForReadme() {
-		return outputDirectoryPathFor("");
-	}
-
-	public String outputDirectoryPathFor(String subPath) {
-		return Config.getInstance().OUTPUT_DIRECTORY + File.separator + subPath
-				+ (subPath.isEmpty() ? "" : File.separator);
+	
+	public void persistDwhJob(EventType eventType, String job) {
+		log.debug("Writing DWH job to disc for " + eventType);
+		FileUtil.writeFile(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_DWH_JOBS_DIRECTORY),
+				persisterPaths.fileNameForDwhJob(eventType), job);
 	}
 
 	public void persistEventSamples(EventType eventType) {
@@ -145,8 +91,8 @@ public class Persister {
 				break;
 			}
 		}
-		FileUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY),
-				fileNameForEventSamples(eventType), eventSample);
+		FileUtil.writeFile(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY),
+				persisterPaths.fileNameForEventSamples(eventType), eventSample);
 	}
 
 	public void persistChanges(ChangeLog changeLog) {
@@ -161,7 +107,7 @@ public class Persister {
 
 		String changeSetFile = "changelog_" + formattedCurrentTime + ".md";
 
-		FileUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY),
+		FileUtil.writeFile(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY),
 				changeSetFile, changeSetContent);
 	}
 
@@ -176,13 +122,13 @@ public class Persister {
 
 		String changeSetFile = "warnings_" + formattedCurrentTime + ".md";
 
-		FileUtil.writeFile(outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY),
+		FileUtil.writeFile(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY),
 				changeSetFile, changeSetContent);
 	}
 
 	public void persistTopicReport(Topic topic) {
 		log.debug("Writing topic report for: " + topic.getName());
-		String sourcePath = outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY);
+		String sourcePath = persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY);
 
 		String reportContent = "# Topic report for: " + topic.getName() + "\n";
 		if (topic.isConsistent()) {
@@ -210,7 +156,7 @@ public class Persister {
 
 		reportContent += lastUpdateMarker();
 
-		FileUtil.writeFile(sourcePath, fileNameForTopicReport(topic), reportContent);
+		FileUtil.writeFile(sourcePath, persisterPaths.fileNameForTopicReport(topic), reportContent);
 	}
 
 	private String generateJsonInformation(String name, JsonNode json) {
@@ -262,28 +208,28 @@ public class Persister {
 	}
 
 	private String generateSubInformation(String type, Set<?> items) {
-		String topicInformation = "* **" + items.size() + "** " + type + "\n";
+		String subInformation = "* **" + items.size() + "** " + type + "\n";
 		if (items.size() > 0) {
 			for (Object item : items) {
-				topicInformation += "  * ";
-				if(item == null) {
-					topicInformation += "";
+				subInformation += "  * ";
+				if (item == null) {
+					subInformation += "";
 				} else if (item instanceof Optional) {
-					Optional<?> option = (Optional<?>)item;
-					if(option.isPresent()) {
-						topicInformation += option.get();
+					Optional<?> option = (Optional<?>) item;
+					if (option.isPresent()) {
+						subInformation += option.get();
 					} else {
-						topicInformation += "ABSENT";
+						subInformation += "ABSENT";
 					}
 				} else {
-					topicInformation += item.toString();
+					subInformation += item.toString();
 				}
-				topicInformation += "\n";
+				subInformation += "\n";
 			}
 		} else {
-			topicInformation += "  * _none detected_\n";
+			subInformation += "  * _none detected_\n";
 		}
-		return topicInformation;
+		return subInformation;
 	}
 
 	public String getFormattedCurrentTime() {
@@ -291,7 +237,7 @@ public class Persister {
 	}
 
 	public void persistEventTypeReport(EventType eventType) {
-		String sourcePath = outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY);
+		String sourcePath = persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY);
 
 		String reportContent = "# EventType Report: " + eventType.getName() + "\n";
 
@@ -299,7 +245,8 @@ public class Persister {
 
 		reportContent += "#### Analyzed Events: " + eventType.getEvents().size() + "\n\n";
 		Optional<Long> drillViewCountOption = eventType.getDrillViewCountOption();
-		reportContent += "#### Drill View Count: " + (drillViewCountOption.isPresent() ? drillViewCountOption.get() : "UNKNOWN") + "\n\n";
+		reportContent += "#### Drill View Count: "
+				+ (drillViewCountOption.isPresent() ? drillViewCountOption.get() : "UNKNOWN") + "\n\n";
 
 		// consistency
 		if (eventType.isConsistent()) {
@@ -307,7 +254,7 @@ public class Persister {
 		} else {
 			reportContent += "### EventType was **NOT** consistent!\n\n";
 		}
-		
+
 		// report messages
 		if (!eventType.getReportMessages().isEmpty()) {
 			reportContent += "### Report messages:\n";
@@ -317,12 +264,18 @@ public class Persister {
 			reportContent += "\n\n";
 		}
 
-		reportContent += "### Merged Event Structure:\n";
-		Optional<EventStructure> mergedEventStructured = eventType.getMergedEventStructured();
-		if (mergedEventStructured.isPresent()) {
-			reportContent += "* " + linkToEventStructureReport(mergedEventStructured.get(), sourcePath) + "\n";
+		reportContent += "### Event Structures:\n";
+		Optional<EventStructure> mergedEventStructureOption = eventType.getMergedEventStructured();
+		if (mergedEventStructureOption.isPresent()) {
+			EventStructure mergedEventStructure = mergedEventStructureOption.get();
+			reportContent += "* " + linkToEventStructureReport(mergedEventStructure, sourcePath) + "\n";
+			for (String sourceStructureName : mergedEventStructure.getSourceStructureNames()) {
+				reportContent += "* " + linkToEventStructureReport(sourceStructureName, eventType, sourcePath) + "\n";
+			}
 		} else {
-			reportContent += "* _not available_\n";
+			reportContent += "* _MERGED EVENT STRUCTURE NOT AVAILABLE!_\n";
+			reportContent += generateSubInformation("Event Structures",
+					eventStructureLinks(eventType.getEventStructures(), sourcePath));
 		}
 
 		reportContent += generateEventTypeInformation(eventType, sourcePath);
@@ -331,23 +284,26 @@ public class Persister {
 		reportContent += "### Found in the following topics:\n";
 		for (Topic topic : eventType.getSourceTopics()) {
 			reportContent += "* "
-					+ linkToTopicReport(topic, outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY))
+					+ linkToTopicReport(topic,
+							persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY))
 					+ "\n";
 		}
 
 		// links
+		// TODO only link to things where the file exists
 		reportContent += "#### Links:\n";
 		reportContent += "* " + linkToEventSamples(eventType, sourcePath) + "\n";
 		reportContent += "* " + linkToDrillView(eventType, sourcePath) + "\n";
+		reportContent += "* " + linkToHiveView(eventType, sourcePath) + "\n";
+		reportContent += "* " + linkToDwhTable(eventType, sourcePath) + "\n";
+		reportContent += "* " + linkToDwhJob(eventType, sourcePath) + "\n";
 
 		// write report to disk
-		FileUtil.writeFile(sourcePath, fileNameForEventTypeReport(eventType), reportContent);
+		FileUtil.writeFile(sourcePath, persisterPaths.fileNameForEventTypeReport(eventType), reportContent);
 	}
 
 	private String generateEventTypeInformation(EventType eventType, String sourcePath) {
 		String eventTypeInformation = "### EventType information:\n";
-		eventTypeInformation += generateSubInformation("Event Structures",
-				eventStructureLinks(eventType.getEventStructures(), sourcePath));
 		eventTypeInformation += generateSubInformation("Avro Schemas",
 				avroSchemaLinks(eventType.getAvroSchemas().values(), sourcePath));
 		eventTypeInformation += generateSubInformation("Schema Versions", eventType.getSchemaVersions());
@@ -358,7 +314,7 @@ public class Persister {
 	}
 
 	public void persistAvroSchema(AvroSchema avroSchema) {
-		String sourcePath = outputDirectoryPathFor(avroSchema);
+		String sourcePath = persisterPaths.outputDirectoryPathFor(avroSchema);
 
 		// avro schema report
 		String reportContent = "# Avro Schema: " + avroSchema.getSchema().getName() + "\n";
@@ -382,7 +338,7 @@ public class Persister {
 
 		// avro schema json
 		String avroSchemaJson = JsonUtil.prettyPrintJsonString(parseToJson(avroSchema.getSchema()));
-		String avroSchemaJsonFile = fileNameForAvroSchemaJson(avroSchema);
+		String avroSchemaJsonFile = persisterPaths.fileNameForAvroSchemaJson(avroSchema);
 		FileUtil.writeFile(sourcePath, avroSchemaJsonFile, avroSchemaJson);
 		reportContent += "### Schema JSON:\n";
 		reportContent += "* " + linkToAvroSchemaJson(avroSchema, sourcePath) + "\n";
@@ -390,23 +346,47 @@ public class Persister {
 		reportContent += lastUpdateMarker();
 
 		// write to disk
-		FileUtil.writeFile(sourcePath, fileNameForAvroSchemaReport(avroSchema), reportContent);
+		FileUtil.writeFile(sourcePath, persisterPaths.fileNameForAvroSchemaReport(avroSchema), reportContent);
 	}
 
 	public void persistEventStructures(EventType eventType) {
 		for (EventStructure eventStructure : eventType.getEventStructures()) {
+			if (eventStructure.getSource().getType().equals(EventStructureSource.Type.DESERIALIZED)) {
+				continue;
+			}
 			persistEventStructure(eventStructure);
 		}
-		Optional<EventStructure> mergedEventStructured = eventType.getMergedEventStructured();
-		if (mergedEventStructured.isPresent()) {
-			persistEventStructure(mergedEventStructured.get());
+		Optional<EventStructure> mergedEventStructureOption = eventType.getMergedEventStructured();
+		if (mergedEventStructureOption.isPresent()) {
+			persistEventStructure(mergedEventStructureOption.get());
+			// TODO quick n dirty, just testing serialization for now
+			serializeMergedEventStructureTreeToDisk(mergedEventStructureOption.get());
 		}
 		;
 	}
 
+	private void serializeMergedEventStructureTreeToDisk(EventStructure mergedEventStructure) {
+
+		String fileName = persisterPaths.fileNameForEventStructureSerialization(mergedEventStructure);
+		String filePath = persisterPaths.outputDirectoryPathFor(mergedEventStructure) + File.separator + fileName;
+
+		log.info("Serializing merged EventStructure tree for " + mergedEventStructure.getEventType().getName() + " to "
+				+ filePath);
+
+		try (FileOutputStream file = new FileOutputStream(filePath);
+				ObjectOutputStream objectOutputStream = new ObjectOutputStream(file)) {
+			objectOutputStream.writeObject(mergedEventStructure.getEventStructureTree());
+		} catch (IOException e) {
+			log.error("Error while serializing merged EventStructure tree for "
+					+ mergedEventStructure.getEventType().getName(), e);
+			throw new IllegalStateException("Error while serializing merged EventStructure tree for "
+					+ mergedEventStructure.getEventType().getName(), e);
+		}
+	}
+
 	public void persistEventStructure(EventStructure eventStructure) {
 		// first write .dot and render as .png
-		String sourcePath = outputDirectoryPathFor(eventStructure);
+		String sourcePath = persisterPaths.outputDirectoryPathFor(eventStructure);
 
 		plotTree(eventStructure);
 
@@ -432,23 +412,28 @@ public class Persister {
 			break;
 		}
 		case MERGE: {
-			Collection<EventStructure> sourceStructures = eventStructure.getSource().getSourceStructures().get();
-			for (EventStructure sourceStructure : sourceStructures) {
-				eventStructureContent += "* " + linkToEventStructureReport(sourceStructure, sourcePath) + "\n";
+			Set<String> propertySourceStructureNames = eventStructure.getSourceStructureNames();
+			for (String propertySourceStructureName : propertySourceStructureNames) {
+				eventStructureContent += "* " + linkToEventStructureReport(propertySourceStructureName,
+						eventStructure.getEventType(), sourcePath) + "\n";
 			}
 
 			break;
+		}
+		default: {
+			throw new IllegalArgumentException(
+					"Unexpected EventStructureSource.Type: " + eventStructure.getSource().getType());
 		}
 		}
 
 		eventStructureContent += lastUpdateMarker();
 
-		FileUtil.writeFile(sourcePath, fileNameForEventStructure(eventStructure), eventStructureContent);
+		FileUtil.writeFile(sourcePath, persisterPaths.fileNameForEventStructure(eventStructure), eventStructureContent);
 	}
 
 	private void plotTree(EventStructure eventStructure) {
 
-		String dotFileName = fileNameForEventStructureDot(eventStructure);
+		String dotFileName = persisterPaths.fileNameForEventStructureDot(eventStructure);
 
 		String dotContent = new Dotter(eventStructure).generateDot();
 		if (gitRepositoryOption.isPresent()) {
@@ -469,13 +454,14 @@ public class Persister {
 			log.debug("Local git repository disabled, unable to check if event structure has changed");
 		}
 
-		doPlotTree(eventStructure, dotContent, dotFileName, fileNameForEventStructurePlot(eventStructure));
+		doPlotTree(eventStructure, dotContent, dotFileName,
+				persisterPaths.fileNameForEventStructurePlot(eventStructure));
 	}
 
 	private void doPlotTree(EventStructure eventStructure, String dotContent, String dotFileName, String pngFileName) {
 
-		String dotFileFolder = outputDirectoryPathFor(eventStructure);
-		String plotFileFolder = outputDirectoryPathFor(eventStructure);
+		String dotFileFolder = persisterPaths.outputDirectoryPathFor(eventStructure);
+		String plotFileFolder = persisterPaths.outputDirectoryPathFor(eventStructure);
 
 		FileUtil.writeFile(dotFileFolder, dotFileName, dotContent);
 		String renderDotCommand = "dot -Tpng " + dotFileFolder + File.separator + dotFileName + " -o" + plotFileFolder
@@ -487,7 +473,7 @@ public class Persister {
 	public void updateReadme(Map<String, EventType> eventTypes) {
 		log.info("Updating readme");
 
-		String sourcePath = outputDirectoryPathForReadme();
+		String sourcePath = persisterPaths.outputDirectoryPathForReadme();
 
 		// add an index to all EventTypes to README.md for ease of navigation
 
@@ -522,7 +508,7 @@ public class Persister {
 		readmeContent += lastUpdateMarker();
 
 		// write to disk
-		FileUtil.writeFile(sourcePath, fileNameForReadme(), readmeContent);
+		FileUtil.writeFile(sourcePath, persisterPaths.fileNameForReadme(), readmeContent);
 	}
 
 	private String lastUpdateMarker() {
@@ -531,56 +517,14 @@ public class Persister {
 
 	private String eventStructurePlot(EventStructure eventStructure, String sourcePath) {
 		return "!" + generateLink(eventStructure.toString(), sourcePath,
-				outputDirectoryPathFor(eventStructure) + fileNameForEventStructurePlot(eventStructure));
-	}
-
-	public String fileNameForDrillView(EventType eventType) {
-		return eventType.getName() + ".sql";
-	}
-
-	public String fileNameForTopicReport(Topic topic) {
-		return topic.getName() + ".md";
-	}
-
-	public String fileNameForEventSamples(EventType eventType) {
-		return eventType.getName() + ".json";
-	}
-
-	public String fileNameForEventTypeReport(EventType eventType) {
-		return fileNameForEventTypeReportByName(eventType.getName());
-	}
-
-	public String fileNameForEventTypeReportByName(String eventTypeName) {
-		return eventTypeName + ".md";
-	}
-
-	public String fileNameForAvroSchemaJson(AvroSchema avroSchema) {
-		return avroSchema.getSchemaHash() + ".json";
-	}
-
-	public String fileNameForAvroSchemaReport(AvroSchema avroSchema) {
-		return avroSchema.getSchemaHash() + ".md";
-	}
-
-	public String fileNameForEventStructure(EventStructure eventStructure) {
-		return eventStructure.toString() + ".md";
-	}
-
-	public String fileNameForEventStructureDot(EventStructure eventStructure) {
-		return eventStructure.toString() + ".dot";
-	}
-
-	public String fileNameForEventStructurePlot(EventStructure eventStructure) {
-		return eventStructure.toString() + ".png";
-	}
-
-	public String fileNameForReadme() {
-		return README_FILE;
+				persisterPaths.outputDirectoryPathFor(eventStructure)
+						+ persisterPaths.fileNameForEventStructurePlot(eventStructure));
 	}
 
 	private String linkToTopicReport(Topic topic, String sourcePath) {
 		return generateLink(topic.getName(), sourcePath,
-				outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY) + fileNameForTopicReport(topic));
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY)
+						+ persisterPaths.fileNameForTopicReport(topic));
 	}
 
 	private String linkToEventTypeReport(EventType eventType, String sourcePath) {
@@ -589,54 +533,99 @@ public class Persister {
 
 	private String linkToEventTypeReportByName(String eventTypeName, String sourcePath) {
 		return generateLink(eventTypeName, sourcePath,
-				outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY)
-						+ fileNameForEventTypeReportByName(eventTypeName));
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY)
+						+ persisterPaths.fileNameForEventTypeReportByName(eventTypeName));
 	}
 
 	private String linkToEventSamples(EventType eventType, String sourcePath) {
 		return generateLink("Event sample", sourcePath,
-				outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY)
-						+ fileNameForEventSamples(eventType));
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY)
+						+ persisterPaths.fileNameForEventSamples(eventType));
 	}
 
 	private String linkToDrillView(EventType eventType, String sourcePath) {
 		return generateLink("Drill view", sourcePath,
-				outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY) + fileNameForDrillView(eventType));
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY)
+						+ persisterPaths.fileNameForDrillView(eventType));
+	}
+
+	private String linkToHiveView(EventType eventType, String sourcePath) {
+		return generateLink("Hive view", sourcePath,
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_HIVE_DIRECTORY)
+						+ persisterPaths.fileNameForHiveView(eventType));
+	}
+	
+	private String linkToDwhTable(EventType eventType, String sourcePath) {
+		return generateLink("DWH table", sourcePath,
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_DWH_TABLES_DIRECTORY)
+						+ persisterPaths.fileNameForDwhTable(eventType));
+	}
+	
+	private String linkToDwhJob(EventType eventType, String sourcePath) {
+		return generateLink("DWH job", sourcePath,
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_DWH_JOBS_DIRECTORY)
+						+ persisterPaths.fileNameForDwhJob(eventType));
 	}
 
 	private String linkToAvroSchema(AvroSchema avroSchema, String sourcePath) {
-		return generateLink(avroSchema.getName(), sourcePath,
-				outputDirectoryPathFor(avroSchema) + fileNameForAvroSchemaReport(avroSchema));
+		return generateLink(avroSchema.getName(), sourcePath, persisterPaths.outputDirectoryPathFor(avroSchema)
+				+ persisterPaths.fileNameForAvroSchemaReport(avroSchema));
 	}
 
 	private String linkToAvroSchemaJson(AvroSchema avroSchema, String sourcePath) {
-		return generateLink(avroSchema.getName(), sourcePath,
-				outputDirectoryPathFor(avroSchema) + fileNameForAvroSchemaJson(avroSchema));
+		return generateLink(avroSchema.getName(), sourcePath, persisterPaths.outputDirectoryPathFor(avroSchema)
+				+ persisterPaths.fileNameForAvroSchemaJson(avroSchema));
 	}
 
 	private String linkToEventStructureReport(EventStructure eventStructure, String sourcePath) {
-		return generateLink(eventStructure.toString(), sourcePath,
-				outputDirectoryPathFor(eventStructure) + fileNameForEventStructure(eventStructure));
+		return generateLink(eventStructure.toString(), sourcePath, persisterPaths.outputDirectoryPathFor(eventStructure)
+				+ persisterPaths.fileNameForEventStructure(eventStructure));
+	}
+
+	private String linkToEventStructureReport(String eventStructureName, EventType eventType, String sourcePath) {
+		return generateLink(eventStructureName, sourcePath, persisterPaths.outputDirectoryPathFor(eventType)
+				+ persisterPaths.fileNameForEventStructure(eventStructureName));
 	}
 
 	private String generateLink(String text, String sourcePath, String targetPath) {
-		return "[" + text + "](" + relativePathBetween(sourcePath, targetPath) + ")";
+		return "[" + text + "](" + persisterPaths.relativePathBetween(sourcePath, targetPath) + ")";
 	}
 
-	private String relativePathBetween(String sourcePath, String targetPath) {
-		// inspired by
-		// https://stackoverflow.com/questions/204784/how-to-construct-a-relative-path-in-java-from-two-absolute-paths-or-urls
-		return Paths.get(sourcePath).relativize(Paths.get(targetPath)).toString();
-	}
+	public void addOutputToGitRepository() {
+		if (!gitRepositoryOption.isPresent()) {
+			log.info("Git disabled, not adding output to repository");
+			return;
+		}
 
-	private boolean isParentOf(String parentPath, String childPath) {
-		// inspired by
-		// https://stackoverflow.com/questions/4746671/how-to-check-if-a-given-path-is-possible-child-of-another-path
-		Path parent = Paths.get(parentPath).toAbsolutePath();
-		Path child = Paths.get(childPath).toAbsolutePath();
-		boolean r = child.startsWith(parent);
-		log.debug("Checking if " + parent.toString() + " is parent of " + child.toString() + ": " + r);
-		return r;
+		log.info("Adding process output to local git repository");
+
+		GitRepository gitRepository = gitRepositoryOption.get();
+
+		// push everything that is written to disk also to git
+		gitRepository
+				.addToRepository(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_DRILL_DIRECTORY));
+		gitRepository
+				.addToRepository(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_HIVE_DIRECTORY));
+		gitRepository
+				.addToRepository(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_SAMPLES_DIRECTORY));
+		gitRepository
+				.addToRepository(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_TOPIC_DIRECTORY));
+		gitRepository.addToRepository(
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTTYPE_DIRECTORY));
+		gitRepository.addToRepository(
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_AVROSCHEMAS_DIRECTORY));
+		gitRepository.addToRepository(
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_EVENTSTRUCTURES_DIRECTORY));
+		gitRepository.addToRepository(
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_CHANGELOGS_DIRECTORY));
+		gitRepository.addToRepository(
+				persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_DWH_TABLES_DIRECTORY));
+		gitRepository
+				.addToRepository(persisterPaths.outputDirectoryPathFor(Config.getInstance().OUTPUT_DWH_JOBS_DIRECTORY));
+		gitRepository
+				.addToRepository(persisterPaths.outputDirectoryPathForReadme() + persisterPaths.fileNameForReadme());
+
+		gitRepository.commitAndPush(getFormattedCurrentTime());
 	}
 
 }

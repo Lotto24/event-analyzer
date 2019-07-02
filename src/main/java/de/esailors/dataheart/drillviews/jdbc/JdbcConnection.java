@@ -1,4 +1,4 @@
-package de.esailors.dataheart.drillviews.drill;
+package de.esailors.dataheart.drillviews.jdbc;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -11,58 +11,37 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import de.esailors.dataheart.drillviews.conf.Config;
+public abstract class JdbcConnection {
 
-public class DrillConnection {
+	private static final Logger log = LogManager.getLogger(JdbcConnection.class.getName());
 
-	private static final String DRILL_JDBC_DRIVER_CLASS = "org.apache.drill.jdbc.Driver";
-
-	private static final Logger log = LogManager.getLogger(DrillConnection.class.getName());
-
+	private String jdbcClass;
+	private String jdbcUrl;
 	private Connection connection;
 
-	public DrillConnection() {
-		connection = connectToDrill();
+	public JdbcConnection(String jdbcClass, String jdbcUrl) {
+		this.jdbcClass = jdbcClass;
+		this.jdbcUrl = jdbcUrl;
+		connection = connect();
 		initShutdownHook();
 	}
-	
+
 	public void executeSqlStatements(String sql) throws SQLException {
-		for(String singleStatement : sql.split(";")) {
-			if(singleStatement.trim().isEmpty()) {
+		for (String singleStatement : sql.split(";")) {
+			if (singleStatement.trim().isEmpty()) {
 				continue;
 			}
 			log.debug("Executing statement: " + singleStatement);
 			connection.createStatement().execute(singleStatement);
 		}
 	}
-	
+
 	public ResultSet query(String query) throws SQLException {
 		log.debug("Running Drill query: " + query);
-//		try {
-			Statement statement = connection.createStatement();
-			return statement.executeQuery(query);
-//		} catch (Exception e) {
-//			log.error("Unable to open connection to drill", e);
-//			throw new IllegalStateException("Unable to execute query: " + query, e);
-//		}
+		Statement statement = connection.createStatement();
+		return statement.executeQuery(query);
 	}
-	
-	public Set<String> listDatabases() {
-		try {
-			return resultSetToStringSet(query("SHOW DATABASES"));
-		} catch (SQLException e) {
-			throw new IllegalStateException("Unable to list databases", e);
-		}
-	}
-	
-	public Set<String> listTablesinDatabase(String database) {
-		try {
-			return resultSetToStringSet(query("SHOW TABLES FROM " + database), 1);
-		} catch (SQLException e) {
-			throw new IllegalStateException("Unable to list tables in database: " + database, e);
-		}
-	}
-	
+
 	public void logResultSet(ResultSet resultSet) {
 		try {
 			while (resultSet.next()) {
@@ -70,14 +49,14 @@ public class DrillConnection {
 			}
 		} catch (SQLException e) {
 			log.error("Error while printing ResultSet", e);
-		}		
+		}
 	}
-	
-	private Set<String> resultSetToStringSet(ResultSet resultSet) {
+
+	protected Set<String> resultSetToStringSet(ResultSet resultSet) {
 		return resultSetToStringSet(resultSet, 0);
 	}
-	
-	private Set<String> resultSetToStringSet(ResultSet resultSet, int columnIndex) {
+
+	protected Set<String> resultSetToStringSet(ResultSet resultSet, int columnIndex) {
 		HashSet<String> r = new HashSet<String>();
 		try {
 			while (resultSet.next()) {
@@ -86,24 +65,24 @@ public class DrillConnection {
 		} catch (SQLException e) {
 			throw new IllegalStateException("Error while transforming ResultSet", e);
 		}
-		
+
 		return r;
 	}
 
-	private Connection connectToDrill() {
+	private Connection connect() {
 		try {
-			log.info("Connecting to Drill at: " + Config.getInstance().DRILL_JDBC_URL);
-			Class.forName(DRILL_JDBC_DRIVER_CLASS);
-			return DriverManager.getConnection(Config.getInstance().DRILL_JDBC_URL);
+			log.info("Connecting to: " + jdbcUrl);
+			Class.forName(jdbcClass);
+			return DriverManager.getConnection(jdbcUrl);
 		} catch (Exception e) {
-			log.error("Unable to open connection to drill", e);
-			throw new IllegalStateException("Unable to connect to drill", e);
+			log.error("Unable to open connection", e);
+			throw new IllegalStateException("Unable to connect to " + jdbcUrl, e);
 		}
 	}
 
 	public void close() {
 		try {
-			if(connection == null || connection.isClosed()) {
+			if (connection == null || connection.isClosed()) {
 				log.warn("Attempted to close a connection that was not open");
 				return;
 			}
@@ -111,16 +90,16 @@ public class DrillConnection {
 			log.warn("Unable to check if connection is closed, skipping manual closing", e);
 			return;
 		}
-		
+
 		log.debug("Closing connection to drill");
-		
+
 		try {
 			connection.close();
 		} catch (SQLException e) {
 			log.error("Error while closing connection to Drill", e);
 		}
 	}
-	
+
 	private void initShutdownHook() {
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {

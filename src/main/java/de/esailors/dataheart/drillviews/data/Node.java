@@ -1,14 +1,20 @@
 package de.esailors.dataheart.drillviews.data;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.base.Optional;
 
-public class Node {
+import de.esailors.dataheart.drillviews.util.CollectionUtil;
+
+public class Node implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	// i.e. parterinfo.trackinginfo.url
 	private String id;
@@ -36,23 +42,25 @@ public class Node {
 		}
 	}
 
-	public void addProperty(String name, String property) {
-		if(properties.get(name) == null) {
-			properties.put(name, new HashSet<>());
+	public void addProperty(NodePropertyType name, String property) {
+		if (properties.get(name.toString()) == null) {
+			properties.put(name.toString(), new HashSet<>());
 		}
-		properties.get(name).add(property);
+		properties.get(name.toString()).add(property);
 	}
 	
-	public void addPropertySet(String name, Set<String> propertiesToAdd) {
-		if(properties.get(name) == null) {
-			properties.put(name, new HashSet<>());
+	public void addProperties(Node anotherNode) {
+		for(String propertyName : anotherNode.properties.keySet()) {
+			addPropertySet(propertyName, anotherNode.properties.get(propertyName));
 		}
-		properties.get(name).addAll(propertiesToAdd);
 	}
 
-	public void addProperties(Map<String, Set<String>> propertiesToAdd) {
-		for(String name : propertiesToAdd.keySet()) {
-			addPropertySet(name, propertiesToAdd.get(name));
+	private void addPropertySet(String name, Set<String> propertiesToAdd) {
+		if (properties.get(name) == null) {
+			properties.put(name, new HashSet<>());
+		}
+		for (String property : propertiesToAdd) {
+			properties.get(name).add(property);
 		}
 	}
 
@@ -60,8 +68,16 @@ public class Node {
 		return !properties.isEmpty();
 	}
 
-	public Map<String, Set<String>> getProperties() {
-		return properties;
+	public Set<String> getProperty(NodePropertyType name) {
+		return properties.get(name.toString());
+	}
+
+	public List<NodePropertyType> getPropertyKeys() {
+		Set<NodePropertyType> r = new HashSet<>();
+		for (String propertyName : properties.keySet()) {
+			r.add(NodePropertyType.valueOf(propertyName));
+		}
+		return CollectionUtil.toSortedList(r);
 	}
 
 	public Optional<Node> getChildById(String childId) {

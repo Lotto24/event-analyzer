@@ -1,4 +1,4 @@
-package de.esailors.dataheart.drillviews.drill;
+package de.esailors.dataheart.drillviews.jdbc.drill;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;

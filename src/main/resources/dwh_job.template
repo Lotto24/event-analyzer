@@ -1,0 +1,72 @@
+-- liquibase formatted sql
+
+-- changeset napkin:1
+
+-- auto generated changeset from event-analyzer
+
+INSERT INTO napkin_meta.JOBDEF ( JOBNAME,JOBTYPE,SCRIPTNAME,SCRIPTTYPE,DELTAJOB,DELTASCRIPT,UNIQUE_RUN,VALID_FROM,VALID_TO,LAST_UPDATE,CONFIGURED)
+VALUES ('__JOB_NAME__','dwhsrc/hbase/load','hbase_rrload','kjb','Y','napkin_util_getdelta_generic.ktr','Y','1900-01-01 00:00:00','3000-12-31 00:00:00', CURRENT_TIMESTAMP, 'ea' )
+ON CONFLICT ( JOBNAME, VALID_FROM ) DO UPDATE SET
+        jobtype    = EXCLUDED.jobtype,
+        scriptname = EXCLUDED.scriptname,
+        scripttype = EXCLUDED.scripttype,
+        deltajob   = EXCLUDED.deltajob,
+        deltascript  = EXCLUDED.deltascript,
+        unique_run = EXCLUDED.unique_run,
+        last_update = CURRENT_TIMESTAMP;
+
+DELETE FROM napkin_meta.JOBPFILTER WHERE jobname = '__JOB_NAME__';
+INSERT INTO napkin_meta.JOBPFILTER ( JOBNAME, PARAM_FILTER ) VALUES
+	( '__JOB_NAME__','DEFAULT' ),
+	( '__JOB_NAME__','DATAHEART' ),
+	( '__JOB_NAME__','__JOB_NAME__' )
+ON CONFLICT ( JOBNAME, PARAM_FILTER ) DO NOTHING;
+
+DELETE FROM napkin_meta.JOBPARAMS WHERE param_filter = '__JOB_NAME__';
+INSERT INTO napkin_meta.JOBPARAMS ( parameter_key, parameter_value, param_filter ) VALUES
+	( 'EVENTTYPE','__EVENT_TYPE__', '__JOB_NAME__' ),
+	( 'DELTA_MAX_STR','__EVENT_TYPE__-F', '__JOB_NAME__' ),
+	( 'DELTA_MAX_LINES','2', '__JOB_NAME__' ),
+	( 'SOURCENAME','kafka_events', '__JOB_NAME__' ),
+	( 'SOURCETYPE','json', '__JOB_NAME__' ),
+	( 'DELTATYPE','hbase', '__JOB_NAME__' ),
+	( 'JSONDOUBLEPARSE','N', '__JOB_NAME__' ),
+	( 'TARGETSCHEMA','JSON','__JOB_NAME__' ),
+	( 'TARGETNAME','__TABLE_NAME__','__JOB_NAME__' )
+ON CONFLICT ( param_filter, parameter_key, valid_from ) DO UPDATE SET
+	parameter_value = EXCLUDED.parameter_value,
+	last_update	= CURRENT_TIMESTAMP;
+
+INSERT INTO napkin_meta.JOBDELTA( targetname,sourcename,deltatype, strvalue, ins_tmstmp )
+SELECT
+        max(case when parameter_key = 'TARGETNAME' 
+                then parameter_value ELSE null END)     AS targetname,          
+        max(case when parameter_key = 'SOURCENAME' 
+                then parameter_value ELSE null END)     AS sourcename,
+        max(case when parameter_key = 'DELTATYPE' 
+                then parameter_value ELSE null END)     AS deltatype,
+        max(case when parameter_key = 'EVENTTYPE'
+                then parameter_value ||'-0' ELSE null END)     AS strvalue,
+        current_timestamp                               AS ins_tmstamp
+FROM
+        napkin_meta.jobparams
+WHERE
+        param_filter = '__JOB_NAME__'     
+ON CONFLICT ( targetname, sourcename, deltatype ) DO NOTHING;
+
+-- just to be sure :
+DELETE FROM napkin_meta.jobkeyvalues WHERE jobname = '__JOB_NAME__';
+INSERT INTO napkin_meta.jobkeyvalues ( jobname, kvfilter,kvindex, kvkey,kvvalue ) VALUES
+--
+--  first the passthrough attributes coming directly from the hbase table
+--  they are prefixed with an underscore to separate them from the attributes
+--  that come from the XML
+--
+('__JOB_NAME__', 'JSONPARSER', 0, 'Target Column', 'meta_CreateProcessID'),
+('__JOB_NAME__', 'JSONPARSER', 0, 'Name', '_RUN_ID'),
+('__JOB_NAME__', 'JSONPARSER', 0, 'Type', 'Integer'),
+
+__COLUMNS__
+ON CONFLICT ( jobname, kvfilter,kvindex,kvkey) DO UPDATE SET
+	kvvalue		= EXCLUDED.kvvalue,
+last_update = CURRENT_TIMESTAMP;

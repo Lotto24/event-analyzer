@@ -1,12 +1,18 @@
 package de.esailors.dataheart.drillviews.data;
 
+import java.io.Serializable;
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Wow, there is no official implemenatation for a tree in Java oO
  * 
  * @author andre.mis
  *
  */
-public class Tree {
+public class Tree implements Serializable {
+	
+	private static final long serialVersionUID = 1L;
 	
 	private Node rootNode;
 	
@@ -16,6 +22,22 @@ public class Tree {
 	
 	public Node getRootNode() {
 		return rootNode;
+	}
+	
+	public Set<Node> getLeafNodes() {
+		Set<Node> r = new HashSet<>();
+		getLeafNodes(rootNode, r);
+		return r;
+	}
+
+	private void getLeafNodes(Node node, Set<Node> leafNodes) {
+		if(node.hasChildren()) {
+			for(Node child : node.getChildren()) {
+				getLeafNodes(child, leafNodes);
+			}
+		} else {
+			leafNodes.add(node);
+		}
 	}
 
 	@Override

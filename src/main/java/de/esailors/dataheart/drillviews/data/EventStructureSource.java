@@ -10,7 +10,7 @@ public class EventStructureSource {
 	private static final int MERGED_STRUCTURE_NAME_MAX_SOURCE_HASHCODES = 5;
 
 	public enum Type {
-		EVENT, AVRO, MERGE
+		EVENT, AVRO, MERGE, DESERIALIZED
 	}
 
 	private Type type;
@@ -32,6 +32,10 @@ public class EventStructureSource {
 	public EventStructureSource(List<EventStructure> sourceStructures) {
 		type = Type.MERGE;
 		this.sourceStructures = sourceStructures;
+	}
+	
+	public EventStructureSource() {
+		type = Type.DESERIALIZED;
 	}
 
 	public Type getType() {
@@ -82,6 +86,10 @@ public class EventStructureSource {
 			}
 			break;
 		}
+		case DESERIALIZED: {
+			break;
+		}
+		default: throw new IllegalStateException("Unexpected EventStructureSource.Type: " + type);
 		}
 		return r;
 	}

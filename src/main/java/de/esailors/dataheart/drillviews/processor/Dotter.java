@@ -5,6 +5,7 @@ import java.util.Set;
 
 import de.esailors.dataheart.drillviews.data.EventStructure;
 import de.esailors.dataheart.drillviews.data.Node;
+import de.esailors.dataheart.drillviews.data.NodePropertyType;
 import de.esailors.dataheart.drillviews.data.Tree;
 import de.esailors.dataheart.drillviews.util.CollectionUtil;
 
@@ -78,8 +79,8 @@ public class Dotter {
 			return;
 		}
 
-		for (String entryKey : CollectionUtil.toSortedList(node.getProperties().keySet())) {
-			rowNumber += appendTableRow(entryKey, node.getProperties().get(entryKey), rowNumber);
+		for (NodePropertyType entryKey : node.getPropertyKeys()) {
+			rowNumber += appendTableRow(entryKey.toString(), node.getProperty(entryKey), rowNumber);
 		}
 	}
 

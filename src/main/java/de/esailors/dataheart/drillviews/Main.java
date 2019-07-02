@@ -33,7 +33,6 @@ public class Main {
 		// - add last n changelogs to README.md in reverse chronological order
 		// - a check to see if different event structures are "compatible"
 		// - add more statistics or a report for each run
-		// - read older event structures from repository
 		// - link avro schemas to official eSailors/kafka-events repo
 		// - on live we find both 'AgeVerification' and 'ageVerification' -> unify
 		// - refactor inconsistency checking to separate class
@@ -46,8 +45,11 @@ public class Main {
 		// - when pulling from git only fetch the branch we actually work on
 
 		initLog4j();
+		
+		// TODO generate dwh table (mapping of types)
+		// TODO generate napkin changeset
 
-		log.info("Starting DrillViewGenerator");
+		log.info("Starting Event Analyzer");
 
 		// load configuration
 		String configPath = DEFAULT_CONFIG_PATH;
@@ -56,7 +58,7 @@ public class Main {
 			log.debug("Using config path from command line argument: " + configPath);
 		}
 		Config.load(configPath);
-
+		
 		// inititalize local git repository
 		Optional<GitRepository> gitRepositoryOption;
 		if (Config.getInstance().GIT_ENABLED) {
