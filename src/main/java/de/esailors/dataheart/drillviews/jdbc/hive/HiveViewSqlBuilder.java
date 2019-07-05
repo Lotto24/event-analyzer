@@ -1,13 +1,17 @@
-package de.esailors.dataheart.drillviews.processor;
+package de.esailors.dataheart.drillviews.jdbc.hive;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import de.esailors.dataheart.drillviews.data.EventStructure;
+import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Node;
+import de.esailors.dataheart.drillviews.util.CollectionUtil;
 import oadd.com.google.common.base.Optional;
 
 public class HiveViewSqlBuilder {
@@ -22,18 +26,21 @@ public class HiveViewSqlBuilder {
 
 	private static final int IDENTATION = 4;
 
-	public HiveViewSqlBuilder() {
+	private HiveViews hiveViews;
+	
+	public HiveViewSqlBuilder(HiveViews hiveViews) {
+		this.hiveViews = hiveViews;
 	}
 
-	public String generateHiveViewsFor(String viewName, EventStructure eventStructure) {
+	public String generateHiveViewsFor(EventType eventType, EventStructure eventStructure) {
 		log.debug("Generating create view statement for Hive from EventStructure from " + eventStructure.toString());
 
 		StringBuilder viewBuilder = new StringBuilder();
 		Node node = eventStructure.getEventStructureTree().getRootNode();
 
-		generateHiveViewFor(viewName, eventStructure, viewBuilder, node, Optional.absent());
-		generateHiveViewFor(viewName + "_last_day", eventStructure, viewBuilder, node, Optional.of(86400));
-		generateHiveViewFor(viewName + "_last_week", eventStructure, viewBuilder, node, Optional.of(604800));
+		generateHiveViewFor(hiveViews.viewNameFor(eventType), eventStructure, viewBuilder, node, Optional.absent());
+		generateHiveViewFor(hiveViews.viewNameLastDayFor(eventType), eventStructure, viewBuilder, node, Optional.of(86400));
+		generateHiveViewFor(hiveViews.viewNameLastWeekFor(eventType), eventStructure, viewBuilder, node, Optional.of(604800));
 
 		return viewBuilder.toString();
 	}
@@ -50,18 +57,25 @@ public class HiveViewSqlBuilder {
 
 	private void generateHiveViewSelectColumns(StringBuilder viewBuilder, Node node, String lateralViewAlias,
 			boolean topLevel) {
-		// need to make sure children are ordered in the same way
-		List<Node> children = new ArrayList<>(node.getChildren());
-		// TODO would be nice to have some columns at the beginning like site,
+		// TODO would be nice to have some special columns at the beginning like site,
 		// customerNumber and timestamp
+		
+		// TODO ^ maybe write some utility that orders like that and reuse for drill views
+
+		// need to make sure children are ordered in the same way
+		Map<String, Node> children = new HashMap<>();
+		for(Node child : node.getChildren()) {
+			children.put(child.getName(), child);
+		}
 		List<Node> nestedChildren = new ArrayList<>();
-		for (Node child : children) {
+		for (String childName : CollectionUtil.toSortedList(children.keySet())) {
+			Node child = children.get(childName);
 			if (child.getChildren().isEmpty()) {
 				viewBuilder.append(",\n");
 				viewBuilder.append(ident());
 				viewBuilder.append(lateralViewAlias);
 				viewBuilder.append(".`");
-				viewBuilder.append(child.getName());
+				viewBuilder.append(childName);
 				viewBuilder.append("`");
 				if (!topLevel) {
 					viewBuilder.append(" as ");

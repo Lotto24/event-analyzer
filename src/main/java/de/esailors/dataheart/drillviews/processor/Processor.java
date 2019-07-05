@@ -24,8 +24,11 @@ import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.data.Tree;
 import de.esailors.dataheart.drillviews.jdbc.drill.DrillConnection;
+import de.esailors.dataheart.drillviews.jdbc.drill.DrillViewSqlBuilder;
 import de.esailors.dataheart.drillviews.jdbc.drill.DrillViews;
 import de.esailors.dataheart.drillviews.jdbc.hive.HiveConnection;
+import de.esailors.dataheart.drillviews.jdbc.hive.HiveViewSqlBuilder;
+import de.esailors.dataheart.drillviews.jdbc.hive.HiveViews;
 import de.esailors.dataheart.drillviews.util.CollectionUtil;
 import de.esailors.dataheart.drillviews.util.GitRepository;
 
@@ -34,6 +37,7 @@ public class Processor {
 	private static final Logger log = LogManager.getLogger(Processor.class.getName());
 
 	private HiveConnection hiveConnection;
+	private HiveViews hiveViews;
 	private DrillConnection drillConnection;
 	private DrillViews drillViews;
 	private DrillViewSqlBuilder drillViewSqlBuilder;
@@ -54,14 +58,15 @@ public class Processor {
 		this.changeLog = new ChangeLog();
 		if (Config.getInstance().DRILL_ENABLED) {
 			this.drillConnection = new DrillConnection();
-			this.drillViewSqlBuilder = new DrillViewSqlBuilder();
 			this.drillViews = new DrillViews(drillConnection);
+			this.drillViewSqlBuilder = new DrillViewSqlBuilder(drillViews);
 		}
 		if (Config.getInstance().HIVE_ENABLED) {
-			this.hiveViewSqlBuilder = new HiveViewSqlBuilder();
 			this.hiveConnection = new HiveConnection();
+			this.hiveViews = new HiveViews(hiveConnection);
+			this.hiveViewSqlBuilder = new HiveViewSqlBuilder(hiveViews);
 		}
-		if(Config.getInstance().DWH_TABLE_GENERATION_ENABLED || Config.getInstance().DWH_JOB_GENERATION_ENABLED) {
+		if (Config.getInstance().DWH_TABLE_GENERATION_ENABLED || Config.getInstance().DWH_JOB_GENERATION_ENABLED) {
 			this.dwhGenerator = new DwhGenerator();
 		}
 	}
@@ -86,6 +91,7 @@ public class Processor {
 			}
 			if (Config.getInstance().HIVE_ENABLED) {
 				createHiveViews(eventType);
+				runCountOnHiveView(eventType);
 			}
 			if (Config.getInstance().DWH_TABLE_GENERATION_ENABLED) {
 				createDwhTable(eventType);
@@ -155,8 +161,20 @@ public class Processor {
 		Optional<Long> drillViewCountOption = drillViews.runDayCount(eventType);
 		if (drillViewCountOption.isPresent()) {
 			long drillViewCount = drillViewCountOption.get();
-			log.info("Count in day view for " + eventType + ": " + drillViewCount);
+			log.info("Count in day drill view for " + eventType + ": " + drillViewCount);
 			eventType.setDrillViewCount(drillViewCount);
+		} else {
+			changeLog.addWarning("Unable to determine count via drill view of " + eventType);
+		}
+	}
+	
+	private void runCountOnHiveView(EventType eventType) {
+		// run count on newly created view for sanity checking and report / statistics
+		Optional<Long> hiveViewCountOption = hiveViews.runDayCount(eventType);
+		if (hiveViewCountOption.isPresent()) {
+			long hiveViewCount = hiveViewCountOption.get();
+			log.info("Count in day hive view for " + eventType + ": " + hiveViewCount);
+			eventType.setHiveViewCount(hiveViewCount);
 		} else {
 			changeLog.addWarning("Unable to determine count via drill view of " + eventType);
 		}
@@ -278,18 +296,17 @@ public class Processor {
 			throw new IllegalStateException(
 					"Topic does not provide a merged event structure even though it had an example event");
 		}
-		String viewName = drillViews.viewNameFor(eventType);
-		String viewFromCurrentRun = drillViewSqlBuilder.generateDrillViewsFor(viewName,
+		String viewFromCurrentRun = drillViewSqlBuilder.generateDrillViewsFor(eventType,
 				mergedEventStructuredOption.get());
 
-		if (drillViews.doesViewExist(viewName)) {
+		if (drillViews.doesViewExist(eventType)) {
 			log.debug("Drill view for " + eventType + " already exists");
 			// check if it's the same view and don't execute if it is
 			// compare with view from local git repository
 			if (currentViewFromRepository.isPresent()) {
 				if (currentViewFromRepository.get().equals(viewFromCurrentRun)) {
 					log.info(
-							"View from repository is the same as the view from current run, skipping further processing");
+							"Drill view from repository is the same as the view from current run, skipping further processing");
 					return;
 				} else {
 					changeLog.addChange("Drill view changed for " + eventType);
@@ -313,7 +330,8 @@ public class Processor {
 	}
 
 	private void createHiveViews(EventType eventType) {
-		// compare and align generated views with those from drill
+		// TODO this is basically the same as createDrillViews -> unify
+		// compare and align generated views with those from hive
 		log.info("Preparing Hive view for " + eventType);
 
 		Optional<String> currentViewFromRepository;
@@ -330,37 +348,32 @@ public class Processor {
 			currentViewFromRepository = Optional.absent();
 		}
 
-		// generate drill views and execute them
+		// generate views and execute them
 		Optional<EventStructure> mergedEventStructuredOption = eventType.getMergedEventStructured();
 		if (!mergedEventStructuredOption.isPresent()) {
 			throw new IllegalStateException(
 					"Topic does not provide a merged event structure even though it had an example event");
 		}
-		// TODO proper viewname
-		String viewName = "hbase_kafka_event_" + eventType.getName(); // drillViews.viewNameFor(eventType);
-		String viewFromCurrentRun = hiveViewSqlBuilder.generateHiveViewsFor(viewName,
+		String viewFromCurrentRun = hiveViewSqlBuilder.generateHiveViewsFor(eventType,
 				mergedEventStructuredOption.get());
 
-//		log.info(viewFromCurrentRun);
-
-//		if (drillViews.doesViewExist(viewName)) {
-//			log.debug("Drill view for " + eventType + " already exists");
-//			// check if it's the same view and don't execute if it is
-//			// compare with view from local git repository
-//			if (currentViewFromRepository.isPresent()) {
-//				if (currentViewFromRepository.get().equals(viewFromCurrentRun)) {
-//					log.info(
-//							"View from repository is the same as the view from current run, skipping further processing");
-//					return;
-//				} else {
-//					changeLog.addChange("Drill view changed for " + eventType);
-//				}
-//			}
-//
-//		} else {
-//			log.debug("No Drill view exists yet for " + eventType);
-//			changeLog.addChange("Genearting new Drill view for: " + eventType);
-//		}
+		if (hiveViews.doesViewExist(eventType)) {
+			log.debug("Hive view for " + eventType + " already exists");
+			// check if it's the same view and don't execute if it is
+			// compare with view from local git repository
+			if (currentViewFromRepository.isPresent()) {
+				if (currentViewFromRepository.get().equals(viewFromCurrentRun)) {
+					log.info(
+							"Hive view from repository is the same as the view from current run, skipping further processing");
+					return;
+				} else {
+					changeLog.addChange("Hive view changed for " + eventType);
+				}
+			}
+		} else {
+			log.debug("No Hive view exists yet for " + eventType);
+			changeLog.addChange("Genearting new Hive view for: " + eventType);
+		}
 
 		// execute create statement on Hive
 		try {
@@ -378,7 +391,7 @@ public class Processor {
 		String ddl = dwhGenerator.createDwhTable(eventType);
 		persister.persistDwhTable(eventType, ddl);
 	}
-	
+
 	private void createDwhJob(EventType eventType) {
 		log.debug("Creating DWH job for " + eventType);
 		String job = dwhGenerator.createDwhJob(eventType);

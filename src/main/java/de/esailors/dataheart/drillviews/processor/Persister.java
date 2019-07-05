@@ -242,18 +242,22 @@ public class Persister {
 		String reportContent = "# EventType Report: " + eventType.getName() + "\n";
 
 		reportContent += lastUpdateMarker();
-
-		reportContent += "#### Analyzed Events: " + eventType.getEvents().size() + "\n\n";
-		Optional<Long> drillViewCountOption = eventType.getDrillViewCountOption();
-		reportContent += "#### Drill View Count: "
-				+ (drillViewCountOption.isPresent() ? drillViewCountOption.get() : "UNKNOWN") + "\n\n";
-
+		
 		// consistency
 		if (eventType.isConsistent()) {
 			reportContent += "#### EventType was consistent\n\n";
 		} else {
 			reportContent += "### EventType was **NOT** consistent!\n\n";
 		}
+
+		reportContent += "#### Analyzed Events: " + eventType.getEvents().size() + "\n\n";
+		Optional<Long> drillViewCountOption = eventType.getDrillViewCountOption();
+		reportContent += "#### Drill View Count: "
+				+ (drillViewCountOption.isPresent() ? drillViewCountOption.get() : "UNKNOWN") + "\n\n";
+		
+		Optional<Long> hiveViewCountOption = eventType.getHiveViewCountOption();
+		reportContent += "#### Hive View Count: "
+				+ (hiveViewCountOption.isPresent() ? hiveViewCountOption.get() : "UNKNOWN") + "\n\n";
 
 		// report messages
 		if (!eventType.getReportMessages().isEmpty()) {

@@ -16,6 +16,8 @@ import de.esailors.dataheart.drillviews.data.EventType;
 
 public class DrillViews {
 
+	private static final String COUNT_COLUMN_ALIAS = "cnt";
+
 	private static final Logger log = LogManager.getLogger(DrillViews.class.getName());
 
 	private DrillConnection drillConnection;
@@ -35,8 +37,7 @@ public class DrillViews {
 	public Optional<Long> runDayCount(EventType eventType) {
 		String viewName = viewNameFor(eventType);
 		String database = Config.getInstance().DRILL_VIEW_DAY_DATABASE;
-		String countColumnLabel = "cnt";
-		String countQuery = "SELECT COUNT(*) as " + countColumnLabel + " FROM " + database + ".`" + viewName + "`";
+		String countQuery = "SELECT COUNT(*) as " + COUNT_COLUMN_ALIAS + " FROM " + database + ".`" + viewName + "`";
 		ResultSet resultSet = null;
 		try {
 			resultSet = drillConnection.query(countQuery);
@@ -44,7 +45,7 @@ public class DrillViews {
 				log.error("Unable to fetch first row of resultSet after count query: " + countQuery);
 				return Optional.absent();
 			}
-			return Optional.of(resultSet.getLong(countColumnLabel));
+			return Optional.of(resultSet.getLong(COUNT_COLUMN_ALIAS));
 		} catch (SQLException e) {
 			log.error("Unexpected SQLException after running day count query " + countQuery, e);
 			return Optional.absent();
@@ -62,8 +63,12 @@ public class DrillViews {
 	public String viewNameFor(EventType eventType) {
 		return eventType.getName();
 	}
+	
+	public boolean doesViewExist(EventType eventType) {
+		return doesViewExist(viewNameFor(eventType));
+	}
 
-	public boolean doesViewExist(String viewName) {
+	private boolean doesViewExist(String viewName) {
 		log.debug("Checking if view exists already in Drill: " + viewName);
 		for (String database : existingTables.keySet()) {
 			if (existingTables.get(database).contains(viewName)) {

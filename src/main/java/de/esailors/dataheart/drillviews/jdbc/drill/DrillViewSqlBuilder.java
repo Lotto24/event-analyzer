@@ -1,4 +1,4 @@
-package de.esailors.dataheart.drillviews.processor;
+package de.esailors.dataheart.drillviews.jdbc.drill;
 
 import java.util.Set;
 
@@ -9,6 +9,7 @@ import com.google.common.base.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.EventStructure;
+import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Node;
 
 public class DrillViewSqlBuilder {
@@ -20,14 +21,19 @@ public class DrillViewSqlBuilder {
 	private static final String SUBSELECT_ALIAS = "e";
 	private static final String JSON_FIELD_ALIAS = "json";
 	private static final int IDENTATION = 4;
+	
+	private DrillViews drillViews;
 
-	public DrillViewSqlBuilder() {
+	public DrillViewSqlBuilder(DrillViews drillViews) {
+		this.drillViews = drillViews;
 	}
 
-	public String generateDrillViewsFor(String viewName, EventStructure eventStructure) {
+	public String generateDrillViewsFor(EventType eventType, EventStructure eventStructure) {
 
 		log.debug("Generating create view statement for Drill from EventStructure from " + eventStructure.toString());
 
+		String viewName = drillViews.viewNameFor(eventType);
+		
 		StringBuilder viewBuilder = new StringBuilder();
 
 		generateDrillView(Config.getInstance().DRILL_VIEW_ALL_DATABASE, eventStructure, viewName, viewBuilder,

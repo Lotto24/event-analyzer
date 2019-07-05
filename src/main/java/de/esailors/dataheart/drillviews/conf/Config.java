@@ -33,6 +33,7 @@ public class Config {
 	private static final String HIVE_JDBC_URL_KEY = "hive.jdbc.url";
 	private static final String HIVE_JDBC_USER_KEY = "hive.jdbc.user";
 	private static final String HIVE_JDBC_PASSWORD_KEY = "hive.jdbc.password";
+	private static final String HIVE_VIEW_NAME_PREFIX_KEY = "hive.view.prefix";
 	
 	// processor config
 	private static final String CONSUL_HOST_KEY = "consul.host";
@@ -115,6 +116,7 @@ public class Config {
 	public String HIVE_JDBC_URL = "jdbc:hive2://hdp-master-01.t24.stagec.sg-cloud.co.uk:2181,hdp-master-02.t24.stagec.sg-cloud.co.uk:2181,hdp-master-03.t24.stagec.sg-cloud.co.uk:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2-hive2";
 	public String HIVE_JDBC_USER = "event-analyzer";
 	public String HIVE_JDBC_PASSWORD = "";
+	public String HIVE_VIEW_NAME_PREFIX = "hbase_kafka_events_";
 	
 	// processor settings
 	public String CONSUL_HOST = "app-01-dwh.test.t24.eu-west-1.sg-cloud.co.uk";
@@ -294,6 +296,7 @@ public class Config {
 		HIVE_JDBC_URL = loadConfigString(HIVE_JDBC_URL_KEY);
 		HIVE_JDBC_USER = loadConfigString(HIVE_JDBC_USER_KEY);
 		HIVE_JDBC_PASSWORD = loadConfigString(HIVE_JDBC_PASSWORD_KEY);
+		HIVE_VIEW_NAME_PREFIX = loadConfigString(HIVE_VIEW_NAME_PREFIX_KEY);
 	}
 
 	private void loadKafkaSettings() {

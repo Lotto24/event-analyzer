@@ -39,6 +39,7 @@ public class EventType implements Comparable<EventType> {
 	private List<String> reportMessages = new ArrayList<>();
 
 	private Optional<Long> drillViewCountOption = Optional.absent();
+	private Optional<Long> hiveViewCountOption = Optional.absent();
 
 
 	public EventType(String eventTypeName, Topic sourceTopic, Set<Event> events) {
@@ -256,6 +257,14 @@ public class EventType implements Comparable<EventType> {
 
 	public void setDrillViewCount(long drillViewCount) {
 		drillViewCountOption = Optional.of(drillViewCount);
+	}
+	
+	public Optional<Long> getHiveViewCountOption() {
+		return hiveViewCountOption;
+	}
+
+	public void setHiveViewCount(long hiveViewCount) {
+		hiveViewCountOption = Optional.of(hiveViewCount);
 	}
 
 	@Override
