@@ -38,8 +38,7 @@ public class Processor {
 	private DrillViews drillViews;
 	private DrillViewSqlBuilder drillViewSqlBuilder;
 	private HiveViewSqlBuilder hiveViewSqlBuilder;
-	private DwhTableGenerator dwhTableGenerator;
-	private DwhJobGenerator dwhJobGenerator;
+	private DwhGenerator dwhGenerator;
 	private PersisterPaths persisterPaths;
 	private Persister persister;
 	private Optional<GitRepository> gitRepositoryOption;
@@ -62,11 +61,8 @@ public class Processor {
 			this.hiveViewSqlBuilder = new HiveViewSqlBuilder();
 			this.hiveConnection = new HiveConnection();
 		}
-		if(Config.getInstance().DWH_TABLE_GENERATION_ENABLED) {
-			this.dwhTableGenerator = new DwhTableGenerator();
-		}
-		if(Config.getInstance().DWH_JOB_GENERATION_ENABLED) {
-			this.dwhJobGenerator = new DwhJobGenerator();
+		if(Config.getInstance().DWH_TABLE_GENERATION_ENABLED || Config.getInstance().DWH_JOB_GENERATION_ENABLED) {
+			this.dwhGenerator = new DwhGenerator();
 		}
 	}
 
@@ -95,7 +91,6 @@ public class Processor {
 				createDwhTable(eventType);
 			}
 			if (Config.getInstance().DWH_JOB_GENERATION_ENABLED) {
-				// TODO implement
 				createDwhJob(eventType);
 			}
 			writeEventSamples(eventType);
@@ -143,7 +138,7 @@ public class Processor {
 
 			return read;
 		} catch (IOException | ClassNotFoundException e) {
-			throw new IllegalStateException("Error while deserializing", e);
+			throw new IllegalStateException("Error while deserializing from " + file.getAbsolutePath(), e);
 		}
 	}
 
@@ -380,13 +375,13 @@ public class Processor {
 
 	private void createDwhTable(EventType eventType) {
 		log.debug("Creating DWH table for " + eventType);
-		String ddl = dwhTableGenerator.createDwhTable(eventType);
+		String ddl = dwhGenerator.createDwhTable(eventType);
 		persister.persistDwhTable(eventType, ddl);
 	}
 	
 	private void createDwhJob(EventType eventType) {
 		log.debug("Creating DWH job for " + eventType);
-		String job = dwhJobGenerator.createDwhJob(eventType);
+		String job = dwhGenerator.createDwhJob(eventType);
 		persister.persistDwhJob(eventType, job);
 	}
 

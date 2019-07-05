@@ -70,7 +70,12 @@ public class EventStructure {
 
 	@Override
 	public String toString() {
-		return source.toString() + "_" + hashCode();
+		if(source.getType().equals(EventStructureSource.Type.MERGE)) {
+			return EventStructureSource.Type.MERGE.toString() + "_" + eventType.getName();
+		}
+		else {
+			return source.toString() + "_" + hashCode();
+		}
 	}
 
 	@Override

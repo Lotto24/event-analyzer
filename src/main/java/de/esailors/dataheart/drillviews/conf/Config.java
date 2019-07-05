@@ -86,6 +86,7 @@ public class Config {
 	
 	private static final String DWH_TABLE_GENERATION_ENABLED_KEY = "dwh.table.enabled";
 	private static final String DWH_TABLE_TEMPLATE_FILE_KEY = "dwh.table.template";
+	private static final String DWH_TABLE_SCHEMA_KEY = "dwh.table.schema";
 	
 	private static final String DWH_JOB_GENERATION_ENABLED_KEY = "dwh.job.enabled";
 	private static final String DWH_JOB_TEMPLATE_FILE_KEY = "dwh.job.template";
@@ -163,6 +164,7 @@ public class Config {
 	
 	public boolean DWH_TABLE_GENERATION_ENABLED = false;
 	public String DWH_TABLE_TEMPLATE_FILE = "dwh_table.template";
+	public String DWH_TABLE_SCHEMA = "JSON";
 	
 	public boolean DWH_JOB_GENERATION_ENABLED = false;
 	public String DWH_JOB_TEMPLATE_FILE = "dwh_job.template";
@@ -295,6 +297,7 @@ public class Config {
 	private void loadDwhSettings() {
 		DWH_TABLE_GENERATION_ENABLED = loadConfigBoolean(DWH_TABLE_GENERATION_ENABLED_KEY);
 		DWH_TABLE_TEMPLATE_FILE = loadConfigString(DWH_TABLE_TEMPLATE_FILE_KEY);
+		DWH_TABLE_SCHEMA = loadConfigString(DWH_TABLE_SCHEMA_KEY);
 		DWH_JOB_GENERATION_ENABLED = loadConfigBoolean(DWH_JOB_GENERATION_ENABLED_KEY);
 		DWH_JOB_TEMPLATE_FILE = loadConfigString(DWH_JOB_TEMPLATE_FILE_KEY);
 	}

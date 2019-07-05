@@ -92,6 +92,11 @@ public class GitRepository {
 
 	private void initRepository() {
 
+		// TODO there is a bug when the local repository has been checked out with
+		// another branch in an earlier run, then the new branch will not be respected.
+		// neither does it check if existing repo was from the current branch nor does
+		// it push to the new branch
+
 		localGitRepositoryDirectory = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH);
 		log.info("Initializing git repository at " + localGitRepositoryDirectory.getAbsolutePath());
 		if (!localGitRepositoryDirectory.exists()) {
@@ -416,7 +421,7 @@ public class GitRepository {
 	public String filePathInRepository(String subPath) {
 		return Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + subPath;
 	}
-	
+
 	public Optional<String> loadFile(String subPath) {
 
 		log.debug("Loading file from local repository: " + subPath);

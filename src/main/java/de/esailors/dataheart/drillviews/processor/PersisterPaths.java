@@ -160,7 +160,7 @@ public class PersisterPaths {
 	}
 	
 	public String fileNameForDwhTable(EventType eventType) {
-		return eventType.getName() + ".sql";
+		return Config.getInstance().DWH_TABLE_SCHEMA + "." + eventType.getName() + ".sql";
 	}
 	
 	public String fileNameForDwhJob(EventType eventType) {
