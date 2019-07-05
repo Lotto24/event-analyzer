@@ -17,11 +17,16 @@ public abstract class JdbcConnection {
 
 	private String jdbcClass;
 	private String jdbcUrl;
+	private String jdbcUser;
+	private String jdbcPassword;
+	
 	private Connection connection;
 
-	public JdbcConnection(String jdbcClass, String jdbcUrl) {
+	public JdbcConnection(String jdbcClass, String jdbcUrl, String jdbcUser, String jdbcPassword) {
 		this.jdbcClass = jdbcClass;
 		this.jdbcUrl = jdbcUrl;
+		this.jdbcUser = jdbcUser;
+		this.jdbcPassword = jdbcPassword;
 		connection = connect();
 		initShutdownHook();
 	}
@@ -73,7 +78,7 @@ public abstract class JdbcConnection {
 		try {
 			log.info("Connecting to: " + jdbcUrl);
 			Class.forName(jdbcClass);
-			return DriverManager.getConnection(jdbcUrl);
+			return DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPassword);
 		} catch (Exception e) {
 			log.error("Unable to open connection", e);
 			throw new IllegalStateException("Unable to connect to " + jdbcUrl, e);

@@ -18,6 +18,8 @@ public class Config {
 	// drill config
 	private static final String DRILL_ENABLED_KEY = "drill.enabled";
 	private static final String DRILL_JDBC_URL_KEY = "drill.jdbc.url";
+	private static final String DRILL_JDBC_USER_KEY = "drill.jdbc.user";
+	private static final String DRILL_JDBC_PASSWORD_KEY = "drill.jdbc.password";
 	private static final String DRILL_VIEW_HBASE_TABLE_KEY = "drill.view.hbase.table";
 	private static final String DRILL_VIEW_HBASE_COLUMN_FAMILY_KEY = "drill.view.hbase.column_family";
 	private static final String DRILL_VIEW_HBASE_JSON_FIELD_KEY = "drill.view.hbase.json_field";
@@ -29,6 +31,8 @@ public class Config {
 	// hive config
 	private static final String HIVE_ENABLED_KEY = "hive.enabled";
 	private static final String HIVE_JDBC_URL_KEY = "hive.jdbc.url";
+	private static final String HIVE_JDBC_USER_KEY = "hive.jdbc.user";
+	private static final String HIVE_JDBC_PASSWORD_KEY = "hive.jdbc.password";
 	
 	// processor config
 	private static final String CONSUL_HOST_KEY = "consul.host";
@@ -96,6 +100,8 @@ public class Config {
 	// drill settings
 	public boolean DRILL_ENABLED = false;
 	public String DRILL_JDBC_URL = "jdbc:drill:zk=hdp-master-01.t24.stagec.sg-cloud.co.uk:2181,hdp-master-02.t24.stagec.sg-cloud.co.uk:2181,hdp-master-03.t24.stagec.sg-cloud.co.uk:2181/drill/drillbits1";
+	public String DRILL_JDBC_USER = "event-analyzer";
+	public String DRILL_JDBC_PASSWORD = "";
 	public String DRILL_VIEW_HBASE_TABLE = "kafka_events";
 	public String DRILL_VIEW_HBASE_COLUMN_FAMILY = "d";
 	public String DRILL_VIEW_HBASE_JSON_FIELD = "json";
@@ -107,6 +113,8 @@ public class Config {
 	// hive settings
 	public boolean HIVE_ENABLED = false;
 	public String HIVE_JDBC_URL = "jdbc:hive2://hdp-master-01.t24.stagec.sg-cloud.co.uk:2181,hdp-master-02.t24.stagec.sg-cloud.co.uk:2181,hdp-master-03.t24.stagec.sg-cloud.co.uk:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2-hive2";
+	public String HIVE_JDBC_USER = "event-analyzer";
+	public String HIVE_JDBC_PASSWORD = "";
 	
 	// processor settings
 	public String CONSUL_HOST = "app-01-dwh.test.t24.eu-west-1.sg-cloud.co.uk";
@@ -270,6 +278,8 @@ public class Config {
 	private void loadDrillSettings() {
 		DRILL_ENABLED = loadConfigBoolean(DRILL_ENABLED_KEY);
 		DRILL_JDBC_URL = loadConfigString(DRILL_JDBC_URL_KEY);
+		DRILL_JDBC_USER = loadConfigString(DRILL_JDBC_USER_KEY);
+		DRILL_JDBC_PASSWORD = loadConfigString(DRILL_JDBC_PASSWORD_KEY);
 		DRILL_VIEW_HBASE_TABLE = loadConfigString(DRILL_VIEW_HBASE_TABLE_KEY);
 		DRILL_VIEW_HBASE_COLUMN_FAMILY = loadConfigString(DRILL_VIEW_HBASE_COLUMN_FAMILY_KEY);
 		DRILL_VIEW_HBASE_JSON_FIELD = loadConfigString(DRILL_VIEW_HBASE_JSON_FIELD_KEY);
@@ -282,6 +292,8 @@ public class Config {
 	private void loadHiveSettings() {
 		HIVE_ENABLED = loadConfigBoolean(HIVE_ENABLED_KEY);
 		HIVE_JDBC_URL = loadConfigString(HIVE_JDBC_URL_KEY);
+		HIVE_JDBC_USER = loadConfigString(HIVE_JDBC_USER_KEY);
+		HIVE_JDBC_PASSWORD = loadConfigString(HIVE_JDBC_PASSWORD_KEY);
 	}
 
 	private void loadKafkaSettings() {

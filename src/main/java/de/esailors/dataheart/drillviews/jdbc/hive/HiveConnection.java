@@ -16,9 +16,10 @@ public class HiveConnection extends JdbcConnection {
 	private static final Logger log = LogManager.getLogger(HiveConnection.class.getName());
 
 	public HiveConnection() {
-		super(HIVE_JDBC_DRIVER_CLASS, Config.getInstance().HIVE_JDBC_URL);
+		super(HIVE_JDBC_DRIVER_CLASS, Config.getInstance().HIVE_JDBC_URL, Config.getInstance().HIVE_JDBC_USER,
+				Config.getInstance().HIVE_JDBC_PASSWORD);
 	}
-	
+
 	public Set<String> listDatabases() {
 		try {
 			return resultSetToStringSet(query("SHOW DATABASES"));
@@ -27,7 +28,7 @@ public class HiveConnection extends JdbcConnection {
 			throw new IllegalStateException("Unable to list databases", e);
 		}
 	}
-	
+
 	public Set<String> listTablesinDatabase(String database) {
 		try {
 			return resultSetToStringSet(query("SHOW TABLES FROM " + database), 0);

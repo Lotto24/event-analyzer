@@ -63,6 +63,7 @@ public class Main {
 		// - persist event samples separately for each event structure
 		// - persist event structure plots somewhere more suitable than git
 		// - when pulling from git only fetch the branch we actually work on
+		// - use some config library instead of the homebrewn one
 
 		initLog4j();
 

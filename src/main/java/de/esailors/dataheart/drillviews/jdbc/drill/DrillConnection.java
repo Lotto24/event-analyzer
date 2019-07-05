@@ -16,7 +16,7 @@ public class DrillConnection extends JdbcConnection {
 	private static final Logger log = LogManager.getLogger(DrillConnection.class.getName());
 
 	public DrillConnection() {
-		super(DRILL_JDBC_DRIVER_CLASS, Config.getInstance().DRILL_JDBC_URL);
+		super(DRILL_JDBC_DRIVER_CLASS, Config.getInstance().DRILL_JDBC_URL, Config.getInstance().DRILL_JDBC_USER, Config.getInstance().DRILL_JDBC_PASSWORD);
 	}
 	
 	public Set<String> listDatabases() {
