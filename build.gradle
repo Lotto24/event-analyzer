@@ -37,11 +37,13 @@ repositories {
     }
 }
 
+def log4j_version = '2.11.2'
+
 dependencies {
-    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.11.2'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.11.2'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: '2.11.2'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2.11.2'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: "$log4j_version"
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: "$log4j_version"
+    compile group: 'org.apache.logging.log4j', name: 'log4j-1.2-api', version: "$log4j_version"
+    compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: "$log4j_version"
     
     compile group: 'org.apache.drill.exec', name: 'drill-jdbc-all', version: '1.14.0'
     compile group: 'org.apache.calcite', name: 'calcite-core', version: '1.16.0'
@@ -102,4 +104,10 @@ afterReleaseBuild.dependsOn uploadArchives
 
 artifacts {
     archives shadowJar
+}
+
+shadowJar {
+    zip64 true
+    // needed for log4j2 to work in farJar https://github.com/TheBoegl/shadow-log4j-transformer
+    transform(com.github.jengelman.gradle.plugins.shadow.transformers.Log4j2PluginsCacheFileTransformer)
 }

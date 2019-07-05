@@ -26,7 +26,8 @@ public class KafkaEventFetcher {
 
 	private static final Logger log = LogManager.getLogger(KafkaEventFetcher.class.getName());
 
-	private static Collection<String> topicsBlacklist;
+	private Set<String> topicsBlacklist;
+	private Set<String> topicsWhitelist;
 
 	private MessageProcessor eventProcessor;
 
@@ -102,11 +103,17 @@ public class KafkaEventFetcher {
 		log.debug("Building topic list");
 
 		initBlacklistTopics();
+		initWhitelistTopics();
 
 		Map<String, List<PartitionInfo>> topicNames = consumer.listTopics();
 
 		for (String topicName : topicNames.keySet()) {
 			String msg = " * " + topicName + ": ";
+			if(topicsWhitelist != null && (topicsWhitelist.size() > 0) && !topicsWhitelist.contains(topicName)) {
+				msg += "WHITELIST IGNORED";
+				log.warn(msg);
+				continue;
+			}
 			// additionally to hardcoded list from initBlacklistTopics() we ignore all topic
 			// names that start with an underscore
 			if (topicName.startsWith("_")) {
@@ -132,8 +139,17 @@ public class KafkaEventFetcher {
 	private void initBlacklistTopics() {
 		topicsBlacklist = new HashSet<String>();
 		topicsBlacklist.add("avro_schema");
-
 		log.debug("Blacklisted topics: " + topicsBlacklist.size());
+	}
+
+	private void initWhitelistTopics() {
+		// FOR DEVELOPMENT PURPOSES ONLY!
+		topicsWhitelist = new HashSet<String>();
+//		topicsWhitelist.add("payment_payin_processed");
+
+		if (topicsWhitelist.size() > 0) {
+			log.warn("DEV ONLY! Whitelisted topics: " + topicsWhitelist.size());
+		}
 	}
 
 	private void initConsumer() {

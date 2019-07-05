@@ -387,13 +387,13 @@ public class Processor {
 	}
 
 	private void createDwhTable(EventType eventType) {
-		log.debug("Creating DWH table for " + eventType);
+		log.info("Creating DWH table for " + eventType);
 		String ddl = dwhGenerator.createDwhTable(eventType);
 		persister.persistDwhTable(eventType, ddl);
 	}
 
 	private void createDwhJob(EventType eventType) {
-		log.debug("Creating DWH job for " + eventType);
+		log.info("Creating DWH job for " + eventType);
 		String job = dwhGenerator.createDwhJob(eventType);
 		persister.persistDwhJob(eventType, job);
 	}
