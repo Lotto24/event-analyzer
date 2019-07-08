@@ -1,25 +1,23 @@
 # connections
 
-#drill.jdbc.url=jdbc:drill:zk=hdp-master-01.t24.livec.sg-cloud.co.uk:2181,hdp-master-02.t24.livec.sg-cloud.co.uk:2181,hdp-master-03.t24.livec.sg-cloud.co.uk:2181/drill/drillbits1
-drill.jdbc.url=jdbc:drill:zk=hdp-master-01.t24.stagec.sg-cloud.co.uk:2181,hdp-master-02.t24.stagec.sg-cloud.co.uk:2181,hdp-master-03.t24.stagec.sg-cloud.co.uk:2181/drill/drillbits1
+drill.jdbc.url=jdbc:drill:zk=hdp-master-01.t24.livec.sg-cloud.co.uk:2181,hdp-master-02.t24.livec.sg-cloud.co.uk:2181,hdp-master-03.t24.livec.sg-cloud.co.uk:2181/drill/drillbits1
+#drill.jdbc.url=jdbc:drill:zk=hdp-master-01.t24.stagec.sg-cloud.co.uk:2181,hdp-master-02.t24.stagec.sg-cloud.co.uk:2181,hdp-master-03.t24.stagec.sg-cloud.co.uk:2181/drill/drillbits1
 #drill.jdbc.url=jdbc:drill:drillbit=localhost
 drill.jdbc.user=event-analyzer
 drill.jdbc.password=
 
-#kafka.consumer.bootstrapserver=kafka-01.t24.livec.sg-cloud.co.uk:9092,kafka-02.t24.livec.sg-cloud.co.uk:9092,kafka-03.t24.livec.sg-cloud.co.uk:9092
+kafka.consumer.bootstrapserver=kafka-01.t24.livec.sg-cloud.co.uk:9092,kafka-02.t24.livec.sg-cloud.co.uk:9092,kafka-03.t24.livec.sg-cloud.co.uk:9092
 #kafka.consumer.bootstrapserver=kafka-01.t24.stagec.sg-cloud.co.uk:9092,kafka-02.t24.stagec.sg-cloud.co.uk:9092,kafka-03.t24.stagec.sg-cloud.co.uk:9092
 #kafka.consumer.bootstrapserver=app-01-dwh.test.t24.eu-west-1.sg-cloud.co.uk:9092
-#kafka.consumer.bootstrapserver=app-01-boom.test.t24.eu-west-1.sg-cloud.co.uk:9092
-kafka.consumer.bootstrapserver=localhost:9092
+#kafka.consumer.bootstrapserver=localhost:9092
 
-#consul.host=consul-01.t24.livec.sg-cloud.co.uk	
+consul.host=consul-01.t24.livec.sg-cloud.co.uk	
 #consul.host=consul-01.t24.stagec.sg-cloud.co.uk
-consul.host=app-01-dwh.test.t24.eu-west-1.sg-cloud.co.uk
-#consul.host=app-01-boom.test.t24.eu-west-1.sg-cloud.co.uk
+#consul.host=app-01-dwh.test.t24.eu-west-1.sg-cloud.co.uk
 consul.port=8500
 
-hive.jdbc.url=jdbc:hive2://hdp-master-01.t24.stagec.sg-cloud.co.uk:2181,hdp-master-02.t24.stagec.sg-cloud.co.uk:2181,hdp-master-03.t24.stagec.sg-cloud.co.uk:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2-hive2
-#hive.jdbc.url=jdbc:hive2://hdp-master-01.t24.livec.sg-cloud.co.uk:2181,hdp-master-02.t24.livec.sg-cloud.co.uk:2181,hdp-master-03.t24.livec.sg-cloud.co.uk:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2-hive2
+#hive.jdbc.url=jdbc:hive2://hdp-master-01.t24.stagec.sg-cloud.co.uk:2181,hdp-master-02.t24.stagec.sg-cloud.co.uk:2181,hdp-master-03.t24.stagec.sg-cloud.co.uk:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2-hive2
+hive.jdbc.url=jdbc:hive2://hdp-master-01.t24.livec.sg-cloud.co.uk:2181,hdp-master-02.t24.livec.sg-cloud.co.uk:2181,hdp-master-03.t24.livec.sg-cloud.co.uk:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2-hive2
 hive.jdbc.user=event-analyzer
 hive.jdbc.password=
 
@@ -31,7 +29,7 @@ events.field.event_type=eventType
 events.field.version=version
 
 # drill view generator
-drill.enabled=false
+drill.enabled=true
 drill.view.hbase.table=kafka_events
 drill.view.hbase.column_family=d
 drill.view.hbase.json_field=json
@@ -63,25 +61,21 @@ persister.out.dwh.jobs=dwh_jobs/
 kafka.consumer.group_id=DataHeartEventAnalyzer
 kafka.consumer.auto_offset_reset=earliest
 kafka.consumer.enable_autocommit=false
-kafka.consumer.max_poll_records=100
-kafka.consumer.poll.timeout=100
-kafka.consumer.emptypoll.retries=2
+kafka.consumer.max_poll_records=500
+kafka.consumer.poll.timeout=200
+kafka.consumer.emptypoll.retries=5
 
 # git settings
 git.enabled=true
-git.authentication.method=ssh
-#git.authentication.method=http
+#git.authentication.method=ssh
+git.authentication.method=http
 git.authentication.user=svc-tde-adm
-git.authentication.password=redacted
+git.authentication.password=
 git.authentication.sshkey.path=/home/andre.mis/.ssh/team_id_rsa
 git.local.repository.path=analysis_repository/
 # remember to add svc-tde-adm to the collaborators of a repository if you make it private
-#git.repository.uri=git@srv-git-01-hh1.alinghi.tipp24.net:andre-mis/drill-views.git
-git.repository.uri=git@srv-git-01-hh1.alinghi.tipp24.net:andre-mis/event-analysis.git
-#git.repository.uri=https://srv-git-01-hh1.alinghi.tipp24.net/andre-mis/event-analysis.git
-#git.branch=master
-#git.branch=stage
-git.branch=dev
+git.repository.uri=https://srv-git-01-hh1.alinghi.tipp24.net/data-engineering/event-analysis.git
+git.branch=master
 git.remote=origin
 git.author=EventAnalyzer
 git.email.default.user=event-analyzer

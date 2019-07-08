@@ -238,7 +238,7 @@ public class Processor {
 			EventType existingEventType = eventTypes.get(eventTypeName);
 			if (existingEventType == null) {
 				// create new EventType
-				log.info("New eventType detected: " + eventTypeName);
+				log.info("EventType detected: " + eventTypeName);
 				EventType eventType = new EventType(eventTypeName, topic, eventTypeEvents);
 				eventTypes.put(eventTypeName, eventType);
 			} else {
@@ -315,7 +315,7 @@ public class Processor {
 
 		} else {
 			log.debug("No Drill view exists yet for " + eventType);
-			changeLog.addChange("Genearting new Drill view for: " + eventType);
+			changeLog.addChange("Generating new Drill view for: " + eventType);
 		}
 
 		// execute create statement on Drill
@@ -372,7 +372,7 @@ public class Processor {
 			}
 		} else {
 			log.debug("No Hive view exists yet for " + eventType);
-			changeLog.addChange("Genearting new Hive view for: " + eventType);
+			changeLog.addChange("Generating new Hive view for: " + eventType);
 		}
 
 		// execute create statement on Hive

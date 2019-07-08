@@ -256,7 +256,7 @@ public class DwhGenerator {
 			return Optional.absent();
 		}
 		if (Type.UNION.toString().equals(primitiveAvroType)) {
-			// TODO look at union types
+			// look at union types
 			Set<String> unionTypes = node.getProperty(NodePropertyType.AVRO_UNION_TYPE);
 			if (unionTypes == null || unionTypes.size() == 0) {
 				throw new IllegalStateException(

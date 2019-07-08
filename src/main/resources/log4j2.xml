@@ -2,7 +2,7 @@
 <Configuration status="warn" shutdownHook="disable">
 	<Properties>
 		<Property name="baseDir">log</Property>
-		<Property name="baseFileName">drillviews</Property>
+		<Property name="baseFileName">event-analyzer</Property>
 	</Properties>
 
 	<Appenders>

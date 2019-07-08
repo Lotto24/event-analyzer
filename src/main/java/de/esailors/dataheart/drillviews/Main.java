@@ -27,26 +27,6 @@ public class Main {
 
 	public static void main(String[] args) {
 
-//		String file = "/home/andre.mis/git/event-analyzer/analysis_repository/event_structures/AgeVerificationResult/AgeVerificationResult.tree";
-//		FileInputStream fileInputStream;
-//		try {
-//			fileInputStream = new FileInputStream(file);
-//			ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-//			Tree read = (Tree) objectInputStream.readObject();
-//		} catch (FileNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (ClassNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//
-//		if (1 == 1)
-//			throw new IllegalStateException("testing");
-
 		// Some ideas for possible improvements:
 		// - fields report, maybe overkill but could be very useful
 		// - using (git) diff to see changes between versions of drill views

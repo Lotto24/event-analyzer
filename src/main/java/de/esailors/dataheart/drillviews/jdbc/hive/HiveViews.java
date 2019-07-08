@@ -59,7 +59,7 @@ public class HiveViews {
 	}
 	
 	public String viewNameFor(EventType eventType) {
-		return Config.getInstance().HIVE_VIEW_NAME_PREFIX + eventType.getName();
+		return Config.getInstance().HIVE_VIEW_NAME_PREFIX.toLowerCase() + eventType.getName().toLowerCase();
 	}
 	
 	public String viewNameLastDayFor(EventType eventType) {
