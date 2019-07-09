@@ -39,7 +39,7 @@ public class TreeFactory {
 		}
 
 		Tree r = new Tree(name);
-		
+
 		r.getRootNode().addProperty(NodePropertyType.SOURCE, "EVENT");
 
 		extendTreeWithJsonFields(r.getRootNode(), json, false);
@@ -63,7 +63,7 @@ public class TreeFactory {
 			JsonNode fieldJson = field.getValue();
 			JsonType jsonType = JsonUtil.getJsonType(fieldJson);
 			node.addProperty(NodePropertyType.JSON_TYPE, jsonType.toString());
-			if(jsonType.equals(JsonType.NULL)) {
+			if (jsonType.equals(JsonType.NULL)) {
 				node.setOptional(true);
 			}
 			if (isNestedJson(fieldJson)) {
@@ -121,26 +121,34 @@ public class TreeFactory {
 	private void addAvroFieldPropertiesToNode(Field field, Node node) {
 		Type fieldType = field.schema().getType();
 		node.addProperty(NodePropertyType.AVRO_TYPE, fieldType.toString());
-		
+
 		// list enum values
-		if(fieldType.equals(Type.ENUM)) {
-			for(String enumSymbol : field.schema().getEnumSymbols()) {
+		if (fieldType.equals(Type.ENUM)) {
+			for (String enumSymbol : field.schema().getEnumSymbols()) {
 				node.addProperty(NodePropertyType.AVRO_ENUM_SYMBOL, enumSymbol);
 			}
 		}
-		
+
 		// list union types and mark node as optional if union types contains NULL
-		if(fieldType.equals(Type.UNION)) {
+		if (fieldType.equals(Type.UNION)) {
 			boolean sawNullType = false;
-			for(Schema unionSchema : field.schema().getTypes()) {
+			for (Schema unionSchema : field.schema().getTypes()) {
 				node.addProperty(NodePropertyType.AVRO_UNION_TYPE, unionSchema.getType().toString());
-				if(unionSchema.getType().equals(Type.NULL)) {
+				if (unionSchema.getType().equals(Type.NULL)) {
 					sawNullType = true;
 				}
 			}
-			if(sawNullType) {
+			if (sawNullType) {
 				node.setOptional(true);
 			}
+		}
+
+		// describe array item
+		if (fieldType.equals(Type.ARRAY)) {
+			Schema arrayItemSchema = field.schema().getElementType();
+			node.addProperty(NodePropertyType.AVRO_ARRAY_ITEM_TYPE, arrayItemSchema.getType().toString());
+			node.addProperty(NodePropertyType.AVRO_ARRAY_ITEM_NAME, arrayItemSchema.getName());
+
 		}
 	}
 
@@ -158,6 +166,10 @@ public class TreeFactory {
 			}
 			return r;
 		}
+		case ARRAY: {
+			r.addAll(getNestedFieldsFromAvroSchema(avroSchema.getElementType()));
+			return r;
+		}
 		case MAP: {
 			// a map is technically nested, but we can not extract the nested fields from
 			// the schema, so we leave it as is for now
@@ -171,7 +183,7 @@ public class TreeFactory {
 
 	private boolean isNestedAvroSchema(Schema schema) {
 		// in the end this will basically check for either the schema being of type
-		// RECORD or being of type UNION with a nested subfield
+		// RECORD or being of type UNION or ARRAY with a nested subfield
 
 		Type schemaType = schema.getType();
 		if (isPrimitiveAvroType(schemaType)) {
@@ -184,8 +196,7 @@ public class TreeFactory {
 		case RECORD:
 			return true;
 		case ENUM:
-		case FIXED:
-		case ARRAY: // we might be able to handle these nicer later, for now we use them as is
+		case FIXED: // we might be able to handle these nicer later, for now we use them as is
 			return false;
 		case MAP:
 			// a map is technically nested, but we can not extract the nested fields from
@@ -200,6 +211,10 @@ public class TreeFactory {
 				}
 			}
 			return false;
+		}
+		case ARRAY: {
+			// if the items inside an array are nested we treat the array as nested
+			return isNestedAvroSchema(schema.getElementType());
 		}
 		default:
 			throw new IllegalStateException(

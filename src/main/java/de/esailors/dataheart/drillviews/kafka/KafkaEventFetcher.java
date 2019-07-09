@@ -2,6 +2,7 @@ package de.esailors.dataheart.drillviews.kafka;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -57,27 +58,37 @@ public class KafkaEventFetcher {
 	}
 
 	private void fetchEventsForTopic(Topic topic) {
-		prepareConsumerFor(topic);
-		ConsumerRecords<byte[], byte[]> consumedRecords = consumer
-				.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
-		int retries = 0;
-		while (consumedRecords.count() == 0 && retries < Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES) {
-			// try to fetch a bit more often until we have at least 1 record
-			retries++;
-			log.debug(topic + " received no records, trying again: " + retries + " / "
-					+ Config.getInstance().KAFKA_CONSUMER_EMPTY_POLL_RETRIES);
-			consumedRecords = consumer.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
+
+		// poll each partition individually until we have enough
+		Collection<TopicPartition> topicParititions = discoverParitionsForTopic(topic);
+		int processedEvents = 0;
+		for (TopicPartition topicPartition : topicParititions) {
+			prepareConsumerForTopicPartition(topicPartition);
+			ConsumerRecords<byte[], byte[]> consumedRecords = consumer
+					.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
+
+			eventProcessor.processRecords(topic, topicPartition, consumedRecords);
+			processedEvents += consumedRecords.count();
+			if (processedEvents >= Config.getInstance().KAFKA_CONSUMER_MAX_POLL_RECORDS) {
+				log.info("Processed enough events for " + topic.toString() + ": " + processedEvents + " / "
+						+ Config.getInstance().KAFKA_CONSUMER_MAX_POLL_RECORDS);
+			}
+			// TODO STOPPED HERE
 		}
-		eventProcessor.processRecords(topic, consumedRecords);
+
 	}
 
-	private void prepareConsumerFor(Topic topic) {
-		log.debug("Preparing consumer for: " + topic);
-		// reset first
+	private void prepareConsumerForTopicPartition(TopicPartition topicPartition) {
 		if (!consumer.subscription().isEmpty()) {
-			log.debug("Unsubscribing from all topics");
+			log.debug("Unsubscribing from all topic partitions");
 			consumer.unsubscribe();
 		}
+		consumer.assign(Collections.singleton(topicPartition));
+		resetConsumerOffsets();
+	}
+
+	private Collection<TopicPartition> discoverParitionsForTopic(Topic topic) {
+		log.debug("Preparing consumer for: " + topic);
 
 		Collection<TopicPartition> partitions = new ArrayList<>();
 		List<PartitionInfo> partitionInfos = consumer.partitionsFor(topic.getName());
@@ -86,17 +97,17 @@ public class KafkaEventFetcher {
 			partitions.add(partition);
 		}
 
-		consumer.assign(partitions);
+		topic.setPartitionCount(partitions.size());
+		log.debug("Preparation for " + topic + " done, partitions: " + partitions.size());
 
-		// TODO poll each partition individually instead of "retrying on empty poll"
+		return partitions;
+	}
 
+	private void resetConsumerOffsets() {
 		// forcefully reset offset to 0
 		consumer.assignment().forEach(topicPartition -> {
 			consumer.seek(topicPartition, 0);
 		});
-
-		topic.setPartitionCount(partitions.size());
-		log.debug("Preparation for " + topic + " done, partitions: " + partitions.size());
 	}
 
 	private void initTopicList() {
@@ -109,7 +120,7 @@ public class KafkaEventFetcher {
 
 		for (String topicName : topicNames.keySet()) {
 			String msg = " * " + topicName + ": ";
-			if(topicsWhitelist != null && (topicsWhitelist.size() > 0) && !topicsWhitelist.contains(topicName)) {
+			if (topicsWhitelist != null && (topicsWhitelist.size() > 0) && !topicsWhitelist.contains(topicName)) {
 				msg += "WHITELIST IGNORED";
 				log.warn(msg);
 				continue;
@@ -129,7 +140,7 @@ public class KafkaEventFetcher {
 			log.debug(msg);
 
 		}
-		log.info("Topics discovered: " + topicNames.size());
+		log.info("Processing topics " + topics.size() + " / " + topicNames.size() + " discovered");
 	}
 
 	private void initMessageProcessor() {
@@ -146,6 +157,7 @@ public class KafkaEventFetcher {
 		// FOR DEVELOPMENT PURPOSES ONLY!
 		topicsWhitelist = new HashSet<String>();
 //		topicsWhitelist.add("payment_payin_processed");
+		topicsWhitelist.add("customer_restrictions_changed");
 
 		if (topicsWhitelist.size() > 0) {
 			log.warn("DEV ONLY! Whitelisted topics: " + topicsWhitelist.size());

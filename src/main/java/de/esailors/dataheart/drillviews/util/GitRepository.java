@@ -92,11 +92,6 @@ public class GitRepository {
 
 	private void initRepository() {
 
-		// TODO there is a bug when the local repository has been checked out with
-		// another branch in an earlier run, then the new branch will not be respected.
-		// neither does it check if existing repo was from the current branch nor does
-		// it push to the new branch
-
 		localGitRepositoryDirectory = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH);
 		log.info("Initializing git repository at " + localGitRepositoryDirectory.getAbsolutePath());
 		if (!localGitRepositoryDirectory.exists()) {
@@ -116,10 +111,12 @@ public class GitRepository {
 
 		if (existingDirectoryRepository.exists() && existingDirectoryRepository.isDirectory()) {
 
-			// see if there are local changes, if yes fail, if not pull remote changes if
-			// necessary
+			// see if local repository is set to incorrect branch and check if there are any
+			// local changes. if yes fail, if not pull remote changes if necessary
 			try {
 				git = Git.open(existingDirectoryRepository);
+
+				checkCorrectBranch();
 				checkStatusIsUnmodified();
 				if (!checkNoUnpushedCommits()) {
 					pullFromRemote();
@@ -135,6 +132,26 @@ public class GitRepository {
 		} else {
 			throw new IllegalStateException("Local git repository path is not empty but also not a repository: "
 					+ Config.getInstance().GIT_LOCAL_REPOSITORY_PATH);
+		}
+	}
+
+	private void checkCorrectBranch() {
+		// make sure local repository has not been checked out with
+		// another branch in an earlier run. otherwise the new branch will not be
+		// respected.
+		List<Ref> branches;
+		try {
+			branches = git.branchList().call();
+		} catch (GitAPIException e) {
+			throw new IllegalStateException("Unable to check for git repository branch", e);
+		}
+		for (Ref branch : branches) {
+			String branchName = branch.getName();
+			String expectedBranchName = "refs/heads/" + Config.getInstance().GIT_BRANCH;
+			if (!expectedBranchName.equals(branchName)) {
+				throw new IllegalStateException(
+						"Local repository contains branch " + branchName + " but config expects " + expectedBranchName);
+			}
 		}
 	}
 

@@ -6,6 +6,8 @@ import java.util.Set;
 
 import com.google.common.base.Optional;
 
+import de.esailors.dataheart.drillviews.data.EventStructureSource.Type;
+
 public class EventStructure {
 
 	private EventType eventType;
@@ -70,11 +72,25 @@ public class EventStructure {
 
 	@Override
 	public String toString() {
-		if(source.getType().equals(EventStructureSource.Type.MERGE)) {
-			return EventStructureSource.Type.MERGE.toString() + "_" + eventType.getName();
+		Type sourceType = source.getType();
+		switch (sourceType) {
+		case MERGE: {
+			return sourceType.toString() + "_" + eventType.getName();
 		}
-		else {
+		case AVRO: {
+			Optional<AvroSchema> sourceSchemaOption = source.getSourceSchema();
+			if (!sourceSchemaOption.isPresent()) {
+				throw new IllegalStateException("Expect EventStructure of type AVRO to have a sourceSchema present");
+			}
+			AvroSchema sourceSchema = sourceSchemaOption.get();
+			String schemaVersion = sourceSchema.getSchemaVersion().isPresent() ? sourceSchema.getSchemaVersion().get()
+					: "?";
+			return sourceType.toString() + "_" + eventType.getName() + "_" + schemaVersion + "_"
+					+ sourceSchema.getSchemaHash();
+		}
+		default: {
 			return source.toString() + "_" + hashCode();
+		}
 		}
 	}
 

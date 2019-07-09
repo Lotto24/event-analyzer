@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -21,13 +22,13 @@ public class MessageProcessor {
 		this.eventFactory = new EventFactory();
 	}
 
-	public void processRecords(Topic topic, ConsumerRecords<byte[], byte[]> consumedRecords) {
+	public void processRecords(Topic topic, TopicPartition topicPartition, ConsumerRecords<byte[], byte[]> consumedRecords) {
 		if (consumedRecords.count() == 0) {
-			log.warn("Did not receive any event for " + topic);
+			log.debug("Did not receive any event from partition: " + topicPartition.toString());
 			return;
 		}
 		
-		log.info("Received " + consumedRecords.count() + " messages for: " + topic);
+		log.info("Received " + consumedRecords.count() + " messages from " + topicPartition.toString());
 		for (ConsumerRecord<byte[], byte[]> record : consumedRecords) {
 			if(record.value() == null) {
 				log.warn("Reveived record with value: null");
