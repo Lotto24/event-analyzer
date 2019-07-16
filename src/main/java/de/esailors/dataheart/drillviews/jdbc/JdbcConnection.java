@@ -42,7 +42,7 @@ public abstract class JdbcConnection {
 	}
 
 	public ResultSet query(String query) throws SQLException {
-		log.debug("Running Drill query: " + query);
+		log.debug("Running query: " + query);
 		Statement statement = connection.createStatement();
 		return statement.executeQuery(query);
 	}
@@ -96,12 +96,12 @@ public abstract class JdbcConnection {
 			return;
 		}
 
-		log.debug("Closing connection to drill");
+		log.debug("Closing connection to " + jdbcUrl);
 
 		try {
 			connection.close();
 		} catch (SQLException e) {
-			log.error("Error while closing connection to Drill", e);
+			log.error("Error while closing connection to " + jdbcUrl, e);
 		}
 	}
 

@@ -1,7 +1,6 @@
 package de.esailors.dataheart.drillviews.jdbc.hive;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -23,11 +22,14 @@ public class HiveViewSqlBuilder {
 	private static final String HIVE_HBASE_TABLE_JSON_COLUMN = "json";
 	private static final String HIVE_HBASE_TABLE_ALIAS = "k";
 	private static final String HIVE_ROOT_LATERAL_VIEW_ALIAS = "r";
+	private static final String ARRAY_ITEM_ALIAS = "item";
+	private static final String ARRAY_INDEX_ALIAS = "index";
 
 	private static final int IDENTATION = 4;
 
+
 	private HiveViews hiveViews;
-	
+
 	public HiveViewSqlBuilder(HiveViews hiveViews) {
 		this.hiveViews = hiveViews;
 	}
@@ -39,8 +41,10 @@ public class HiveViewSqlBuilder {
 		Node node = eventStructure.getEventStructureTree().getRootNode();
 
 		generateHiveViewFor(hiveViews.viewNameFor(eventType), eventStructure, viewBuilder, node, Optional.absent());
-		generateHiveViewFor(hiveViews.viewNameLastDayFor(eventType), eventStructure, viewBuilder, node, Optional.of(86400));
-		generateHiveViewFor(hiveViews.viewNameLastWeekFor(eventType), eventStructure, viewBuilder, node, Optional.of(604800));
+		generateHiveViewFor(hiveViews.viewNameLastDayFor(eventType), eventStructure, viewBuilder, node,
+				Optional.of(86400));
+		generateHiveViewFor(hiveViews.viewNameLastWeekFor(eventType), eventStructure, viewBuilder, node,
+				Optional.of(604800));
 
 		return viewBuilder.toString();
 	}
@@ -59,29 +63,60 @@ public class HiveViewSqlBuilder {
 			boolean topLevel) {
 		// TODO would be nice to have some special columns at the beginning like site,
 		// customerNumber and timestamp
-		
-		// TODO ^ maybe write some utility that orders like that and reuse for drill views
+
+		// TODO ^ maybe write some utility that orders like that and reuse for drill
+		// views
+
+		// TODO handle ARRAYs
 
 		// need to make sure children are ordered in the same way
-		Map<String, Node> children = new HashMap<>();
-		for(Node child : node.getChildren()) {
-			children.put(child.getName(), child);
-		}
+		Map<String, Node> childMap = node.getChildMap();
 		List<Node> nestedChildren = new ArrayList<>();
-		for (String childName : CollectionUtil.toSortedList(children.keySet())) {
-			Node child = children.get(childName);
-			if (child.getChildren().isEmpty()) {
+		for (String childPath : CollectionUtil.toSortedList(childMap.keySet())) {
+			Node child = childMap.get(childPath);
+			if (child.hasArrayType()) {
+				String arrayLateralViewAlias = arrayLateralViewAlias(child);
+				
+				// array index
+				viewBuilder.append(",\n");
+				viewBuilder.append(ident());
+				viewBuilder.append(arrayLateralViewAlias);
+				viewBuilder.append(".`");
+				viewBuilder.append(ARRAY_INDEX_ALIAS);
+				viewBuilder.append("` as `");
+				viewBuilder.append(child.getName());
+				viewBuilder.append("_index`");
+
+				Map<String, Node> arrayChildMap = child.getChildMap();
+				for (String arrayChildPath : CollectionUtil.toSortedList(arrayChildMap.keySet())) {
+					Node arrayChild = arrayChildMap.get(arrayChildPath);
+					viewBuilder.append(",\n");
+					viewBuilder.append(ident());
+					viewBuilder.append(arrayLateralViewAlias);
+					viewBuilder.append(".`");
+					viewBuilder.append(ARRAY_ITEM_ALIAS);
+					viewBuilder.append("`['");
+					viewBuilder.append(arrayChild.getName());
+					viewBuilder.append("'] as `");
+					viewBuilder.append(child.getName());
+					viewBuilder.append("_");
+					viewBuilder.append(arrayChild.getName());
+					viewBuilder.append("`");
+				}
+
+			} else if (child.getChildren().isEmpty()) {
 				viewBuilder.append(",\n");
 				viewBuilder.append(ident());
 				viewBuilder.append(lateralViewAlias);
 				viewBuilder.append(".`");
-				viewBuilder.append(childName);
+				viewBuilder.append(child.getName());
 				viewBuilder.append("`");
 				if (!topLevel) {
-					viewBuilder.append(" as ");
+					viewBuilder.append(" as `");
 					viewBuilder.append(lateralViewAlias.substring(HIVE_ROOT_LATERAL_VIEW_ALIAS.length() + 1));
 					viewBuilder.append("_");
 					viewBuilder.append(child.getName());
+					viewBuilder.append("`");
 				}
 			} else {
 				nestedChildren.add(child);
@@ -104,6 +139,25 @@ public class HiveViewSqlBuilder {
 
 	private void genreateLateralViews(StringBuilder viewBuilder, Node node, String lateralViewAlias, String nodeAlias,
 			String nodeColumn) {
+
+		if (node.getChildren().isEmpty() && !node.hasArrayType()) {
+			throw new IllegalArgumentException(
+					"Unable to generate lateral views for non-nested non-array node: " + node.getId());
+		}
+		if (node.hasArrayType()) {
+			gernateLateralViewForArrayNode(viewBuilder, node, lateralViewAlias, nodeAlias, nodeColumn);
+		} else {
+			generateLaterViewForNestedNode(viewBuilder, node, lateralViewAlias, nodeAlias, nodeColumn);
+		}
+	}
+
+	private void generateLaterViewForNestedNode(StringBuilder viewBuilder, Node node, String lateralViewAlias,
+			String nodeAlias, String nodeColumn) {
+
+		if (node.getChildren().isEmpty()) {
+			throw new IllegalArgumentException(
+					"Unable to generate nested lateral view for non-nested node: " + node.getId());
+		}
 
 		// need to make sure children are ordered in the same way
 		List<Node> children = new ArrayList<>(node.getChildren());
@@ -145,13 +199,41 @@ public class HiveViewSqlBuilder {
 		}
 	}
 
+	private void gernateLateralViewForArrayNode(StringBuilder viewBuilder, Node node, String lateralViewAlias,
+			String nodeAlias, String nodeColumn) {
+		if (!node.hasArrayType()) {
+			throw new IllegalArgumentException("Unable to generate array lateral view non-array node: " + node.getId());
+		}
+
+		viewBuilder.append("LATERAL VIEW posexplode(from_json(");
+		viewBuilder.append(nodeAlias);
+		viewBuilder.append(".`");
+		viewBuilder.append(nodeColumn);
+		// TODO this is assuming the array contains json objects, could also be a
+		// primitive
+		viewBuilder.append("`, 'array<map<string,string>>')) ");
+		viewBuilder.append(arrayLateralViewAlias(node));
+		viewBuilder.append(" as ");
+		viewBuilder.append(ARRAY_INDEX_ALIAS);
+		viewBuilder.append(", ");
+		viewBuilder.append(ARRAY_ITEM_ALIAS);
+		viewBuilder.append("\n");
+	}
+
+	private String arrayLateralViewAlias(Node arrayNode) {
+		return "arr_" + arrayNode.getName();
+	}
+	
 	private String newLateralViewAlias(String lateralViewAlias, Node nestedNode) {
 		// need to make sure aliases are unique
 		return lateralViewAlias + "_" + nestedNode.getName();
 	}
 
 	private void generateHiveViewStart(StringBuilder viewBuilder, String viewName) {
-		viewBuilder.append("CREATE OR REPLACE VIEW ");
+		viewBuilder.append("DROP VIEW IF EXISTS ");
+		viewBuilder.append(viewName);
+		viewBuilder.append(";\n");
+		viewBuilder.append("CREATE VIEW ");
 		viewBuilder.append(viewName);
 		viewBuilder.append(" AS \nSELECT\n");
 		viewBuilder.append(ident());

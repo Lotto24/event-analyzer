@@ -24,11 +24,8 @@ public class MessageProcessor {
 
 	public void processRecords(Topic topic, TopicPartition topicPartition, ConsumerRecords<byte[], byte[]> consumedRecords) {
 		if (consumedRecords.count() == 0) {
-			log.debug("Did not receive any event from partition: " + topicPartition.toString());
 			return;
 		}
-		
-		log.info("Received " + consumedRecords.count() + " messages from " + topicPartition.toString());
 		for (ConsumerRecord<byte[], byte[]> record : consumedRecords) {
 			if(record.value() == null) {
 				log.warn("Reveived record with value: null");

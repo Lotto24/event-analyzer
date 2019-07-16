@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.avro.Schema.Type;
+
 import com.google.common.base.Optional;
 
 import de.esailors.dataheart.drillviews.util.CollectionUtil;
@@ -48,9 +50,9 @@ public class Node implements Serializable {
 		}
 		properties.get(name.toString()).add(property);
 	}
-	
+
 	public void addProperties(Node anotherNode) {
-		for(String propertyName : anotherNode.properties.keySet()) {
+		for (String propertyName : anotherNode.properties.keySet()) {
 			addPropertySet(propertyName, anotherNode.properties.get(propertyName));
 		}
 	}
@@ -95,6 +97,15 @@ public class Node implements Serializable {
 		children.put(child.getId(), child);
 	}
 
+	public boolean hasArrayType() {
+		// TODO for now we only treat arrays properly when event is defined with avro
+		// getProperty(NodePropertyType.JSON_TYPE).contains(JsonType.ARRAY.toString());
+		Set<String> avroTypes = getProperty(NodePropertyType.AVRO_TYPE);
+		Set<String> avroUnionTypes = getProperty(NodePropertyType.AVRO_UNION_TYPE);
+		return (avroTypes != null && avroTypes.contains(Type.ARRAY.toString()))
+				|| (avroUnionTypes != null && avroUnionTypes.contains(Type.ARRAY.toString()));
+	}
+
 	public String getId() {
 		return id;
 	}
@@ -115,6 +126,10 @@ public class Node implements Serializable {
 		// values() can not have duplicates in our case, as they are mapped by name and
 		// name is part of equals check
 		return new HashSet<>(children.values());
+	}
+
+	public Map<String, Node> getChildMap() {
+		return children;
 	}
 
 	public boolean equalIgnoringId(Node otherNode) {

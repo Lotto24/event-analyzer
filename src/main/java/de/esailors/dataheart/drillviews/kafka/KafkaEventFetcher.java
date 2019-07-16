@@ -61,21 +61,24 @@ public class KafkaEventFetcher {
 
 		// poll each partition individually until we have enough
 		Collection<TopicPartition> topicParititions = discoverParitionsForTopic(topic);
-		int processedEvents = 0;
+		int consumedRecordsTotal = 0;
 		for (TopicPartition topicPartition : topicParititions) {
 			prepareConsumerForTopicPartition(topicPartition);
 			ConsumerRecords<byte[], byte[]> consumedRecords = consumer
 					.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
 
 			eventProcessor.processRecords(topic, topicPartition, consumedRecords);
-			processedEvents += consumedRecords.count();
-			if (processedEvents >= Config.getInstance().KAFKA_CONSUMER_MAX_POLL_RECORDS) {
-				log.info("Processed enough events for " + topic.toString() + ": " + processedEvents + " / "
+			log.info(consumedRecords.count() + " / " + Config.getInstance().KAFKA_CONSUMER_MAX_POLL_RECORDS + " records consumed from " + topicPartition);
+			consumedRecordsTotal += consumedRecords.count();
+			if (consumedRecordsTotal >= Config.getInstance().KAFKA_CONSUMER_MAX_POLL_RECORDS) {
+				log.info("Consumed enough records for " + topic.toString() + ": " + consumedRecordsTotal + " / "
 						+ Config.getInstance().KAFKA_CONSUMER_MAX_POLL_RECORDS);
+				break;
 			}
-			// TODO STOPPED HERE
 		}
-
+		if(consumedRecordsTotal == 0) {
+			log.info("NO records consumed for " + topic.toString());
+		}
 	}
 
 	private void prepareConsumerForTopicPartition(TopicPartition topicPartition) {
@@ -83,6 +86,7 @@ public class KafkaEventFetcher {
 			log.debug("Unsubscribing from all topic partitions");
 			consumer.unsubscribe();
 		}
+		log.debug("Preparing for topic partitiong: " + topicPartition);
 		consumer.assign(Collections.singleton(topicPartition));
 		resetConsumerOffsets();
 	}
@@ -157,7 +161,10 @@ public class KafkaEventFetcher {
 		// FOR DEVELOPMENT PURPOSES ONLY!
 		topicsWhitelist = new HashSet<String>();
 //		topicsWhitelist.add("payment_payin_processed");
-		topicsWhitelist.add("customer_restrictions_changed");
+//		topicsWhitelist.add("customer_restrictions_changed");
+//		topicsWhitelist.add("customer_registration");
+//		topicsWhitelist.add("postident_response_reporting");
+		topicsWhitelist.add("account_balance_change_events");
 
 		if (topicsWhitelist.size() > 0) {
 			log.warn("DEV ONLY! Whitelisted topics: " + topicsWhitelist.size());

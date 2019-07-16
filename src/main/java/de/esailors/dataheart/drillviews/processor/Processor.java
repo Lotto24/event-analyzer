@@ -357,6 +357,8 @@ public class Processor {
 		String viewFromCurrentRun = hiveViewSqlBuilder.generateHiveViewsFor(eventType,
 				mergedEventStructuredOption.get());
 
+		System.out.println(viewFromCurrentRun);
+		
 		if (hiveViews.doesViewExist(eventType)) {
 			log.debug("Hive view for " + eventType + " already exists");
 			// check if it's the same view and don't execute if it is
