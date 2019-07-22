@@ -120,6 +120,7 @@ public class KafkaEventFetcher {
 		initBlacklistTopics();
 		initWhitelistTopics();
 
+		log.debug("Listing all topics in Kafka");
 		Map<String, List<PartitionInfo>> topicNames = consumer.listTopics();
 
 		for (String topicName : topicNames.keySet()) {
@@ -164,7 +165,9 @@ public class KafkaEventFetcher {
 //		topicsWhitelist.add("customer_restrictions_changed");
 //		topicsWhitelist.add("customer_registration");
 //		topicsWhitelist.add("postident_response_reporting");
-		topicsWhitelist.add("account_balance_change_events");
+//		topicsWhitelist.add("account_balance_change_events");
+//		topicsWhitelist.add("alinghi_dbg_real_ticket_mapped");
+		topicsWhitelist.add("alinghi_dbg_lc_ticket_ordered");
 
 		if (topicsWhitelist.size() > 0) {
 			log.warn("DEV ONLY! Whitelisted topics: " + topicsWhitelist.size());

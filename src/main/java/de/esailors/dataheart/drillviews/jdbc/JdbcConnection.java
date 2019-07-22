@@ -46,6 +46,17 @@ public abstract class JdbcConnection {
 		Statement statement = connection.createStatement();
 		return statement.executeQuery(query);
 	}
+	
+	public Set<String> listDatabases() {
+		try {
+			return resultSetToStringSet(query("SHOW DATABASES"));
+		} catch (SQLException e) {
+			log.error("Error when listing Hive databases", e);
+			throw new IllegalStateException("Unable to list databases", e);
+		}
+	}
+	
+	public abstract Set<String> listTablesinDatabase(String database);
 
 	public void logResultSet(ResultSet resultSet) {
 		try {

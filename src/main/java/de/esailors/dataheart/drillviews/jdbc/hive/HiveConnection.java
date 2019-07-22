@@ -20,15 +20,6 @@ public class HiveConnection extends JdbcConnection {
 				Config.getInstance().HIVE_JDBC_PASSWORD);
 	}
 
-	public Set<String> listDatabases() {
-		try {
-			return resultSetToStringSet(query("SHOW DATABASES"));
-		} catch (SQLException e) {
-			log.error("Error when listing Hive databases", e);
-			throw new IllegalStateException("Unable to list databases", e);
-		}
-	}
-
 	public Set<String> listTablesinDatabase(String database) {
 		try {
 			return resultSetToStringSet(query("SHOW TABLES FROM " + database), 0);

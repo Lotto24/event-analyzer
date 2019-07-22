@@ -13,9 +13,10 @@ public class JsonUtil {
 		ARRAY, BINARY, BOOLEAN, FLOAT, INTEGER, NULL, OBJECT, TEXTUAL, UNKNOWN
 	}
 	
+	private static ObjectMapper mapper = new ObjectMapper();
+	
 	public static String prettyPrintJsonString(JsonNode jsonNode) {
 		try {
-			ObjectMapper mapper = new ObjectMapper();
 			Object json = mapper.readValue(jsonNode.toString(), Object.class);
 			return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json);
 		} catch (Exception e) {

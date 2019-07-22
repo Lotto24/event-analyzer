@@ -7,6 +7,7 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.EventStructure;
 import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Node;
@@ -28,10 +29,12 @@ public class HiveViewSqlBuilder {
 	private static final int IDENTATION = 4;
 
 
-	private HiveViews hiveViews;
+	private HiveMetadata hiveViews;
+	private HiveComplexTypeGenerator hiveComplexTypeGenerator; 
 
-	public HiveViewSqlBuilder(HiveViews hiveViews) {
+	public HiveViewSqlBuilder(HiveMetadata hiveViews) {
 		this.hiveViews = hiveViews;
+		this.hiveComplexTypeGenerator = new HiveComplexTypeGenerator();
 	}
 
 	public String generateHiveViewsFor(EventType eventType, EventStructure eventStructure) {
@@ -39,19 +42,21 @@ public class HiveViewSqlBuilder {
 
 		StringBuilder viewBuilder = new StringBuilder();
 		Node node = eventStructure.getEventStructureTree().getRootNode();
+		
+		String hiveType = hiveComplexTypeGenerator.generateComplexTypeFor(node);
+		System.out.println(hiveType);
 
-		generateHiveViewFor(hiveViews.viewNameFor(eventType), eventStructure, viewBuilder, node, Optional.absent());
-		generateHiveViewFor(hiveViews.viewNameLastDayFor(eventType), eventStructure, viewBuilder, node,
-				Optional.of(86400));
-		generateHiveViewFor(hiveViews.viewNameLastWeekFor(eventType), eventStructure, viewBuilder, node,
-				Optional.of(604800));
+		String viewName = hiveViews.viewNameFor(eventType);
+		generateHiveViewFor(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.absent());
+		generateHiveViewFor(Config.getInstance().HIVE_VIEW_DAY_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.of(86400));
+		generateHiveViewFor(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.of(604800));
 
 		return viewBuilder.toString();
 	}
 
-	private void generateHiveViewFor(String viewName, EventStructure eventStructure, StringBuilder viewBuilder,
+	private void generateHiveViewFor(String database, String viewName, EventStructure eventStructure, StringBuilder viewBuilder,
 			Node node, Optional<Integer> timeLimit) {
-		generateHiveViewStart(viewBuilder, viewName);
+		generateHiveViewStart(viewBuilder, database, viewName);
 		generateHiveViewSelectColumns(viewBuilder, node, HIVE_ROOT_LATERAL_VIEW_ALIAS, true);
 		generateHiveViewFromClause(viewBuilder);
 		genreateLateralViews(viewBuilder, node, HIVE_ROOT_LATERAL_VIEW_ALIAS, HIVE_HBASE_TABLE_ALIAS,
@@ -85,7 +90,7 @@ public class HiveViewSqlBuilder {
 				viewBuilder.append(ARRAY_INDEX_ALIAS);
 				viewBuilder.append("` as `");
 				viewBuilder.append(child.getName());
-				viewBuilder.append("_index`");
+				viewBuilder.append("_array_index`");
 
 				Map<String, Node> arrayChildMap = child.getChildMap();
 				for (String arrayChildPath : CollectionUtil.toSortedList(arrayChildMap.keySet())) {
@@ -205,7 +210,7 @@ public class HiveViewSqlBuilder {
 			throw new IllegalArgumentException("Unable to generate array lateral view non-array node: " + node.getId());
 		}
 
-		viewBuilder.append("LATERAL VIEW posexplode(from_json(");
+		viewBuilder.append("LATERAL VIEW OUTER posexplode(from_json(");
 		viewBuilder.append(nodeAlias);
 		viewBuilder.append(".`");
 		viewBuilder.append(nodeColumn);
@@ -229,11 +234,15 @@ public class HiveViewSqlBuilder {
 		return lateralViewAlias + "_" + nestedNode.getName();
 	}
 
-	private void generateHiveViewStart(StringBuilder viewBuilder, String viewName) {
+	private void generateHiveViewStart(StringBuilder viewBuilder, String database, String viewName) {
 		viewBuilder.append("DROP VIEW IF EXISTS ");
+		viewBuilder.append(database);
+		viewBuilder.append(".");
 		viewBuilder.append(viewName);
 		viewBuilder.append(";\n");
 		viewBuilder.append("CREATE VIEW ");
+		viewBuilder.append(database);
+		viewBuilder.append(".");
 		viewBuilder.append(viewName);
 		viewBuilder.append(" AS \nSELECT\n");
 		viewBuilder.append(ident());

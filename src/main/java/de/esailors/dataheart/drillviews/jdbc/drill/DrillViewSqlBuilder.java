@@ -22,9 +22,9 @@ public class DrillViewSqlBuilder {
 	private static final String JSON_FIELD_ALIAS = "json";
 	private static final int IDENTATION = 4;
 	
-	private DrillViews drillViews;
+	private DrillMetadata drillViews;
 
-	public DrillViewSqlBuilder(DrillViews drillViews) {
+	public DrillViewSqlBuilder(DrillMetadata drillViews) {
 		this.drillViews = drillViews;
 	}
 

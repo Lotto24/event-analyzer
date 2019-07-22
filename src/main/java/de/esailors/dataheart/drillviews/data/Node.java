@@ -105,7 +105,7 @@ public class Node implements Serializable {
 		return (avroTypes != null && avroTypes.contains(Type.ARRAY.toString()))
 				|| (avroUnionTypes != null && avroUnionTypes.contains(Type.ARRAY.toString()));
 	}
-
+	
 	public String getId() {
 		return id;
 	}

@@ -11,6 +11,7 @@ public class ChangeLog {
 	private static final Logger log = LogManager.getLogger(ChangeLog.class.getName());
 
 	 // separate warnings (no events found) from changes (new view)
+	// TODO add errors like day count not working or view not being creatable
 	private List<String> changes = new ArrayList<>();
 	private List<String> warnings = new ArrayList<>();
 

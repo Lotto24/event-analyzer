@@ -25,10 +25,10 @@ import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.data.Tree;
 import de.esailors.dataheart.drillviews.jdbc.drill.DrillConnection;
 import de.esailors.dataheart.drillviews.jdbc.drill.DrillViewSqlBuilder;
-import de.esailors.dataheart.drillviews.jdbc.drill.DrillViews;
+import de.esailors.dataheart.drillviews.jdbc.drill.DrillMetadata;
 import de.esailors.dataheart.drillviews.jdbc.hive.HiveConnection;
 import de.esailors.dataheart.drillviews.jdbc.hive.HiveViewSqlBuilder;
-import de.esailors.dataheart.drillviews.jdbc.hive.HiveViews;
+import de.esailors.dataheart.drillviews.jdbc.hive.HiveMetadata;
 import de.esailors.dataheart.drillviews.util.CollectionUtil;
 import de.esailors.dataheart.drillviews.util.GitRepository;
 
@@ -37,9 +37,9 @@ public class Processor {
 	private static final Logger log = LogManager.getLogger(Processor.class.getName());
 
 	private HiveConnection hiveConnection;
-	private HiveViews hiveViews;
+	private HiveMetadata hiveViews;
 	private DrillConnection drillConnection;
-	private DrillViews drillViews;
+	private DrillMetadata drillViews;
 	private DrillViewSqlBuilder drillViewSqlBuilder;
 	private HiveViewSqlBuilder hiveViewSqlBuilder;
 	private DwhGenerator dwhGenerator;
@@ -58,12 +58,12 @@ public class Processor {
 		this.changeLog = new ChangeLog();
 		if (Config.getInstance().DRILL_ENABLED) {
 			this.drillConnection = new DrillConnection();
-			this.drillViews = new DrillViews(drillConnection);
+			this.drillViews = new DrillMetadata(drillConnection);
 			this.drillViewSqlBuilder = new DrillViewSqlBuilder(drillViews);
 		}
 		if (Config.getInstance().HIVE_ENABLED) {
 			this.hiveConnection = new HiveConnection();
-			this.hiveViews = new HiveViews(hiveConnection);
+			this.hiveViews = new HiveMetadata(hiveConnection);
 			this.hiveViewSqlBuilder = new HiveViewSqlBuilder(hiveViews);
 		}
 		if (Config.getInstance().DWH_TABLE_GENERATION_ENABLED || Config.getInstance().DWH_JOB_GENERATION_ENABLED) {
@@ -381,7 +381,8 @@ public class Processor {
 		try {
 			hiveConnection.executeSqlStatements(viewFromCurrentRun);
 		} catch (SQLException e) {
-			throw new IllegalStateException("Error while executing create view SQL statement on Hive", e);
+			log.error("Error while executing create view SQL statement on Hive", e);
+//			throw new IllegalStateException("Error while executing create view SQL statement on Hive", e);
 		}
 
 		// write hive views to disk
