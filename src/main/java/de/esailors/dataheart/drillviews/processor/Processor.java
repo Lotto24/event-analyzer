@@ -167,7 +167,7 @@ public class Processor {
 			changeLog.addWarning("Unable to determine count via drill view of " + eventType);
 		}
 	}
-	
+
 	private void runCountOnHiveView(EventType eventType) {
 		// run count on newly created view for sanity checking and report / statistics
 		Optional<Long> hiveViewCountOption = hiveViews.runDayCount(eventType);
@@ -357,8 +357,9 @@ public class Processor {
 		String viewFromCurrentRun = hiveViewSqlBuilder.generateHiveViewsFor(eventType,
 				mergedEventStructuredOption.get());
 
+		// TODO hacky test
 		System.out.println(viewFromCurrentRun);
-		
+
 		if (hiveViews.doesViewExist(eventType)) {
 			log.debug("Hive view for " + eventType + " already exists");
 			// check if it's the same view and don't execute if it is
@@ -381,8 +382,9 @@ public class Processor {
 		try {
 			hiveConnection.executeSqlStatements(viewFromCurrentRun);
 		} catch (SQLException e) {
-			log.error("Error while executing create view SQL statement on Hive", e);
-//			throw new IllegalStateException("Error while executing create view SQL statement on Hive", e);
+			// TODO either treat properly, log and add to changeset or throw Exception
+			// log.error("Error while executing create view SQL statement on Hive", e);
+			throw new IllegalStateException("Error while executing create view SQL statement on Hive", e);
 		}
 
 		// write hive views to disk

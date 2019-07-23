@@ -18,15 +18,19 @@ public class HiveViewSqlBuilder {
 
 	private static final Logger log = LogManager.getLogger(HiveViewSqlBuilder.class.getName());
 
-	private static final String HIVE_HBASE_TABLE = "hbase_kafka_events";
-	private static final String HIVE_HBASE_TABLE_ROWKEY_COLUMN = "rowkey";
-	private static final String HIVE_HBASE_TABLE_JSON_COLUMN = "json";
-	private static final String HIVE_HBASE_TABLE_ALIAS = "k";
+	private static final String HBASE_TABLE_ALIAS = "k";
+	private static final String HBASE_TABLE_ROWKEY_COLUMN = "rowkey";
+	private static final String HBASE_TABLE_JSON_COLUMN = "json";
+	
+	private static final String COMPLEX_TYPE_EVENT_ALIAS = "event";
+	private static final String COMPLEX_TYPE_SUB_VIEW_ALIAS = "c";
+	
 	private static final String HIVE_ROOT_LATERAL_VIEW_ALIAS = "r";
-	private static final String ARRAY_ITEM_ALIAS = "item";
-	private static final String ARRAY_INDEX_ALIAS = "index";
+	private static final String LATERAL_VIEW_ARRAY_ITEM_ALIAS = "item";
+	private static final String LATERAL_VIEW_ARRAY_INDEX_ALIAS = "index";
 
 	private static final int IDENTATION = 4;
+
 
 
 	private HiveMetadata hiveViews;
@@ -43,36 +47,101 @@ public class HiveViewSqlBuilder {
 		StringBuilder viewBuilder = new StringBuilder();
 		Node node = eventStructure.getEventStructureTree().getRootNode();
 		
-		String hiveType = hiveComplexTypeGenerator.generateComplexTypeFor(node);
-		System.out.println(hiveType);
 
 		String viewName = hiveViews.viewNameFor(eventType);
-		generateHiveViewFor(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.absent());
-		generateHiveViewFor(Config.getInstance().HIVE_VIEW_DAY_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.of(86400));
-		generateHiveViewFor(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.of(604800));
+		lateralViewsView(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.absent());
+		lateralViewsView(Config.getInstance().HIVE_VIEW_DAY_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.of(86400));
+		lateralViewsView(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.of(604800));
+		
+		complexTypeView(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName + "_complex", eventStructure, viewBuilder, node, Optional.absent());
 
 		return viewBuilder.toString();
 	}
 
-	private void generateHiveViewFor(String database, String viewName, EventStructure eventStructure, StringBuilder viewBuilder,
+	private void complexTypeView(String database, String viewName, EventStructure eventStructure, StringBuilder viewBuilder,
 			Node node, Optional<Integer> timeLimit) {
-		generateHiveViewStart(viewBuilder, database, viewName);
-		generateHiveViewSelectColumns(viewBuilder, node, HIVE_ROOT_LATERAL_VIEW_ALIAS, true);
-		generateHiveViewFromClause(viewBuilder);
-		genreateLateralViews(viewBuilder, node, HIVE_ROOT_LATERAL_VIEW_ALIAS, HIVE_HBASE_TABLE_ALIAS,
-				HIVE_HBASE_TABLE_JSON_COLUMN);
-		generateHiveViewEnd(eventStructure, viewBuilder, timeLimit);
+		
+		createView(viewBuilder, database, viewName);
+		
+		viewBuilder.append("SELECT\n");
+		viewBuilder.append(ident());
+		viewBuilder.append(COMPLEX_TYPE_SUB_VIEW_ALIAS);
+		viewBuilder.append(".`");
+		viewBuilder.append(HBASE_TABLE_ROWKEY_COLUMN);
+		viewBuilder.append("`");
+		
+		String path = COMPLEX_TYPE_SUB_VIEW_ALIAS + ".`" + COMPLEX_TYPE_EVENT_ALIAS + "`";
+		selectComplexTypeColumns(viewBuilder, node, path, "");
+		
+		viewBuilder.append("\nFROM (");
+		
+		selectStart(viewBuilder);
+		selectComplexType(viewBuilder, node);
+		fromClause(viewBuilder);
+		whereClause(eventStructure, viewBuilder, timeLimit);
+		
+		viewBuilder.append("\n) ");
+		viewBuilder.append(COMPLEX_TYPE_SUB_VIEW_ALIAS);
+		
+		endStatement(viewBuilder);
 	}
 
-	private void generateHiveViewSelectColumns(StringBuilder viewBuilder, Node node, String lateralViewAlias,
+	private void selectComplexTypeColumns(StringBuilder viewBuilder, Node node, String parentPath, String aliasPrefix) {
+		Map<String, Node> childMap = node.getChildMap();
+		for(String childPath : CollectionUtil.toSortedList(childMap.keySet())) {
+			Node child = childMap.get(childPath);
+			if(child.hasArrayType() || !child.hasChildren()) {
+				viewBuilder.append(",\n");
+				viewBuilder.append(ident());
+				viewBuilder.append(parentPath);
+				viewBuilder.append(".`");
+				viewBuilder.append(child.getName());
+				viewBuilder.append("` as `");
+				viewBuilder.append(aliasPrefix);
+				viewBuilder.append(child.getName());
+				viewBuilder.append("`");
+			} else {
+				String newParentPath = parentPath + ".`" + child.getName() + "`";
+				String newAliasPrefix = aliasPrefix + child.getName() + "_";
+				selectComplexTypeColumns(viewBuilder, child, newParentPath, newAliasPrefix);
+			}
+		}
+	}
+
+	private void selectComplexType(StringBuilder viewBuilder, Node node) {
+		String hiveType = hiveComplexTypeGenerator.generateComplexTypeFor(node);
+		viewBuilder.append(",\n");
+		viewBuilder.append(ident());
+		viewBuilder.append("default.from_json(");
+		viewBuilder.append(HBASE_TABLE_ALIAS);
+		viewBuilder.append(".`");
+		viewBuilder.append(HBASE_TABLE_JSON_COLUMN);
+		viewBuilder.append("`, '");
+		viewBuilder.append(hiveType);
+		viewBuilder.append("') as `");
+		viewBuilder.append(COMPLEX_TYPE_EVENT_ALIAS);
+		viewBuilder.append("`");
+	}
+
+	private void lateralViewsView(String database, String viewName, EventStructure eventStructure, StringBuilder viewBuilder,
+			Node node, Optional<Integer> timeLimit) {
+		createView(viewBuilder, database, viewName);
+		selectStart(viewBuilder);
+		selectLateralViewColumns(viewBuilder, node, HIVE_ROOT_LATERAL_VIEW_ALIAS, true);
+		fromClause(viewBuilder);
+		lateralViews(viewBuilder, node, HIVE_ROOT_LATERAL_VIEW_ALIAS, HBASE_TABLE_ALIAS,
+				HBASE_TABLE_JSON_COLUMN);
+		whereClause(eventStructure, viewBuilder, timeLimit);
+		endStatement(viewBuilder);
+	}
+
+	private void selectLateralViewColumns(StringBuilder viewBuilder, Node node, String lateralViewAlias,
 			boolean topLevel) {
 		// TODO would be nice to have some special columns at the beginning like site,
 		// customerNumber and timestamp
 
 		// TODO ^ maybe write some utility that orders like that and reuse for drill
 		// views
-
-		// TODO handle ARRAYs
 
 		// need to make sure children are ordered in the same way
 		Map<String, Node> childMap = node.getChildMap();
@@ -87,7 +156,7 @@ public class HiveViewSqlBuilder {
 				viewBuilder.append(ident());
 				viewBuilder.append(arrayLateralViewAlias);
 				viewBuilder.append(".`");
-				viewBuilder.append(ARRAY_INDEX_ALIAS);
+				viewBuilder.append(LATERAL_VIEW_ARRAY_INDEX_ALIAS);
 				viewBuilder.append("` as `");
 				viewBuilder.append(child.getName());
 				viewBuilder.append("_array_index`");
@@ -99,7 +168,7 @@ public class HiveViewSqlBuilder {
 					viewBuilder.append(ident());
 					viewBuilder.append(arrayLateralViewAlias);
 					viewBuilder.append(".`");
-					viewBuilder.append(ARRAY_ITEM_ALIAS);
+					viewBuilder.append(LATERAL_VIEW_ARRAY_ITEM_ALIAS);
 					viewBuilder.append("`['");
 					viewBuilder.append(arrayChild.getName());
 					viewBuilder.append("'] as `");
@@ -130,19 +199,19 @@ public class HiveViewSqlBuilder {
 
 		for (Node nestedChild : nestedChildren) {
 			String newLateralViewAlias = newLateralViewAlias(lateralViewAlias, nestedChild);
-			generateHiveViewSelectColumns(viewBuilder, nestedChild, newLateralViewAlias, false);
+			selectLateralViewColumns(viewBuilder, nestedChild, newLateralViewAlias, false);
 		}
 	}
 
-	private void generateHiveViewFromClause(StringBuilder viewBuilder) {
+	private void fromClause(StringBuilder viewBuilder) {
 		viewBuilder.append("\nFROM ");
-		viewBuilder.append(HIVE_HBASE_TABLE);
+		viewBuilder.append(Config.getInstance().HIVE_HBASE_TABLE);
 		viewBuilder.append(" ");
-		viewBuilder.append(HIVE_HBASE_TABLE_ALIAS);
+		viewBuilder.append(HBASE_TABLE_ALIAS);
 		viewBuilder.append("\n");
 	}
 
-	private void genreateLateralViews(StringBuilder viewBuilder, Node node, String lateralViewAlias, String nodeAlias,
+	private void lateralViews(StringBuilder viewBuilder, Node node, String lateralViewAlias, String nodeAlias,
 			String nodeColumn) {
 
 		if (node.getChildren().isEmpty() && !node.hasArrayType()) {
@@ -150,13 +219,13 @@ public class HiveViewSqlBuilder {
 					"Unable to generate lateral views for non-nested non-array node: " + node.getId());
 		}
 		if (node.hasArrayType()) {
-			gernateLateralViewForArrayNode(viewBuilder, node, lateralViewAlias, nodeAlias, nodeColumn);
+			lateralViewForArrayNode(viewBuilder, node, lateralViewAlias, nodeAlias, nodeColumn);
 		} else {
-			generateLaterViewForNestedNode(viewBuilder, node, lateralViewAlias, nodeAlias, nodeColumn);
+			laterViewForNestedNode(viewBuilder, node, lateralViewAlias, nodeAlias, nodeColumn);
 		}
 	}
 
-	private void generateLaterViewForNestedNode(StringBuilder viewBuilder, Node node, String lateralViewAlias,
+	private void laterViewForNestedNode(StringBuilder viewBuilder, Node node, String lateralViewAlias,
 			String nodeAlias, String nodeColumn) {
 
 		if (node.getChildren().isEmpty()) {
@@ -178,7 +247,7 @@ public class HiveViewSqlBuilder {
 			viewBuilder.append(", '");
 			viewBuilder.append(child.getName());
 			viewBuilder.append("'");
-			if (!child.getChildren().isEmpty()) {
+			if (child.hasChildren() || child.hasArrayType()) {
 				nestedNodes.add(child);
 			}
 		}
@@ -200,17 +269,17 @@ public class HiveViewSqlBuilder {
 
 		for (Node nestedNode : nestedNodes) {
 			String newLateralViewAlias = newLateralViewAlias(lateralViewAlias, nestedNode);
-			genreateLateralViews(viewBuilder, nestedNode, newLateralViewAlias, lateralViewAlias, nestedNode.getName());
+			lateralViews(viewBuilder, nestedNode, newLateralViewAlias, lateralViewAlias, nestedNode.getName());
 		}
 	}
 
-	private void gernateLateralViewForArrayNode(StringBuilder viewBuilder, Node node, String lateralViewAlias,
+	private void lateralViewForArrayNode(StringBuilder viewBuilder, Node node, String lateralViewAlias,
 			String nodeAlias, String nodeColumn) {
 		if (!node.hasArrayType()) {
 			throw new IllegalArgumentException("Unable to generate array lateral view non-array node: " + node.getId());
 		}
 
-		viewBuilder.append("LATERAL VIEW OUTER posexplode(from_json(");
+		viewBuilder.append("LATERAL VIEW OUTER posexplode(default.from_json(");
 		viewBuilder.append(nodeAlias);
 		viewBuilder.append(".`");
 		viewBuilder.append(nodeColumn);
@@ -219,10 +288,64 @@ public class HiveViewSqlBuilder {
 		viewBuilder.append("`, 'array<map<string,string>>')) ");
 		viewBuilder.append(arrayLateralViewAlias(node));
 		viewBuilder.append(" as ");
-		viewBuilder.append(ARRAY_INDEX_ALIAS);
+		viewBuilder.append(LATERAL_VIEW_ARRAY_INDEX_ALIAS);
 		viewBuilder.append(", ");
-		viewBuilder.append(ARRAY_ITEM_ALIAS);
+		viewBuilder.append(LATERAL_VIEW_ARRAY_ITEM_ALIAS);
 		viewBuilder.append("\n");
+	}
+
+	private void createView(StringBuilder viewBuilder, String database, String viewName) {
+		viewBuilder.append("DROP VIEW IF EXISTS ");
+		viewBuilder.append(database);
+		viewBuilder.append(".");
+		viewBuilder.append(viewName);
+		viewBuilder.append(";\n");
+		viewBuilder.append("CREATE VIEW ");
+		viewBuilder.append(database);
+		viewBuilder.append(".");
+		viewBuilder.append(viewName);
+		viewBuilder.append(" AS \n");
+	}
+
+	private void selectStart(StringBuilder viewBuilder) {
+		viewBuilder.append("SELECT\n");
+		viewBuilder.append(ident());
+		viewBuilder.append(HBASE_TABLE_ALIAS);
+		viewBuilder.append(".`");
+		viewBuilder.append(HBASE_TABLE_ROWKEY_COLUMN);
+		viewBuilder.append("` as `");
+		viewBuilder.append(HBASE_TABLE_ROWKEY_COLUMN);
+		viewBuilder.append("`");
+	}
+
+	private void whereClause(EventStructure eventStructure, StringBuilder viewBuilder,
+			Optional<Integer> timeLimit) {
+		viewBuilder.append("WHERE ");
+		viewBuilder.append(HBASE_TABLE_ROWKEY_COLUMN);
+		viewBuilder.append(" > ");
+		viewBuilder.append("'");
+		viewBuilder.append(eventStructure.getEventType().getName().toUpperCase());
+		rowKeyStart(viewBuilder, timeLimit);
+		viewBuilder.append(" AND ");
+		viewBuilder.append(HBASE_TABLE_ROWKEY_COLUMN);
+		viewBuilder.append(" < ");
+		viewBuilder.append("'");
+		viewBuilder.append(eventStructure.getEventType().getName().toUpperCase());
+		viewBuilder.append("-9'");
+	}
+	
+	private void endStatement(StringBuilder viewBuilder) {
+		viewBuilder.append(";\n");
+	}
+
+	private void rowKeyStart(StringBuilder viewBuilder, Optional<Integer> timeLimit) {
+		String rowKeyStart;
+		if (timeLimit == null || !timeLimit.isPresent()) {
+			rowKeyStart = "-0'";
+		} else {
+			rowKeyStart = "-' || (unix_timestamp() - " + timeLimit.get() + ")";
+		}
+		viewBuilder.append(rowKeyStart);
 	}
 
 	private String arrayLateralViewAlias(Node arrayNode) {
@@ -233,50 +356,7 @@ public class HiveViewSqlBuilder {
 		// need to make sure aliases are unique
 		return lateralViewAlias + "_" + nestedNode.getName();
 	}
-
-	private void generateHiveViewStart(StringBuilder viewBuilder, String database, String viewName) {
-		viewBuilder.append("DROP VIEW IF EXISTS ");
-		viewBuilder.append(database);
-		viewBuilder.append(".");
-		viewBuilder.append(viewName);
-		viewBuilder.append(";\n");
-		viewBuilder.append("CREATE VIEW ");
-		viewBuilder.append(database);
-		viewBuilder.append(".");
-		viewBuilder.append(viewName);
-		viewBuilder.append(" AS \nSELECT\n");
-		viewBuilder.append(ident());
-		viewBuilder.append(HIVE_HBASE_TABLE_ALIAS);
-		viewBuilder.append(".");
-		viewBuilder.append(HIVE_HBASE_TABLE_ROWKEY_COLUMN);
-	}
-
-	private void generateHiveViewEnd(EventStructure eventStructure, StringBuilder viewBuilder,
-			Optional<Integer> timeLimit) {
-		viewBuilder.append("WHERE ");
-		viewBuilder.append(HIVE_HBASE_TABLE_ROWKEY_COLUMN);
-		viewBuilder.append(" > ");
-		viewBuilder.append("'");
-		viewBuilder.append(eventStructure.getEventType().getName().toUpperCase());
-		generateHiveRowKeyStart(viewBuilder, timeLimit);
-		viewBuilder.append(" AND ");
-		viewBuilder.append(HIVE_HBASE_TABLE_ROWKEY_COLUMN);
-		viewBuilder.append(" < ");
-		viewBuilder.append("'");
-		viewBuilder.append(eventStructure.getEventType().getName().toUpperCase());
-		viewBuilder.append("-9';\n");
-	}
-
-	private void generateHiveRowKeyStart(StringBuilder viewBuilder, Optional<Integer> timeLimit) {
-		String rowKeyStart;
-		if (timeLimit == null || !timeLimit.isPresent()) {
-			rowKeyStart = "-0'";
-		} else {
-			rowKeyStart = "-' || (unix_timestamp() - " + timeLimit.get() + ")";
-		}
-		viewBuilder.append(rowKeyStart);
-	}
-
+	
 	private static String ident() {
 		StringBuilder r = new StringBuilder();
 		for (int i = 0; i < IDENTATION; i++) {

@@ -33,6 +33,7 @@ public class Config {
 	private static final String HIVE_JDBC_URL_KEY = "hive.jdbc.url";
 	private static final String HIVE_JDBC_USER_KEY = "hive.jdbc.user";
 	private static final String HIVE_JDBC_PASSWORD_KEY = "hive.jdbc.password";
+	private static final String HIVE_HBASE_TABLE_KEY = "hive.hbase.table";
 	private static final String HIVE_VIEW_ALL_DATABASE_KEY = "hive.database.all";
 	private static final String HIVE_VIEW_DAY_DATABASE_KEY = "hive.database.day";
 	private static final String HIVE_VIEW_WEEK_DATABASE_KEY = "hive.database.week";
@@ -71,6 +72,7 @@ public class Config {
 	private static final String KAFKA_CONSUMER_AUTO_OFFSET_RESET_KEY = "kafka.consumer.auto_offset_reset";
 	private static final String KAFKA_CONSUMER_ENABLE_AUTO_COMMIT_KEY = "kafka.consumer.enable_autocommit";
 	private static final String KAFKA_CONSUMER_MAX_POLL_RECORDS_KEY = "kafka.consumer.max_poll_records";
+	private static final String KAFKA_POLL_PARTITIONS_INDIVIDUALLY_KEY = "kafka.poll.partitions.individually";
 
 	// git settings
 
@@ -117,6 +119,7 @@ public class Config {
 	public String HIVE_JDBC_URL = "jdbc:hive2://hdp-master-01.t24.stagec.sg-cloud.co.uk:2181,hdp-master-02.t24.stagec.sg-cloud.co.uk:2181,hdp-master-03.t24.stagec.sg-cloud.co.uk:2181/;serviceDiscoveryMode=zooKeeper;zooKeeperNamespace=hiveserver2-hive2";
 	public String HIVE_JDBC_USER = "event-analyzer";
 	public String HIVE_JDBC_PASSWORD = "";
+	public String HIVE_HBASE_TABLE = "default.hbase_kafka_events";
 	public String HIVE_VIEW_ALL_DATABASE = "kafka_events";
 	public String HIVE_VIEW_DAY_DATABASE = "kafka_events_last_day";
 	public String HIVE_VIEW_WEEK_DATABASE = "kafka_events_last_week";
@@ -147,15 +150,14 @@ public class Config {
 	// kafka connection settings
 
 	public String KAFKA_CONSUMER_BOOTSTRAP_SERVERS = "app-01-dwh.test.t24.eu-west-1.sg-cloud.co.uk:9092";
-	public String KAFKA_CONSUMER_GROUP_ID = "DataHeartHBaseConnector";
-
-	public int KAFKA_CONSUMER_POLL_TIMEOUT = 100;
 
 	// kafka consumer config
-
+	public String KAFKA_CONSUMER_GROUP_ID = "DataHeartHBaseConnector";
 	public String KAFKA_CONSUMER_AUTO_OFFSET_RESET = "earliest";
 	public boolean KAFKA_CONSUMER_ENABLE_AUTO_COMMIT = false;
 	public int KAFKA_CONSUMER_MAX_POLL_RECORDS = 10;
+	public int KAFKA_CONSUMER_POLL_TIMEOUT = 100;
+	public boolean KAFKA_POLL_PARTITIONS_INDIVIDUALLY = false;
 
 	// git settings
 	
@@ -298,6 +300,7 @@ public class Config {
 		HIVE_JDBC_URL = loadConfigString(HIVE_JDBC_URL_KEY);
 		HIVE_JDBC_USER = loadConfigString(HIVE_JDBC_USER_KEY);
 		HIVE_JDBC_PASSWORD = loadConfigString(HIVE_JDBC_PASSWORD_KEY);
+		HIVE_HBASE_TABLE = loadConfigString(HIVE_HBASE_TABLE_KEY);
 		HIVE_VIEW_ALL_DATABASE = loadConfigString(HIVE_VIEW_ALL_DATABASE_KEY);
 		HIVE_VIEW_DAY_DATABASE = loadConfigString(HIVE_VIEW_DAY_DATABASE_KEY);
 		HIVE_VIEW_WEEK_DATABASE = loadConfigString(HIVE_VIEW_WEEK_DATABASE_KEY);
@@ -310,6 +313,7 @@ public class Config {
 		KAFKA_CONSUMER_AUTO_OFFSET_RESET = loadConfigString(KAFKA_CONSUMER_AUTO_OFFSET_RESET_KEY);
 		KAFKA_CONSUMER_ENABLE_AUTO_COMMIT = loadConfigBoolean(KAFKA_CONSUMER_ENABLE_AUTO_COMMIT_KEY);
 		KAFKA_CONSUMER_MAX_POLL_RECORDS = loadConfigInteger(KAFKA_CONSUMER_MAX_POLL_RECORDS_KEY);
+		KAFKA_POLL_PARTITIONS_INDIVIDUALLY = loadConfigBoolean(KAFKA_POLL_PARTITIONS_INDIVIDUALLY_KEY);
 	}
 	
 	private void loadDwhSettings() {
