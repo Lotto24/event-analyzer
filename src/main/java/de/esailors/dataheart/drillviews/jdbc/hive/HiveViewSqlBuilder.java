@@ -46,15 +46,16 @@ public class HiveViewSqlBuilder {
 
 		StringBuilder viewBuilder = new StringBuilder();
 		Node node = eventStructure.getEventStructureTree().getRootNode();
-		
-
 		String viewName = hiveViews.viewNameFor(eventType);
-		lateralViewsView(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.absent());
-		lateralViewsView(Config.getInstance().HIVE_VIEW_DAY_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.of(86400));
-		lateralViewsView(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.of(604800));
 		
-		complexTypeView(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName + "_complex", eventStructure, viewBuilder, node, Optional.absent());
-
+		complexTypeView(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.absent());
+		complexTypeView(Config.getInstance().HIVE_VIEW_DAY_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.of(86400));
+		complexTypeView(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName, eventStructure, viewBuilder, node, Optional.of(604800));
+		
+		lateralViewsView(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName + "_lv", eventStructure, viewBuilder, node, Optional.absent());
+		lateralViewsView(Config.getInstance().HIVE_VIEW_DAY_DATABASE, viewName + "_lv", eventStructure, viewBuilder, node, Optional.of(86400));
+		lateralViewsView(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName + "_lv", eventStructure, viewBuilder, node, Optional.of(604800));
+		
 		return viewBuilder.toString();
 	}
 
@@ -73,7 +74,7 @@ public class HiveViewSqlBuilder {
 		String path = COMPLEX_TYPE_SUB_VIEW_ALIAS + ".`" + COMPLEX_TYPE_EVENT_ALIAS + "`";
 		selectComplexTypeColumns(viewBuilder, node, path, "");
 		
-		viewBuilder.append("\nFROM (");
+		viewBuilder.append("\nFROM (\n");
 		
 		selectStart(viewBuilder);
 		selectComplexType(viewBuilder, node);

@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -32,40 +35,70 @@ public class KafkaEventFetcher {
 
 	private MessageProcessor eventProcessor;
 
-	private Consumer<byte[], byte[]> consumer;
+	int createdConsumers = 0;
+	
+	private Properties consumerProperties;
+	private Consumer<byte[], byte[]> metaConsumer;
 	private Set<Topic> topics = new HashSet<>();
 
 	public KafkaEventFetcher() {
-		initConsumer();
+		initializeConsumerProperties();
+		initMetaConsumer();
 		initTopicList();
 		initMessageProcessor();
 		initShutdownHook();
 	}
 
 	public Set<Topic> fetchEvents() {
-		log.info("Starting to consume events from Kafka");
+		int maxThreads = 4;
+		log.info("Starting to consume events from Kafka using threads: " + maxThreads);
 		long consumeStart = System.currentTimeMillis();
+		
+		ExecutorService executorService = Executors.newFixedThreadPool(maxThreads);
+		
 		int cnt = 0;
 		for (Topic topic : CollectionUtil.toSortedList(topics)) {
 			cnt++;
-			log.info(cnt + " / " + topics.size() + ": " + topic.toString());
-			fetchEventsForTopic(topic);
+			
+			executorService.submit(createThreadForTopic(topic, cnt));
 		}
+		
+		executorService.shutdown();
+		try {
+			executorService.awaitTermination(1, TimeUnit.HOURS);
+		} catch (InterruptedException e) {
+			throw new IllegalStateException("Awaiting termination of topic fetchers failed", e);
+		}
+		
 		long consumeEnd = System.currentTimeMillis();
 		log.info("Consuming finished after " + (consumeEnd - consumeStart) + " ms");
 
 		return topics;
 	}
 
-	private void fetchEventsForTopic(Topic topic) {
+	private Runnable createThreadForTopic(Topic topic, int cnt) {
+		return new Runnable() {
 
-		Collection<TopicPartition> topicParititions = discoverParitionsForTopic(topic);
+			@Override
+			public void run() {
+				log.info(cnt + " / " + topics.size() + ": " + topic.toString());
+				Consumer<byte[], byte[]> consumer = createConsumer();
+				fetchEventsForTopic(topic, consumer);
+				consumer.close();
+			}
+			
+		};
+	}
+
+	private void fetchEventsForTopic(Topic topic, Consumer<byte[], byte[]> consumer) {
+
+		Collection<TopicPartition> topicParititions = discoverParitionsForTopic(topic, consumer);
 		int consumedRecordsTotal = 0;
 
 		if (Config.getInstance().KAFKA_POLL_PARTITIONS_INDIVIDUALLY) {
 			// poll each partition individually until we have enough
 			for (TopicPartition topicPartition : topicParititions) {
-				prepareConsumerForTopicPartition(topicPartition);
+				prepareConsumerForTopicPartition(topicPartition, consumer);
 				ConsumerRecords<byte[], byte[]> consumedRecords = consumer
 						.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
 
@@ -80,7 +113,7 @@ public class KafkaEventFetcher {
 				}
 			}
 		} else {
-			prepareConsumerForTopicPartitions(topicParititions);
+			prepareConsumerForTopicPartitions(topicParititions, consumer);
 			ConsumerRecords<byte[], byte[]> consumedRecords = consumer
 					.poll(Config.getInstance().KAFKA_CONSUMER_POLL_TIMEOUT);
 
@@ -94,21 +127,21 @@ public class KafkaEventFetcher {
 		}
 	}
 
-	private void prepareConsumerForTopicPartitions(Collection<TopicPartition> topicPartitions) {
+	private void prepareConsumerForTopicPartition(TopicPartition topicPartition, Consumer<byte[], byte[]> consumer) {
+		log.debug("Preparing for topic partitiong: " + topicPartition);
+		prepareConsumerForTopicPartitions(Collections.singleton(topicPartition), consumer);
+	}
+	
+	private void prepareConsumerForTopicPartitions(Collection<TopicPartition> topicPartitions, Consumer<byte[], byte[]> consumer) {
 		if (!consumer.subscription().isEmpty()) {
 			log.debug("Unsubscribing from all topic partitions");
 			consumer.unsubscribe();
 		}
 		consumer.assign(topicPartitions);
-		resetConsumerOffsets();
-	}
-	
-	private void prepareConsumerForTopicPartition(TopicPartition topicPartition) {
-		log.debug("Preparing for topic partitiong: " + topicPartition);
-		prepareConsumerForTopicPartitions(Collections.singleton(topicPartition));
+		resetConsumerOffsets(consumer);
 	}
 
-	private Collection<TopicPartition> discoverParitionsForTopic(Topic topic) {
+	private Collection<TopicPartition> discoverParitionsForTopic(Topic topic, Consumer<byte[], byte[]> consumer) {
 		log.debug("Preparing consumer for: " + topic);
 
 		Collection<TopicPartition> partitions = new ArrayList<>();
@@ -124,7 +157,7 @@ public class KafkaEventFetcher {
 		return partitions;
 	}
 
-	private void resetConsumerOffsets() {
+	private void resetConsumerOffsets(Consumer<byte[], byte[]> consumer) {
 		// forcefully reset offset to 0
 		consumer.assignment().forEach(topicPartition -> {
 			consumer.seek(topicPartition, 0);
@@ -138,7 +171,7 @@ public class KafkaEventFetcher {
 		initWhitelistTopics();
 
 		log.debug("Listing all topics in Kafka");
-		Map<String, List<PartitionInfo>> topicNames = consumer.listTopics();
+		Map<String, List<PartitionInfo>> topicNames = metaConsumer.listTopics();
 
 		for (String topicName : topicNames.keySet()) {
 			String msg = " * " + topicName + ": ";
@@ -297,14 +330,14 @@ public class KafkaEventFetcher {
 	private void initWhitelistTopics() {
 		// FOR DEVELOPMENT PURPOSES ONLY!
 		topicsWhitelist = new HashSet<String>();
-//		topicsWhitelist.add("payment_payin_processed");
-//		topicsWhitelist.add("customer_restrictions_changed");
-//		topicsWhitelist.add("customer_registration");
-//		topicsWhitelist.add("postident_response_reporting");
-//		topicsWhitelist.add("account_balance_change_events");
-//		topicsWhitelist.add("alinghi_dbg_real_ticket_mapped");
-//		topicsWhitelist.add("alinghi_dbg_lc_ticket_ordered");
-//		topicsWhitelist.add("address_change");
+		topicsWhitelist.add("payment_payin_processed");
+		topicsWhitelist.add("customer_restrictions_changed");
+		topicsWhitelist.add("customer_registration");
+		topicsWhitelist.add("postident_response_reporting");
+		topicsWhitelist.add("account_balance_change_events");
+		topicsWhitelist.add("alinghi_dbg_real_ticket_mapped");
+		topicsWhitelist.add("alinghi_dbg_lc_ticket_ordered");
+		topicsWhitelist.add("address_change");
 		topicsWhitelist.add("fritz_ticket_procurement");
 
 		if (topicsWhitelist.size() > 0) {
@@ -312,31 +345,35 @@ public class KafkaEventFetcher {
 		}
 	}
 
-	private void initConsumer() {
-		consumer = new KafkaConsumer<>(initializeConsumerProperties());
+	private void initMetaConsumer() {
+		metaConsumer = createConsumer();
 	}
 
-	private Properties initializeConsumerProperties() {
+	private KafkaConsumer<byte[], byte[]> createConsumer() {
+		createdConsumers++;
+		return new KafkaConsumer<>(consumerProperties);
+	}
+
+	private void initializeConsumerProperties() {
 		log.info("Creating Kafka consumer for: " + Config.getInstance().KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
 
-		Properties props = new Properties();
-		props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
-		props.put(ConsumerConfig.GROUP_ID_CONFIG, Config.getInstance().KAFKA_CONSUMER_GROUP_ID);
-		props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-		props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
-		props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, Config.getInstance().KAFKA_CONSUMER_AUTO_OFFSET_RESET);
-		props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, Config.getInstance().KAFKA_CONSUMER_ENABLE_AUTO_COMMIT);
-		props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, Config.getInstance().KAFKA_CONSUMER_MAX_POLL_RECORDS);
-		return props;
+		consumerProperties = new Properties();
+		consumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, Config.getInstance().KAFKA_CONSUMER_BOOTSTRAP_SERVERS);
+		consumerProperties.put(ConsumerConfig.GROUP_ID_CONFIG, Config.getInstance().KAFKA_CONSUMER_GROUP_ID);
+		consumerProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+		consumerProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
+		consumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, Config.getInstance().KAFKA_CONSUMER_AUTO_OFFSET_RESET);
+		consumerProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, Config.getInstance().KAFKA_CONSUMER_ENABLE_AUTO_COMMIT);
+		consumerProperties.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, Config.getInstance().KAFKA_CONSUMER_MAX_POLL_RECORDS);
 	}
 
 	public void close() {
 		log.debug("Closing connection to Kafka");
-		if (consumer == null) {
+		if (metaConsumer == null) {
 			log.warn("Tried to close uninitialized kafka connection");
 			return;
 		}
-		consumer.close();
+		metaConsumer.close();
 	}
 
 	private void initShutdownHook() {
@@ -344,6 +381,7 @@ public class KafkaEventFetcher {
 			public void run() {
 				log.debug("Shutdown Hook triggered");
 				close();
+				System.out.println("Created consumers during run: " + createdConsumers);
 			}
 		});
 	}

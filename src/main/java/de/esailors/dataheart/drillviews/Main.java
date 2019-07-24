@@ -1,6 +1,11 @@
 package de.esailors.dataheart.drillviews;
 
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -8,7 +13,6 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
 
 import com.google.common.base.Optional;
-
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.kafka.KafkaEventFetcher;
@@ -24,6 +28,53 @@ public class Main {
 	private static final Logger log = LogManager.getLogger(Main.class.getName());
 
 	private static final String DEFAULT_CONFIG_PATH = "conf/config.properties";
+
+	public static void main2(String[] args) {
+
+		ExecutorService executorService = Executors.newFixedThreadPool(4);
+
+		Random rng = new Random();
+		
+		for (int i = 0; i < 10; i++) {
+			int r = rng.nextInt(10);
+			AtomicInteger counter = new AtomicInteger(r);
+			executorService.submit(createTask(counter));
+		}
+		System.out.println("Done submitting: " + executorService.isTerminated() + " " + executorService.isShutdown());
+		executorService.shutdown();
+		try {
+			executorService.awaitTermination(10, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+	}
+
+	private static Runnable createTask(AtomicInteger counter) {
+		return new Runnable() {
+
+			@Override
+			public void run() {
+				Thread currentThread = Thread.currentThread();
+				String threadName = currentThread.getName() + " " + currentThread.getId();
+				
+				int inititalValue = counter.get();
+				threadName = "" + inititalValue;
+				
+				int current;
+				while((current = counter.getAndIncrement()) < 10) {
+					System.out.println(threadName + ": " + current);
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				System.out.println(threadName + " done");
+			}
+
+		};
+	}
 
 	public static void main(String[] args) {
 
