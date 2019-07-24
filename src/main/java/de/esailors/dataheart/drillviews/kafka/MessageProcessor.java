@@ -15,9 +15,18 @@ public class MessageProcessor {
 
 	private static final Logger log = LogManager.getLogger(MessageProcessor.class.getName());
 
+	private static MessageProcessor instance;
+	
+	public static MessageProcessor getInstance() {
+		if(instance == null) {
+			instance = new MessageProcessor();
+		}
+		return instance;
+	}
+	
 	private EventFactory eventFactory;
 
-	public MessageProcessor() {
+	private MessageProcessor() {
 		this.eventFactory = new EventFactory();
 	}
 

@@ -1,9 +1,9 @@
 package de.esailors.dataheart.drillviews;
 
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -13,9 +13,12 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
 
 import com.google.common.base.Optional;
+
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.kafka.KafkaEventFetcher;
+import de.esailors.dataheart.drillviews.kafka.KafkaEventFetcherFactory;
+import de.esailors.dataheart.drillviews.kafka.KafkaTopicsExplorer;
 import de.esailors.dataheart.drillviews.processor.Processor;
 import de.esailors.dataheart.drillviews.util.GitRepository;
 
@@ -31,13 +34,20 @@ public class Main {
 
 	public static void main2(String[] args) {
 
-		ExecutorService executorService = Executors.newFixedThreadPool(4);
-
-		Random rng = new Random();
+		initLog4j();
+		initConfig(args);
 		
+		System.out.println("Creating service");
+		ExecutorService executorService = Executors.newFixedThreadPool(2, new KafkaEventFetcherFactory());
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
+
 		for (int i = 0; i < 10; i++) {
-			int r = rng.nextInt(10);
-			AtomicInteger counter = new AtomicInteger(r);
+			AtomicInteger counter = new AtomicInteger(i);
+			System.out.println("Submitting task " + i);
 			executorService.submit(createTask(counter));
 		}
 		System.out.println("Done submitting: " + executorService.isTerminated() + " " + executorService.isShutdown());
@@ -50,6 +60,23 @@ public class Main {
 		
 	}
 
+	private static ThreadFactory createThreadFactory() {
+		return new ThreadFactory() {
+
+			private int threadCount = 0;
+			
+			@Override
+			public Thread newThread(Runnable r) {
+				System.out.println("Creating thread");
+				Thread t = new Thread(r);
+				t.setName("CustomThread-" + threadCount);
+				threadCount++;
+				return t;
+			}
+			
+		};
+	}
+
 	private static Runnable createTask(AtomicInteger counter) {
 		return new Runnable() {
 
@@ -57,10 +84,9 @@ public class Main {
 			public void run() {
 				Thread currentThread = Thread.currentThread();
 				String threadName = currentThread.getName() + " " + currentThread.getId();
-				
-				int inititalValue = counter.get();
-				threadName = "" + inititalValue;
-				
+				System.out.println(threadName + " running with " + currentThread.getClass());
+				KafkaEventFetcher myThread = (KafkaEventFetcher) currentThread;
+//				myThread.doStuff(threadName, counter);
 				int current;
 				while((current = counter.getAndIncrement()) < 10) {
 					System.out.println(threadName + ": " + current);
@@ -97,16 +123,8 @@ public class Main {
 		// - use some config library instead of the homebrewn one
 
 		initLog4j();
-
+		initConfig(args);
 		log.info("Starting Event Analyzer");
-
-		// load configuration
-		String configPath = DEFAULT_CONFIG_PATH;
-		if (args.length > 0) {
-			configPath = args[0];
-			log.debug("Using config path from command line argument: " + configPath);
-		}
-		Config.load(configPath);
 
 		// inititalize local git repository
 		Optional<GitRepository> gitRepositoryOption;
@@ -118,7 +136,9 @@ public class Main {
 		}
 
 //		 fetch messages from all Topics and parse to Event
-		Set<Topic> topics = new KafkaEventFetcher().fetchEvents();
+		KafkaTopicsExplorer kafkaExplorer = new KafkaTopicsExplorer();
+		Set<Topic> topics = kafkaExplorer.fetchEvents();
+		kafkaExplorer.close();
 
 		// process the fetched messages
 		// align existing Drill views with fetched events
@@ -128,6 +148,15 @@ public class Main {
 
 		log.info("DrillViewGenerator finished successfully");
 
+	}
+
+	private static void initConfig(String[] args) {
+		String configPath = DEFAULT_CONFIG_PATH;
+		if (args.length > 0) {
+			configPath = args[0];
+			log.debug("Using config path from command line argument: " + configPath);
+		}
+		Config.load(configPath);
 	}
 
 	private static void initLog4j() {
