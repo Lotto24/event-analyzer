@@ -13,6 +13,7 @@ import org.apache.avro.Schema.Type;
 import com.google.common.base.Optional;
 
 import de.esailors.dataheart.drillviews.util.CollectionUtil;
+import de.esailors.dataheart.drillviews.util.JsonUtil.JsonType;
 
 public class Node implements Serializable {
 
@@ -98,12 +99,20 @@ public class Node implements Serializable {
 	}
 
 	public boolean hasArrayType() {
-		// TODO for now we only treat arrays properly when event is defined with avro
-		// getProperty(NodePropertyType.JSON_TYPE).contains(JsonType.ARRAY.toString());
 		Set<String> avroTypes = getProperty(NodePropertyType.AVRO_TYPE);
+		if((avroTypes != null && avroTypes.contains(Type.ARRAY.toString()))) {
+			return true;
+		}
 		Set<String> avroUnionTypes = getProperty(NodePropertyType.AVRO_UNION_TYPE);
-		return (avroTypes != null && avroTypes.contains(Type.ARRAY.toString()))
-				|| (avroUnionTypes != null && avroUnionTypes.contains(Type.ARRAY.toString()));
+		if((avroUnionTypes != null && avroUnionTypes.contains(Type.ARRAY.toString()))) {
+			return true;
+		}
+		// TODO wip trying to handle arrays from pure jsons as well
+		Set<String> jsonTypes = getProperty(NodePropertyType.JSON_TYPE);
+		if(jsonTypes != null && jsonTypes.contains(JsonType.ARRAY.toString())) {
+			return true;
+		}
+		return false;
 	}
 	
 	public String getId() {
