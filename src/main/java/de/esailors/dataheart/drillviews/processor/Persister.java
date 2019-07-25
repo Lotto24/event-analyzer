@@ -363,7 +363,6 @@ public class Persister {
 		Optional<EventStructure> mergedEventStructureOption = eventType.getMergedEventStructured();
 		if (mergedEventStructureOption.isPresent()) {
 			persistEventStructure(mergedEventStructureOption.get());
-			// TODO quick n dirty, just testing serialization for now
 			serializeMergedEventStructureTreeToDisk(mergedEventStructureOption.get());
 		}
 		;
@@ -374,7 +373,7 @@ public class Persister {
 		String fileName = persisterPaths.fileNameForEventStructureSerialization(mergedEventStructure);
 		String filePath = persisterPaths.outputDirectoryPathFor(mergedEventStructure) + File.separator + fileName;
 
-		log.info("Serializing merged EventStructure tree for " + mergedEventStructure.getEventType().getName() + " to "
+		log.debug("Serializing merged EventStructure tree for " + mergedEventStructure.getEventType().getName() + " to "
 				+ filePath);
 
 		try (FileOutputStream file = new FileOutputStream(filePath);
@@ -436,9 +435,7 @@ public class Persister {
 	}
 
 	private void plotTree(EventStructure eventStructure) {
-
 		String dotFileName = persisterPaths.fileNameForEventStructureDot(eventStructure);
-
 		String dotContent = new Dotter(eventStructure).generateDot();
 		if (gitRepositoryOption.isPresent()) {
 			// check if .dot changed from git repository, if not don't render it again
@@ -452,7 +449,7 @@ public class Persister {
 				}
 				log.info("Event structure plot has changed, rerendering " + eventStructure);
 			} else {
-				log.debug("Event structure not found in local git repository");
+				log.info("Event structure not found in local git repository, starting to render " + eventStructure);
 			}
 		} else {
 			log.debug("Local git repository disabled, unable to check if event structure has changed");

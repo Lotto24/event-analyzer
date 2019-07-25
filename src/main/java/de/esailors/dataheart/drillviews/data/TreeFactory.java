@@ -148,6 +148,12 @@ public class TreeFactory {
 			Schema arrayItemSchema = field.schema().getElementType();
 			node.addProperty(NodePropertyType.AVRO_ARRAY_ITEM_TYPE, arrayItemSchema.getType().toString());
 			node.addProperty(NodePropertyType.AVRO_ARRAY_ITEM_NAME, arrayItemSchema.getName());
+			// if it's an array of enums we can decorate the avro enum symbols as well
+			if (arrayItemSchema.getType().equals(Type.ENUM)) {
+				for (String enumSymbol : arrayItemSchema.getEnumSymbols()) {
+					node.addProperty(NodePropertyType.AVRO_ENUM_SYMBOL, enumSymbol);
+				}
+			}
 
 		}
 	}

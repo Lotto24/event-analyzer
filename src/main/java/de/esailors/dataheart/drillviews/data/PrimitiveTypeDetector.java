@@ -8,6 +8,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.google.common.base.Optional;
 
+import de.esailors.dataheart.drillviews.util.CollectionUtil;
 import de.esailors.dataheart.drillviews.util.JsonUtil.JsonType;
 
 public class PrimitiveTypeDetector {
@@ -15,13 +16,58 @@ public class PrimitiveTypeDetector {
 	private static final Logger log = LogManager.getLogger(PrimitiveTypeDetector.class.getName());
 
 	public Optional<PrimitiveType> primitiveTypeForNode(Node node) {
-
-		// TODO multiple types, no type, avro_type, union_types etc
+		// check if primitive type has been analyzed before
+		Set<String> primitiveTypeProperty = node.getProperty(NodePropertyType.PRIMITIVE_TYPE);
+		if(primitiveTypeProperty != null && primitiveTypeProperty.size() == 1) {
+			String primitiveType = CollectionUtil.popFromSet(primitiveTypeProperty);
+			log.debug("Found PrimitiveType " + primitiveType + " from previous analysis for: " + node.getId());
+			return Optional.of(PrimitiveType.valueOf(primitiveType));
+		}
+		Optional<PrimitiveType> determinedPrimitiveType = determinePrimitiveTypeForNode(node);
+		if(determinedPrimitiveType.isPresent()) {
+			// mark primitive type as node property
+			PrimitiveType primitiveType = determinedPrimitiveType.get();
+			node.addProperty(NodePropertyType.PRIMITIVE_TYPE, primitiveType.toString());
+		}
+		return determinedPrimitiveType;
+	}
+	
+	/**
+	 * For nodes that are arrays of primitives
+	 */
+	public Optional<PrimitiveType> primitiveAvroArrayItemTypeForNode(Node node) {
+		// check if primitive type has been analyzed before
+		Set<String> primitiveTypeProperty = node.getProperty(NodePropertyType.ARRAY_ITEM_PRIMITIVE_TYPE);
+		if(primitiveTypeProperty != null && primitiveTypeProperty.size() == 1) {
+			String primitiveType = CollectionUtil.popFromSet(primitiveTypeProperty);
+			log.debug("Found PrimitiveType " + primitiveType + " from previous analysis for: " + node.getId());
+			return Optional.of(PrimitiveType.valueOf(primitiveType));
+		}
+		Optional<PrimitiveType> determinedPrimitiveType = determinePrimitiveAvroArrayItemTypeForNode(node);
+		if(determinedPrimitiveType.isPresent()) {
+			// mark primitive type as node property
+			PrimitiveType primitiveType = determinedPrimitiveType.get();
+			node.addProperty(NodePropertyType.ARRAY_ITEM_PRIMITIVE_TYPE, primitiveType.toString());
+		}
+		return determinedPrimitiveType;
+	}
+	
+	private Optional<PrimitiveType> determinePrimitiveAvroArrayItemTypeForNode(Node node) {
+		Set<String> arrayTypes = node.getProperty(NodePropertyType.AVRO_ARRAY_ITEM_TYPE);
+		if (arrayTypes == null || arrayTypes.isEmpty()) {
+			log.warn("Got asked for primitive avro array item type of a nodes withou avro_array_item_type set: "
+					+ node.getId());
+			return Optional.absent();
+		}
+		return primitiveTypeForAvroType(primitiveAvroTypeFromSet(arrayTypes));
+	}
+	
+	private Optional<PrimitiveType> determinePrimitiveTypeForNode(Node node) {
 
 		// try avro type first
 		Optional<Type> avroTypeOption = primitiveAvroTypeForNode(node);
 		Optional<PrimitiveType> primitiveTypeForAvroType = primitiveTypeForAvroType(avroTypeOption);
-		if(primitiveTypeForAvroType.isPresent()) {
+		if (primitiveTypeForAvroType.isPresent()) {
 			return primitiveTypeForAvroType;
 		}
 		log.debug("Unable to determined primitivte avroType, trying jsonType for " + node.getId());
@@ -55,60 +101,35 @@ public class PrimitiveTypeDetector {
 		}
 
 		Optional<Type> primitiveAvroTypeOption = primitiveAvroTypeFromSet(avroTypes);
-		if (!primitiveAvroTypeOption.isPresent()) {
-			return Optional.absent();
-		}
-		Type primitiveAvroType = primitiveAvroTypeOption.get();
-		if (Type.UNION.equals(primitiveAvroType)) {
-			// look at union types
-			Set<String> unionTypes = node.getProperty(NodePropertyType.AVRO_UNION_TYPE);
-			return primitiveAvroTypeFromSet(unionTypes);
-		} else {
+		if (primitiveAvroTypeOption.isPresent()) {
 			return primitiveAvroTypeOption;
 		}
-
-//			if (unionTypes == null || unionTypes.size() == 0) {
-//				throw new IllegalStateException(
-//						"Expect nodes with avro type UNION to have set union types property " + node.getId());
-//			}
-//			for (String unionType : unionTypes) {
-//				if (Type.NULL.toString().equals(unionType)) {
-//					continue;
-//				}
-//				// TODO bad heuristic, same as above
-//				if (Type.UNION.toString().equals(primitiveAvroType)
-//						|| Type.STRING.toString().equals(primitiveAvroType)) {
-//					primitiveAvroType = unionType;
-//				}
-//			}
-//		}
-//		return Optional.of(Type.valueOf(primitiveAvroType));
+		// check if it's a union, if yet look at union types (nullable)
+		if(avroTypes.contains(Type.UNION.toString())) {
+			Set<String> unionTypes = node.getProperty(NodePropertyType.AVRO_UNION_TYPE);
+			return primitiveAvroTypeFromSet(unionTypes);
+		}
+		
+		return Optional.absent();
 	}
 
 	private Optional<Type> primitiveAvroTypeFromSet(Set<String> avroTypes) {
-		String primitiveAvroType = null;
-		for (String avroType : avroTypes) {
-			if (Type.NULL.toString().equals(avroType)) {
-				continue;
-			}
-			if (primitiveAvroType == null) {
-				primitiveAvroType = avroType;
-			} else {
-				// TODO bad heuristic, if we get conflicting types we should get up to String as
-				// well
-				if (Type.STRING.toString().equals(avroType)) {
-					primitiveAvroType = avroType;
-				}
-			}
-		}
-		if (primitiveAvroType == null) {
+		if (avroTypes == null || avroTypes.isEmpty()) {
 			return Optional.absent();
 		}
+		// rank avro types from biggest to smallest
+		Type[] orderedTypes = { Type.BYTES, Type.STRING, Type.FIXED, Type.ENUM, Type.DOUBLE, Type.FLOAT, Type.LONG,
+				Type.INT, Type.BOOLEAN };
+		for (Type type : orderedTypes) {
+			if (avroTypes.contains(type.toString())) {
+				return Optional.of(type);
+			}
+		}
 
-		return Optional.of(Type.valueOf(primitiveAvroType));
+		return Optional.absent();
 	}
 
-	public Optional<JsonType> primitiveJsonTypeForNode(Node node) {
+	private Optional<JsonType> primitiveJsonTypeForNode(Node node) {
 		// TODO multiple types, no type, avro_type, union_types etc
 		if (node.hasChildren()) {
 			throw new IllegalArgumentException("Got asked for a primitive type of a nested node: " + node.getId());
@@ -140,20 +161,6 @@ public class PrimitiveTypeDetector {
 		return Optional.of(JsonType.valueOf(primitiveJsonType));
 	}
 
-	/**
-	 * For nodes that are arrays of primitives
-	 */
-	public Optional<PrimitiveType> primitiveAvroArrayItemTypeForNode(Node node) {
-		Set<String> arrayTypes = node.getProperty(NodePropertyType.AVRO_ARRAY_ITEM_TYPE);
-		if (arrayTypes == null || arrayTypes.isEmpty()) {
-			log.warn("Got asked for primitive avro array item type of a nodes withou avro_array_item_type set: "
-					+ node.getId());
-			return Optional.absent();
-		}
-		return primitiveTypeForAvroType(primitiveAvroTypeFromSet(arrayTypes));
-
-	}
-
 	private Optional<PrimitiveType> primitiveTypeForAvroType(Optional<Type> avroTypeOption) {
 		if (!avroTypeOption.isPresent()) {
 			return Optional.absent();
@@ -164,6 +171,10 @@ public class PrimitiveTypeDetector {
 	private Optional<PrimitiveType> primitiveTypeForAvroType(Type avroType) {
 		switch (avroType) {
 		case STRING:
+			return Optional.of(PrimitiveType.TEXT);
+		case FIXED:
+			return Optional.of(PrimitiveType.TEXT);
+		case BYTES:
 			return Optional.of(PrimitiveType.TEXT);
 		case ENUM:
 			// TODO special handling for ENUMs?
@@ -184,12 +195,9 @@ public class PrimitiveTypeDetector {
 		case MAP:
 		case RECORD:
 		case UNION: {
-			throw new IllegalStateException(
-					"Unexpected nested avro type received as primitive " + avroType);
+			throw new IllegalStateException("Unexpected nested avro type received as primitive " + avroType);
 		}
 
-		case BYTES:
-		case FIXED:
 		case ARRAY:
 		case NULL:
 		default: {

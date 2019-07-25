@@ -13,6 +13,7 @@ import org.apache.kafka.common.PartitionInfo;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Topic;
 import de.esailors.dataheart.drillviews.util.CollectionUtil;
 
@@ -35,7 +36,7 @@ public class KafkaTopicsExplorer {
 	}
 
 	public Set<Topic> fetchEvents() {
-		int maxThreads = 4;
+		int maxThreads = Config.getInstance().KAFKA_FETCHER_THREADS;
 		log.info("Starting to consume events from Kafka using threads: " + maxThreads);
 		long consumeStart = System.currentTimeMillis();
 		

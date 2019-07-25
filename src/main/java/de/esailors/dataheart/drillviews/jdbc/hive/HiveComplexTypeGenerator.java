@@ -47,7 +47,6 @@ public class HiveComplexTypeGenerator {
 			}
 			r.append(">");
 		} else {
-			// TODO quick n dirty for now
 			if (node.hasArrayType()) {
 				// an array of primitives
 				Optional<PrimitiveType> primitiveArrayItemTypeOption = primitiveTypeDetector

@@ -27,11 +27,11 @@ public class KafkaEventFetcherFactory implements ThreadFactory {
 	}
 	
 	public void close() {
-		log.debug("Closing all kafka event fetchers");
 		if(!open || createdInstances == null) {
 			log.debug("Already closed");
 			return;
 		}
+		log.info("Closing " + createdInstances.size() + " kafka event fetchers");
 		for(KafkaEventFetcher instance : createdInstances) {
 			instance.close();
 		}

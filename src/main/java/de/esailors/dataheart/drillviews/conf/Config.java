@@ -73,6 +73,7 @@ public class Config {
 	private static final String KAFKA_CONSUMER_ENABLE_AUTO_COMMIT_KEY = "kafka.consumer.enable_autocommit";
 	private static final String KAFKA_CONSUMER_MAX_POLL_RECORDS_KEY = "kafka.consumer.max_poll_records";
 	private static final String KAFKA_POLL_PARTITIONS_INDIVIDUALLY_KEY = "kafka.poll.partitions.individually";
+	private static final String KAFKA_FETCHER_THREADS_KEY = "kafka.fetcher.threads";
 
 	// git settings
 
@@ -158,6 +159,7 @@ public class Config {
 	public int KAFKA_CONSUMER_MAX_POLL_RECORDS = 10;
 	public int KAFKA_CONSUMER_POLL_TIMEOUT = 100;
 	public boolean KAFKA_POLL_PARTITIONS_INDIVIDUALLY = false;
+	public int KAFKA_FETCHER_THREADS = 8;
 
 	// git settings
 	
@@ -314,6 +316,7 @@ public class Config {
 		KAFKA_CONSUMER_ENABLE_AUTO_COMMIT = loadConfigBoolean(KAFKA_CONSUMER_ENABLE_AUTO_COMMIT_KEY);
 		KAFKA_CONSUMER_MAX_POLL_RECORDS = loadConfigInteger(KAFKA_CONSUMER_MAX_POLL_RECORDS_KEY);
 		KAFKA_POLL_PARTITIONS_INDIVIDUALLY = loadConfigBoolean(KAFKA_POLL_PARTITIONS_INDIVIDUALLY_KEY);
+		KAFKA_FETCHER_THREADS = loadConfigInteger(KAFKA_FETCHER_THREADS_KEY);
 	}
 	
 	private void loadDwhSettings() {

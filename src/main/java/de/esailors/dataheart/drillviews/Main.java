@@ -1,11 +1,6 @@
 package de.esailors.dataheart.drillviews;
 
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -16,8 +11,6 @@ import com.google.common.base.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Topic;
-import de.esailors.dataheart.drillviews.kafka.KafkaEventFetcher;
-import de.esailors.dataheart.drillviews.kafka.KafkaEventFetcherFactory;
 import de.esailors.dataheart.drillviews.kafka.KafkaTopicsExplorer;
 import de.esailors.dataheart.drillviews.processor.Processor;
 import de.esailors.dataheart.drillviews.util.GitRepository;
@@ -31,76 +24,6 @@ public class Main {
 	private static final Logger log = LogManager.getLogger(Main.class.getName());
 
 	private static final String DEFAULT_CONFIG_PATH = "conf/config.properties";
-
-	public static void main2(String[] args) {
-
-		initLog4j();
-		initConfig(args);
-		
-		System.out.println("Creating service");
-		ExecutorService executorService = Executors.newFixedThreadPool(2, new KafkaEventFetcherFactory());
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e1) {
-			e1.printStackTrace();
-		}
-
-		for (int i = 0; i < 10; i++) {
-			AtomicInteger counter = new AtomicInteger(i);
-			System.out.println("Submitting task " + i);
-			executorService.submit(createTask(counter));
-		}
-		System.out.println("Done submitting: " + executorService.isTerminated() + " " + executorService.isShutdown());
-		executorService.shutdown();
-		try {
-			executorService.awaitTermination(10, TimeUnit.SECONDS);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		
-	}
-
-	private static ThreadFactory createThreadFactory() {
-		return new ThreadFactory() {
-
-			private int threadCount = 0;
-			
-			@Override
-			public Thread newThread(Runnable r) {
-				System.out.println("Creating thread");
-				Thread t = new Thread(r);
-				t.setName("CustomThread-" + threadCount);
-				threadCount++;
-				return t;
-			}
-			
-		};
-	}
-
-	private static Runnable createTask(AtomicInteger counter) {
-		return new Runnable() {
-
-			@Override
-			public void run() {
-				Thread currentThread = Thread.currentThread();
-				String threadName = currentThread.getName() + " " + currentThread.getId();
-				System.out.println(threadName + " running with " + currentThread.getClass());
-				KafkaEventFetcher myThread = (KafkaEventFetcher) currentThread;
-//				myThread.doStuff(threadName, counter);
-				int current;
-				while((current = counter.getAndIncrement()) < 10) {
-					System.out.println(threadName + ": " + current);
-					try {
-						Thread.sleep(100);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-				System.out.println(threadName + " done");
-			}
-
-		};
-	}
 
 	public static void main(String[] args) {
 

@@ -357,9 +357,6 @@ public class Processor {
 		String viewFromCurrentRun = hiveViewSqlBuilder.generateHiveViewsFor(eventType,
 				mergedEventStructuredOption.get());
 
-		// TODO hacky test
-		System.out.println(viewFromCurrentRun);
-
 		if (hiveViews.doesViewExist(eventType)) {
 			log.debug("Hive view for " + eventType + " already exists");
 			// check if it's the same view and don't execute if it is
@@ -392,13 +389,13 @@ public class Processor {
 	}
 
 	private void createDwhTable(EventType eventType) {
-		log.info("Creating DWH table for " + eventType);
+		log.debug("Creating DWH table for " + eventType);
 		String ddl = dwhGenerator.createDwhTable(eventType);
 		persister.persistDwhTable(eventType, ddl);
 	}
 
 	private void createDwhJob(EventType eventType) {
-		log.info("Creating DWH job for " + eventType);
+		log.debug("Creating DWH job for " + eventType);
 		String job = dwhGenerator.createDwhJob(eventType);
 		persister.persistDwhJob(eventType, job);
 	}

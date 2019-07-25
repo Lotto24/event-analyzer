@@ -49,7 +49,7 @@ public class SystemUtil {
 	public static void executeCommand(String command) {
 		// inspired by https://alvinalexander.com/java/edu/pj/pj010016
 
-		log.info("Executing system command: " + command);
+		log.debug("Executing system command: " + command);
 		
 		String s = null;
 		try {
