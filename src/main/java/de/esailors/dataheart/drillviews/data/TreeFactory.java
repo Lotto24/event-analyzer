@@ -67,7 +67,20 @@ public class TreeFactory {
 				node.setOptional(true);
 			}
 			if (isNestedJson(fieldJson)) {
-				extendTreeWithJsonFields(node, fieldJson, true);
+				// TODO wip trying to handle arrays as well
+				if (fieldJson.isObject()) {
+					extendTreeWithJsonFields(node, fieldJson, true);
+				} else if (fieldJson.isArray()) {
+					Iterator<JsonNode> arrayItemIterator = fieldJson.getElements();
+					while (arrayItemIterator.hasNext()) {
+						JsonNode arrayItem = arrayItemIterator.next();
+						if (isNestedJson(arrayItem)) {
+							extendTreeWithJsonFields(node, arrayItem, true);
+						}
+					}
+				} else {
+					throw new IllegalStateException("Expect nested jsons to either be objects/records or arrays");
+				}
 			}
 		}
 	}
@@ -246,7 +259,9 @@ public class TreeFactory {
 	}
 
 	private boolean isNestedJson(JsonNode json) {
-		return json.isObject();
+		// TODO wip trying to get arrays to work
+//		return json.isObject();
+		return json.isContainerNode();
 	}
 
 }
