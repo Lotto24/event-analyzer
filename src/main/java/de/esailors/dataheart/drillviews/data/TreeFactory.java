@@ -74,6 +74,8 @@ public class TreeFactory {
 					Iterator<JsonNode> arrayItemIterator = fieldJson.getElements();
 					while (arrayItemIterator.hasNext()) {
 						JsonNode arrayItem = arrayItemIterator.next();
+						node.addProperty(NodePropertyType.JSON_ARRAY_ITEM_TYPE,
+								JsonUtil.getJsonType(arrayItem).toString());
 						if (isNestedJson(arrayItem)) {
 							extendTreeWithJsonFields(node, arrayItem, true);
 						}

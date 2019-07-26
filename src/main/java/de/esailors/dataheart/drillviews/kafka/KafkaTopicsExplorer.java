@@ -248,7 +248,7 @@ public class KafkaTopicsExplorer {
 //		topicsWhitelist.add("alinghi_dbg_real_ticket_mapped");
 //		topicsWhitelist.add("alinghi_dbg_lc_ticket_ordered");
 //		topicsWhitelist.add("address_change");
-//		topicsWhitelist.add("fritz_ticket_procurement");
+		topicsWhitelist.add("fritz_ticket_procurement");
 
 		if (topicsWhitelist.size() > 0) {
 			log.warn("DEV ONLY! Whitelisted topics: " + topicsWhitelist.size());

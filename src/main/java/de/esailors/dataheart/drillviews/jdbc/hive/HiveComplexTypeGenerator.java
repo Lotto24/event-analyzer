@@ -50,12 +50,15 @@ public class HiveComplexTypeGenerator {
 			if (node.hasArrayType()) {
 				// an array of primitives
 				Optional<PrimitiveType> primitiveArrayItemTypeOption = primitiveTypeDetector
-						.primitiveAvroArrayItemTypeForNode(node);
+						.primitiveArrayItemTypeForNode(node);
+				PrimitiveType primitiveType;
 				if (!primitiveArrayItemTypeOption.isPresent()) {
-					throw new IllegalStateException(
-							"Expect arrays withouth children to have a primitive type: " + node.getId());
+					// fall back to text
+					primitiveType = PrimitiveType.TEXT;
+					log.error("Expect arrays withouth children to have a primitive type: " + node.getId());
+				} else {
+				    primitiveType = primitiveArrayItemTypeOption.get();
 				}
-				PrimitiveType primitiveType = primitiveArrayItemTypeOption.get();
 				r.append(hiveTypeFor(primitiveType));
 			} else {
 				// primitive type
