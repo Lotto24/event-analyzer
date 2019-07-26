@@ -45,6 +45,10 @@ public class Node implements Serializable {
 		}
 	}
 
+	public <E extends Enum<E>> void addProperty(NodePropertyType name, E property) {
+		addProperty(name, property.toString());
+	}
+	
 	public void addProperty(NodePropertyType name, String property) {
 		if (properties.get(name.toString()) == null) {
 			properties.put(name.toString(), new HashSet<>());

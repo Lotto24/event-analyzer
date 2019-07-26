@@ -62,20 +62,18 @@ public class TreeFactory {
 
 			JsonNode fieldJson = field.getValue();
 			JsonType jsonType = JsonUtil.getJsonType(fieldJson);
-			node.addProperty(NodePropertyType.JSON_TYPE, jsonType.toString());
+			node.addProperty(NodePropertyType.JSON_TYPE, jsonType);
 			if (jsonType.equals(JsonType.NULL)) {
 				node.setOptional(true);
 			}
 			if (isNestedJson(fieldJson)) {
-				// TODO wip trying to handle arrays as well
 				if (fieldJson.isObject()) {
 					extendTreeWithJsonFields(node, fieldJson, true);
 				} else if (fieldJson.isArray()) {
 					Iterator<JsonNode> arrayItemIterator = fieldJson.getElements();
 					while (arrayItemIterator.hasNext()) {
 						JsonNode arrayItem = arrayItemIterator.next();
-						node.addProperty(NodePropertyType.JSON_ARRAY_ITEM_TYPE,
-								JsonUtil.getJsonType(arrayItem).toString());
+						node.addProperty(NodePropertyType.JSON_ARRAY_ITEM_TYPE, JsonUtil.getJsonType(arrayItem));
 						if (isNestedJson(arrayItem)) {
 							extendTreeWithJsonFields(node, arrayItem, true);
 						}
@@ -135,7 +133,7 @@ public class TreeFactory {
 
 	private void addAvroFieldPropertiesToNode(Field field, Node node) {
 		Type fieldType = field.schema().getType();
-		node.addProperty(NodePropertyType.AVRO_TYPE, fieldType.toString());
+		node.addProperty(NodePropertyType.AVRO_TYPE, fieldType);
 
 		// list enum values
 		if (fieldType.equals(Type.ENUM)) {
@@ -169,7 +167,17 @@ public class TreeFactory {
 					node.addProperty(NodePropertyType.AVRO_ENUM_SYMBOL, enumSymbol);
 				}
 			}
+		}
 
+		// list map value types
+		if (fieldType.equals(Type.MAP)) {
+			Schema valueType = field.schema().getValueType();
+			node.addProperty(NodePropertyType.AVRO_MAP_VALUE_TYPE, valueType.getType().toString());
+			if (valueType.getType().equals(Type.UNION)) {
+				for (Schema valueSchema : valueType.getTypes()) {
+					node.addProperty(NodePropertyType.AVRO_MAP_VALUE_TYPE, valueSchema.getType().toString());
+				}
+			}
 		}
 	}
 

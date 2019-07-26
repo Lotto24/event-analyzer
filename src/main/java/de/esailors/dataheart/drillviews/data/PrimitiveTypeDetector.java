@@ -20,14 +20,14 @@ public class PrimitiveTypeDetector {
 		Set<String> primitiveTypeProperty = node.getProperty(NodePropertyType.PRIMITIVE_TYPE);
 		if (primitiveTypeProperty != null && primitiveTypeProperty.size() == 1) {
 			String primitiveType = CollectionUtil.popFromSet(primitiveTypeProperty);
-			log.debug("Found PrimitiveType " + primitiveType + " from previous analysis for: " + node.getId());
+			log.trace("Found PrimitiveType " + primitiveType + " from previous analysis for: " + node.getId());
 			return Optional.of(PrimitiveType.valueOf(primitiveType));
 		}
 		Optional<PrimitiveType> determinedPrimitiveType = determinePrimitiveTypeForNode(node);
 		if (determinedPrimitiveType.isPresent()) {
 			// mark primitive type as node property
 			PrimitiveType primitiveType = determinedPrimitiveType.get();
-			node.addProperty(NodePropertyType.PRIMITIVE_TYPE, primitiveType.toString());
+			node.addProperty(NodePropertyType.PRIMITIVE_TYPE, primitiveType);
 		}
 		return determinedPrimitiveType;
 	}
@@ -40,18 +40,18 @@ public class PrimitiveTypeDetector {
 		Set<String> primitiveTypeProperty = node.getProperty(NodePropertyType.ARRAY_ITEM_PRIMITIVE_TYPE);
 		if (primitiveTypeProperty != null && primitiveTypeProperty.size() == 1) {
 			String primitiveType = CollectionUtil.popFromSet(primitiveTypeProperty);
-			log.debug("Found PrimitiveType " + primitiveType + " from previous analysis for: " + node.getId());
+			log.trace("Found PrimitiveType " + primitiveType + " from previous analysis for: " + node.getId());
 			return Optional.of(PrimitiveType.valueOf(primitiveType));
 		}
 		Optional<PrimitiveType> determinedPrimitiveType = determinePrimitiveArrayItemTypeForNode(node);
 		if (determinedPrimitiveType.isPresent()) {
 			// mark primitive type as node property
 			PrimitiveType primitiveType = determinedPrimitiveType.get();
-			node.addProperty(NodePropertyType.ARRAY_ITEM_PRIMITIVE_TYPE, primitiveType.toString());
+			node.addProperty(NodePropertyType.ARRAY_ITEM_PRIMITIVE_TYPE, primitiveType);
 		}
 		return determinedPrimitiveType;
 	}
-	
+
 	private Optional<PrimitiveType> determinePrimitiveArrayItemTypeForNode(Node node) {
 		// first try avro property
 		Optional<PrimitiveType> primitiveAvroArrayItemTypeForNode = determinePrimitiveAvroArrayItemTypeForNode(node);
@@ -76,7 +76,7 @@ public class PrimitiveTypeDetector {
 
 		return Optional.absent();
 	}
-	
+
 	private Optional<PrimitiveType> determinePrimitiveJsonArrayItemTypeForNode(Node node) {
 		Set<String> jsonArrayTypes = node.getProperty(NodePropertyType.JSON_ARRAY_ITEM_TYPE);
 		if (jsonArrayTypes == null || jsonArrayTypes.isEmpty()) {

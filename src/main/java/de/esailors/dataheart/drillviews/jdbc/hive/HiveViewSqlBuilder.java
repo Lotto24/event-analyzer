@@ -159,7 +159,7 @@ public class HiveViewSqlBuilder {
 				viewBuilder.append(".`");
 				viewBuilder.append(LATERAL_VIEW_ARRAY_INDEX_ALIAS);
 				viewBuilder.append("` as `");
-				viewBuilder.append(child.getName());
+				viewBuilder.append(child.getId().replace(".", "_"));
 				viewBuilder.append("_array_index`");
 
 				Map<String, Node> arrayChildMap = child.getChildMap();
@@ -350,7 +350,7 @@ public class HiveViewSqlBuilder {
 	}
 
 	private String arrayLateralViewAlias(Node arrayNode) {
-		return "arr_" + arrayNode.getName();
+		return "arr_" + arrayNode.getId().replace(".", "_");
 	}
 	
 	private String newLateralViewAlias(String lateralViewAlias, Node nestedNode) {
