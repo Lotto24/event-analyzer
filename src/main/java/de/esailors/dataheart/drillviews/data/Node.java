@@ -111,7 +111,6 @@ public class Node implements Serializable {
 		if((avroUnionTypes != null && avroUnionTypes.contains(Type.ARRAY.toString()))) {
 			return true;
 		}
-		// TODO wip trying to handle arrays from pure jsons as well
 		Set<String> jsonTypes = getProperty(NodePropertyType.JSON_TYPE);
 		if(jsonTypes != null && jsonTypes.contains(JsonType.ARRAY.toString())) {
 			return true;

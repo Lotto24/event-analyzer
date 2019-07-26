@@ -269,8 +269,6 @@ public class TreeFactory {
 	}
 
 	private boolean isNestedJson(JsonNode json) {
-		// TODO wip trying to get arrays to work
-//		return json.isObject();
 		return json.isContainerNode();
 	}
 

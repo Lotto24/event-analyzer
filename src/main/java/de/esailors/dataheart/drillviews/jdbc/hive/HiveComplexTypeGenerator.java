@@ -80,14 +80,17 @@ public class HiveComplexTypeGenerator {
 	}
 
 	public String hiveTypeFor(PrimitiveType primitiveType) {
-		// TODO would be great to distinguish between int/bigint and float/double
 		switch (primitiveType) {
 		case BOOLEAN:
 			return "boolean";
-		case FLOAT:
+		case DOUBLE:
 			return "double";
-		case INT:
+		case FLOAT:
+			return "float";
+		case BIGINT:
 			return "bigint";
+		case INT:
+			return "int";
 		case TEXT:
 			return "string";
 		default:

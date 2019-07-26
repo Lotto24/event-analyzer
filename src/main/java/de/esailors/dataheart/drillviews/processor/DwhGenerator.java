@@ -92,9 +92,9 @@ public class DwhGenerator {
 		switch (primitiveType) {
 		case TEXT:
 			return Optional.of("String");
-		case INT:
+		case BIGINT:
 			return Optional.of("Integer");
-		case FLOAT:
+		case DOUBLE:
 			return Optional.of("Number");
 		case BOOLEAN:
 			return Optional.of("Boolean");
@@ -144,8 +144,11 @@ public class DwhGenerator {
 		switch (primitiveType) {
 		case TEXT:
 			return Optional.of("NVARCHAR(255)");
-		case INT:
+		case BIGINT:
 			return Optional.of("BIGINT");
+		case INT:
+			return Optional.of("INT");
+		case DOUBLE:
 		case FLOAT:
 			return Optional.of("NUMERIC(18, 5)");
 		case BOOLEAN:

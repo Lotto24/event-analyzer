@@ -29,17 +29,13 @@ public class Main {
 
 		// Some ideas for possible improvements:
 		// - fields report, maybe overkill but could be very useful
-		// - using (git) diff to see changes between versions of drill views
 		// - add last n changelogs to README.md in reverse chronological order
 		// - a check to see if different event structures are "compatible"
 		// - add more statistics or a report for each run
 		// - link avro schemas to official eSailors/kafka-events repo
-		// - on live we find both 'AgeVerification' and 'ageVerification' -> unify
 		// - refactor inconsistency checking to separate class
 		// - check for more kinds of event invalidity and add cause enum
 		// - extract markdown specifics to separate class and
-		// - refactor persister to separate report generation from path handling
-		// - for nodes that are Avro MAPS we need to select the whole blob in views
 		// - persist event samples separately for each event structure
 		// - persist event structure plots somewhere more suitable than git
 		// - when pulling from git only fetch the branch we actually work on

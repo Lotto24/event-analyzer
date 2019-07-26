@@ -182,19 +182,16 @@ public class PrimitiveTypeDetector {
 		case BYTES:
 			return Optional.of(PrimitiveType.TEXT);
 		case ENUM:
-			// TODO special handling for ENUMs?
 			return Optional.of(PrimitiveType.TEXT);
 		case BOOLEAN:
 			return Optional.of(PrimitiveType.BOOLEAN);
+		case LONG:
+			return Optional.of(PrimitiveType.BIGINT);
 		case INT:
 			return Optional.of(PrimitiveType.INT);
-		case LONG:
-			// TODO maybe it makes sense to differentiate between int and long here
-			return Optional.of(PrimitiveType.INT);
-		case FLOAT:
-			return Optional.of(PrimitiveType.FLOAT);
 		case DOUBLE:
-			// TODO maybe it makes sense to differentiate between float and double here
+			return Optional.of(PrimitiveType.DOUBLE);
+		case FLOAT:
 			return Optional.of(PrimitiveType.FLOAT);
 
 		case MAP:
@@ -224,9 +221,9 @@ public class PrimitiveTypeDetector {
 		case TEXTUAL:
 			return Optional.of(PrimitiveType.TEXT);
 		case INTEGER:
-			return Optional.of(PrimitiveType.INT);
+			return Optional.of(PrimitiveType.BIGINT);
 		case FLOAT:
-			return Optional.of(PrimitiveType.FLOAT);
+			return Optional.of(PrimitiveType.DOUBLE);
 		case BOOLEAN:
 			return Optional.of(PrimitiveType.BOOLEAN);
 		default: {
