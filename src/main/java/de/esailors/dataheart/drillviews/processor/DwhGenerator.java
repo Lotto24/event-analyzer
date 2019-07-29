@@ -36,8 +36,6 @@ public class DwhGenerator {
 	private static final String JOB_NAME_PREFIX = "DWHSRC_HBASE_LOADJSON_";
 	private static final String JOB_FALLBACK_DATA_TYPE = "String";
 
-	private PrimitiveTypeDetector primitiveTypeDetector = new PrimitiveTypeDetector();
-	
 	public String createDwhJob(EventType eventType) {
 
 		Optional<EventStructure> mergedEventStructuredOption = eventType.getMergedEventStructured();
@@ -83,7 +81,7 @@ public class DwhGenerator {
 	}
 
 	private Optional<String> dwhJobDataTypeForNode(Node node) {
-		Optional<PrimitiveType> primitiveTypeOption = primitiveTypeDetector.primitiveTypeForNode(node);
+		Optional<PrimitiveType> primitiveTypeOption = PrimitiveTypeDetector.getInstance().primitiveTypeForNode(node);
 
 		if (!primitiveTypeOption.isPresent()) {
 			return Optional.absent();
@@ -135,7 +133,7 @@ public class DwhGenerator {
 	}
 
 	private Optional<String> dwhTableDataTypeForNode(Node node) {
-		Optional<PrimitiveType> primitiveTypeOption = primitiveTypeDetector.primitiveTypeForNode(node);
+		Optional<PrimitiveType> primitiveTypeOption = PrimitiveTypeDetector.getInstance().primitiveTypeForNode(node);
 
 		if (!primitiveTypeOption.isPresent()) {
 			return Optional.absent();

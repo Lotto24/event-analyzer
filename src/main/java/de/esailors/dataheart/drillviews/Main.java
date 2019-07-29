@@ -54,15 +54,13 @@ public class Main {
 			gitRepositoryOption = Optional.absent();
 		}
 
-//		 fetch messages from all Topics and parse to Event
+		// fetch messages from all Topics and parse to Event
 		KafkaTopicsExplorer kafkaExplorer = new KafkaTopicsExplorer();
 		Set<Topic> topics = kafkaExplorer.fetchEvents();
 		kafkaExplorer.close();
 
-		// process the fetched messages
-		// align existing Drill views with fetched events
-		// write report, views and sample data
-		// publish to git for others to see
+		// process the fetched messages align existing Drill and Hive views with fetched
+		// events write report, views and sample data publish to git for others to see
 		new Processor(gitRepositoryOption).process(topics);
 
 		log.info("DrillViewGenerator finished successfully");

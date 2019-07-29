@@ -14,6 +14,20 @@ import de.esailors.dataheart.drillviews.util.JsonUtil.JsonType;
 public class PrimitiveTypeDetector {
 
 	private static final Logger log = LogManager.getLogger(PrimitiveTypeDetector.class.getName());
+	
+	private static PrimitiveTypeDetector instance;
+	
+	public static PrimitiveTypeDetector getInstance() {
+		if(instance == null) {
+			instance = new PrimitiveTypeDetector();
+		}
+		return instance;
+	}
+	
+	
+	private PrimitiveTypeDetector() {
+		
+	}
 
 	public Optional<PrimitiveType> primitiveTypeForNode(Node node) {
 		// check if primitive type has been analyzed before

@@ -16,8 +16,6 @@ public class HiveComplexTypeGenerator {
 
 	private static final Logger log = LogManager.getLogger(HiveComplexTypeGenerator.class.getName());
 
-	private PrimitiveTypeDetector primitiveTypeDetector = new PrimitiveTypeDetector();
-
 	public String generateComplexTypeFor(Node node) {
 		StringBuilder r = new StringBuilder();
 		generateComplexTypeFor(node, r);
@@ -49,7 +47,7 @@ public class HiveComplexTypeGenerator {
 		} else {
 			if (node.hasArrayType()) {
 				// an array of primitives
-				Optional<PrimitiveType> primitiveArrayItemTypeOption = primitiveTypeDetector
+				Optional<PrimitiveType> primitiveArrayItemTypeOption = PrimitiveTypeDetector.getInstance()
 						.primitiveArrayItemTypeForNode(node);
 				PrimitiveType primitiveType;
 				if (!primitiveArrayItemTypeOption.isPresent()) {
@@ -57,12 +55,13 @@ public class HiveComplexTypeGenerator {
 					primitiveType = PrimitiveType.TEXT;
 					log.error("Expect arrays withouth children to have a primitive type: " + node.getId());
 				} else {
-				    primitiveType = primitiveArrayItemTypeOption.get();
+					primitiveType = primitiveArrayItemTypeOption.get();
 				}
 				r.append(hiveTypeFor(primitiveType));
 			} else {
 				// primitive type
-				Optional<PrimitiveType> primitiveTypeOption = primitiveTypeDetector.primitiveTypeForNode(node);
+				Optional<PrimitiveType> primitiveTypeOption = PrimitiveTypeDetector.getInstance()
+						.primitiveTypeForNode(node);
 				PrimitiveType primitiveType;
 				if (!primitiveTypeOption.isPresent()) {
 					// happens for example for non-avro NULL nodes

@@ -164,7 +164,7 @@ public class Processor {
 			log.info("Count in day drill view for " + eventType + ": " + drillViewCount);
 			eventType.setDrillViewCount(drillViewCount);
 		} else {
-			changeLog.addWarning("Unable to determine count via drill view of " + eventType);
+			changeLog.addWarning("Unable to determine count via Drill view of " + eventType);
 		}
 	}
 
@@ -176,7 +176,7 @@ public class Processor {
 			log.info("Count in day hive view for " + eventType + ": " + hiveViewCount);
 			eventType.setHiveViewCount(hiveViewCount);
 		} else {
-			changeLog.addWarning("Unable to determine count via drill view of " + eventType);
+			changeLog.addWarning("Unable to determine count via Hive view of " + eventType);
 		}
 	}
 
