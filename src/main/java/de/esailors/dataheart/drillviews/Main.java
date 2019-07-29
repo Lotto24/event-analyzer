@@ -7,7 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.Configurator;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.Topic;
@@ -51,7 +51,7 @@ public class Main {
 			gitRepositoryOption = Optional.of(new GitRepository());
 		} else {
 			log.warn("Local git repository for analysis output is not enabled");
-			gitRepositoryOption = Optional.absent();
+			gitRepositoryOption = Optional.empty();
 		}
 
 		// fetch messages from all Topics and parse to Event

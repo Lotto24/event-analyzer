@@ -10,7 +10,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public class Topic implements Comparable<Topic> {
 

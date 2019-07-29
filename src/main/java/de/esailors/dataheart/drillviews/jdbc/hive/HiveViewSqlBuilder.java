@@ -7,7 +7,7 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.EventStructure;
@@ -50,14 +50,14 @@ public class HiveViewSqlBuilder {
 		String viewName = hiveViews.viewNameFor(eventType);
 
 		complexTypeView(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName, eventStructure, viewBuilder, node,
-				Optional.absent());
+				Optional.empty());
 		complexTypeView(Config.getInstance().HIVE_VIEW_DAY_DATABASE, viewName, eventStructure, viewBuilder, node,
 				Optional.of(86400));
 		complexTypeView(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName, eventStructure, viewBuilder, node,
 				Optional.of(604800));
 
 		lateralViewsView(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName + "_lv", eventStructure, viewBuilder,
-				node, Optional.absent());
+				node, Optional.empty());
 		lateralViewsView(Config.getInstance().HIVE_VIEW_DAY_DATABASE, viewName + "_lv", eventStructure, viewBuilder,
 				node, Optional.of(86400));
 		lateralViewsView(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName + "_lv", eventStructure, viewBuilder,

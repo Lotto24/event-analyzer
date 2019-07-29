@@ -5,7 +5,7 @@ import java.util.Map;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.data.Node;
 import de.esailors.dataheart.drillviews.data.PrimitiveType;

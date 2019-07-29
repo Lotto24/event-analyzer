@@ -9,7 +9,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.data.EventType;
 
@@ -50,12 +50,12 @@ public abstract class JdbcMetadata {
 			resultSet = jdbcConnection.query(countQuery);
 			if (!resultSet.next()) {
 				log.error("Unable to fetch first row of resultSet after count query: " + countQuery);
-				return Optional.absent();
+				return Optional.empty();
 			}
 			return Optional.of(resultSet.getLong(COUNT_COLUMN_ALIAS));
 		} catch (SQLException e) {
 			log.error("Unexpected SQLException after running day count query " + countQuery, e);
-			return Optional.absent();
+			return Optional.empty();
 		} finally {
 			try {
 				if (resultSet != null) {

@@ -14,7 +14,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.AvroSchema;
@@ -287,7 +287,7 @@ public class Processor {
 			}
 		} else {
 			log.warn("Local git repository not enabled, unable to check if view changed");
-			currentViewFromRepository = Optional.absent();
+			currentViewFromRepository = Optional.empty();
 		}
 
 		// generate drill views and execute them
@@ -345,7 +345,7 @@ public class Processor {
 			}
 		} else {
 			log.warn("Local git repository not enabled, unable to check if view changed");
-			currentViewFromRepository = Optional.absent();
+			currentViewFromRepository = Optional.empty();
 		}
 
 		// generate views and execute them

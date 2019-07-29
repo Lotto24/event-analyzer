@@ -34,7 +34,7 @@ import org.eclipse.jgit.transport.Transport;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.util.FS;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
@@ -447,13 +447,13 @@ public class GitRepository {
 		if (!fileToLoad.exists()) {
 			log.debug(
 					"Unable to load file from git repository as file doesn't exist at " + fileToLoad.getAbsolutePath());
-			return Optional.absent();
+			return Optional.empty();
 		}
 
 		if (!fileToLoad.canRead()) {
 			log.debug(
 					"Unable to load file from git repository as file can't be read at " + fileToLoad.getAbsolutePath());
-			return Optional.absent();
+			return Optional.empty();
 		}
 
 		try {
@@ -461,7 +461,7 @@ public class GitRepository {
 		} catch (IOException e) {
 			log.warn("Unable to read file from local git repository even though the file exists at: "
 					+ fileToLoad.getAbsolutePath(), e);
-			return Optional.absent();
+			return Optional.empty();
 		}
 	}
 

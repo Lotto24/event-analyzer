@@ -3,7 +3,7 @@ package de.esailors.dataheart.drillviews.data;
 import java.util.Collection;
 import java.util.List;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public class EventStructureSource {
 
@@ -43,15 +43,15 @@ public class EventStructureSource {
 	}
 
 	public Optional<Event> getSourceEvent() {
-		return Optional.fromNullable(sourceEvent);
+		return Optional.ofNullable(sourceEvent);
 	}
 
 	public Optional<AvroSchema> getSourceSchema() {
-		return Optional.fromNullable(sourceSchema);
+		return Optional.ofNullable(sourceSchema);
 	}
 
 	public Optional<Collection<EventStructure>> getSourceStructures() {
-		return Optional.fromNullable(sourceStructures);
+		return Optional.ofNullable(sourceStructures);
 	}
 
 	@Override

@@ -10,7 +10,7 @@ import java.util.Set;
 
 import org.apache.avro.Schema.Type;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.util.CollectionUtil;
 import de.esailors.dataheart.drillviews.util.JsonUtil.JsonType;
@@ -89,7 +89,7 @@ public class Node implements Serializable {
 
 	public Optional<Node> getChildById(String childId) {
 		if (children == null || children.get(childId) == null) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		return Optional.of(children.get(childId));
 	}

@@ -6,7 +6,7 @@ import org.apache.avro.Schema.Type;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.util.CollectionUtil;
 import de.esailors.dataheart.drillviews.util.JsonUtil.JsonType;
@@ -81,14 +81,14 @@ public class PrimitiveTypeDetector {
 		if (avroArrayTypes == null || avroArrayTypes.isEmpty()) {
 			log.debug("Got asked for primitive array item type of a node without avro_array_item_type set: "
 					+ node.getId());
-			return Optional.absent();
+			return Optional.empty();
 		}
 		Optional<Type> primitiveAvroTypeFromSet = primitiveAvroTypeFromSet(avroArrayTypes);
 		if (primitiveAvroTypeFromSet.isPresent()) {
 			return primitiveTypeForAvroType(primitiveAvroTypeFromSet.get());
 		}
 
-		return Optional.absent();
+		return Optional.empty();
 	}
 
 	private Optional<PrimitiveType> determinePrimitiveJsonArrayItemTypeForNode(Node node) {
@@ -96,7 +96,7 @@ public class PrimitiveTypeDetector {
 		if (jsonArrayTypes == null || jsonArrayTypes.isEmpty()) {
 			log.debug("Got asked for primitive array item type of a node without json_array_item_type set: "
 					+ node.getId());
-			return Optional.absent();
+			return Optional.empty();
 		}
 		return primitiveTypeForJsonType(primitiveJsonTypeFromSet(jsonArrayTypes));
 	}
@@ -122,7 +122,7 @@ public class PrimitiveTypeDetector {
 		Set<String> avroTypes = node.getProperty(NodePropertyType.AVRO_TYPE);
 		if (avroTypes == null || avroTypes.size() == 0) {
 			log.debug("Did not find any avro Type property for " + node.getId());
-			return Optional.absent();
+			return Optional.empty();
 		}
 
 		Optional<Type> primitiveAvroTypeOption = primitiveAvroTypeFromSet(avroTypes);
@@ -135,12 +135,12 @@ public class PrimitiveTypeDetector {
 			return primitiveAvroTypeFromSet(unionTypes);
 		}
 
-		return Optional.absent();
+		return Optional.empty();
 	}
 
 	private Optional<Type> primitiveAvroTypeFromSet(Set<String> avroTypes) {
 		if (avroTypes == null || avroTypes.isEmpty()) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		// rank primitive avro types from biggest to smallest
 		Type[] orderedTypes = { Type.BYTES, Type.STRING, Type.FIXED, Type.ENUM, Type.DOUBLE, Type.FLOAT, Type.LONG,
@@ -151,7 +151,7 @@ public class PrimitiveTypeDetector {
 			}
 		}
 
-		return Optional.absent();
+		return Optional.empty();
 	}
 
 	private Optional<JsonType> primitiveJsonTypeForNode(Node node) {
@@ -161,7 +161,7 @@ public class PrimitiveTypeDetector {
 		Set<String> jsonTypes = node.getProperty(NodePropertyType.JSON_TYPE);
 		if (jsonTypes == null || jsonTypes.size() == 0) {
 			log.warn("Did not find any JsonTypes property for " + node.getId());
-			return Optional.absent();
+			return Optional.empty();
 		}
 
 		return primitiveJsonTypeFromSet(jsonTypes);
@@ -177,12 +177,12 @@ public class PrimitiveTypeDetector {
 				return Optional.of(type);
 			}
 		}
-		return Optional.absent();
+		return Optional.empty();
 	}
 
 	private Optional<PrimitiveType> primitiveTypeForAvroType(Optional<Type> avroTypeOption) {
 		if (!avroTypeOption.isPresent()) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		return primitiveTypeForAvroType(avroTypeOption.get());
 	}
@@ -220,12 +220,12 @@ public class PrimitiveTypeDetector {
 			log.warn("Unable to determine primitive type for avro type: " + avroType);
 		}
 		}
-		return Optional.absent();
+		return Optional.empty();
 	}
 
 	private Optional<PrimitiveType> primitiveTypeForJsonType(Optional<JsonType> jsonTypeOption) {
 		if (!jsonTypeOption.isPresent()) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		return primitiveTypeForJsonType(jsonTypeOption.get());
 	}
@@ -242,7 +242,7 @@ public class PrimitiveTypeDetector {
 			return Optional.of(PrimitiveType.BOOLEAN);
 		default: {
 			log.warn("Unable to determine primitive type for jsonType " + jsonType);
-			return Optional.absent();
+			return Optional.empty();
 		}
 		}
 	}

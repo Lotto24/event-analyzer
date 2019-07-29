@@ -7,7 +7,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.EventStructure;
@@ -84,7 +84,7 @@ public class DwhGenerator {
 		Optional<PrimitiveType> primitiveTypeOption = PrimitiveTypeDetector.getInstance().primitiveTypeForNode(node);
 
 		if (!primitiveTypeOption.isPresent()) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		PrimitiveType primitiveType = primitiveTypeOption.get();
 		switch (primitiveType) {
@@ -98,7 +98,7 @@ public class DwhGenerator {
 			return Optional.of("Boolean");
 		default: {
 			log.warn("Unsupported primitiveType " + primitiveType + " for node: " + node.getId());
-			return Optional.absent();
+			return Optional.empty();
 		}
 		}
 	}
@@ -136,7 +136,7 @@ public class DwhGenerator {
 		Optional<PrimitiveType> primitiveTypeOption = PrimitiveTypeDetector.getInstance().primitiveTypeForNode(node);
 
 		if (!primitiveTypeOption.isPresent()) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		PrimitiveType primitiveType = primitiveTypeOption.get();
 		switch (primitiveType) {
@@ -153,7 +153,7 @@ public class DwhGenerator {
 			return Optional.of("BIT");
 		default: {
 			log.warn("Unsupported primitiveType " + primitiveType + " for node: " + node.getId());
-			return Optional.absent();
+			return Optional.empty();
 		}
 		}
 	}

@@ -12,7 +12,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public class EventType implements Comparable<EventType> {
 
@@ -24,7 +24,7 @@ public class EventType implements Comparable<EventType> {
 	private List<Topic> sourceTopics = new ArrayList<>();
 	private Set<Event> events = new HashSet<>();
 
-	private Optional<EventStructure> deserializedEventStructureOption = Optional.absent();
+	private Optional<EventStructure> deserializedEventStructureOption = Optional.empty();
 	
 	// absent if there are no events
 	private Optional<EventStructure> mergedEventStructure;
@@ -38,8 +38,8 @@ public class EventType implements Comparable<EventType> {
 
 	private List<String> reportMessages = new ArrayList<>();
 
-	private Optional<Long> drillViewCountOption = Optional.absent();
-	private Optional<Long> hiveViewCountOption = Optional.absent();
+	private Optional<Long> drillViewCountOption = Optional.empty();
+	private Optional<Long> hiveViewCountOption = Optional.empty();
 
 
 	public EventType(String eventTypeName, Topic sourceTopic, Set<Event> events) {
@@ -147,7 +147,7 @@ public class EventType implements Comparable<EventType> {
 			// could theoretically still build merged event structure from avro schema
 			// potentially, but in practice we did not fetch a schema without an event
 			log.warn("Unable to build merged even structure due to missing events for " + this);
-			mergedEventStructure = Optional.absent();
+			mergedEventStructure = Optional.empty();
 		} else {
 			mergedEventStructure = Optional.of(new EventStructure(this));
 		}

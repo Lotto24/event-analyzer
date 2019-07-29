@@ -5,7 +5,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.EventStructure;
@@ -37,7 +37,7 @@ public class DrillViewSqlBuilder {
 		StringBuilder viewBuilder = new StringBuilder();
 
 		generateDrillView(Config.getInstance().DRILL_VIEW_ALL_DATABASE, eventStructure, viewName, viewBuilder,
-				Optional.absent());
+				Optional.empty());
 		generateDrillView(Config.getInstance().DRILL_VIEW_DAY_DATABASE, eventStructure, viewName, viewBuilder,
 				Optional.of("'-1' day"));
 		generateDrillView(Config.getInstance().DRILL_VIEW_WEEK_DATABASE, eventStructure, viewName, viewBuilder,

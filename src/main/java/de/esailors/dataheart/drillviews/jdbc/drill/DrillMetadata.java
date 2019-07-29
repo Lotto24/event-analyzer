@@ -1,6 +1,6 @@
 package de.esailors.dataheart.drillviews.jdbc.drill;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.EventType;
