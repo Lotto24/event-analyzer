@@ -25,7 +25,7 @@ public class KafkaEventFetcher extends Thread {
 		super(r, name);
 		this.consumer = KafkaConsumerFactory.getInstance().createConsumer();
 		
-		log.info("Created fetcher thread for " + r);
+		log.debug("Created fetcher thread for " + r);
 	}
 	
 	public void fetchEventsForTopic(Topic topic) {

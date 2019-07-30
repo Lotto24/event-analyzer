@@ -3,11 +3,10 @@ package de.esailors.dataheart.drillviews.jdbc.hive;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.EventStructure;
@@ -56,12 +55,12 @@ public class HiveViewSqlBuilder {
 		complexTypeView(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName, eventStructure, viewBuilder, node,
 				Optional.of(604800));
 
-		lateralViewsView(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName + "_lv", eventStructure, viewBuilder,
-				node, Optional.empty());
-		lateralViewsView(Config.getInstance().HIVE_VIEW_DAY_DATABASE, viewName + "_lv", eventStructure, viewBuilder,
-				node, Optional.of(86400));
-		lateralViewsView(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName + "_lv", eventStructure, viewBuilder,
-				node, Optional.of(604800));
+//		lateralViewsView(Config.getInstance().HIVE_VIEW_ALL_DATABASE, viewName + "_lv", eventStructure, viewBuilder,
+//				node, Optional.empty());
+//		lateralViewsView(Config.getInstance().HIVE_VIEW_DAY_DATABASE, viewName + "_lv", eventStructure, viewBuilder,
+//				node, Optional.of(86400));
+//		lateralViewsView(Config.getInstance().HIVE_VIEW_WEEK_DATABASE, viewName + "_lv", eventStructure, viewBuilder,
+//				node, Optional.of(604800));
 
 		return viewBuilder.toString();
 	}
@@ -79,7 +78,7 @@ public class HiveViewSqlBuilder {
 		viewBuilder.append("`");
 
 		String path = COMPLEX_TYPE_SUB_VIEW_ALIAS + ".`" + COMPLEX_TYPE_EVENT_ALIAS + "`";
-		selectComplexTypeColumns(viewBuilder, node, path, "");
+		selectComplexTypeColumns(viewBuilder, node, path, "", true);
 
 		viewBuilder.append("\nFROM (\n");
 
@@ -94,24 +93,33 @@ public class HiveViewSqlBuilder {
 		endStatement(viewBuilder);
 	}
 
-	private void selectComplexTypeColumns(StringBuilder viewBuilder, Node node, String parentPath, String aliasPrefix) {
+	private void selectComplexTypeColumns(StringBuilder viewBuilder, Node node, String parentPath, String aliasPrefix, boolean topLevel) {
 		Map<String, Node> childMap = node.getChildMap();
 		for (String childPath : CollectionUtil.toSortedList(childMap.keySet())) {
 			Node child = childMap.get(childPath);
 			if (child.hasArrayType() || !child.hasChildren()) {
 				viewBuilder.append(",\n");
 				viewBuilder.append(ident());
+				if(topLevel && child.getName().equals(Config.getInstance().EVENT_FIELD_TIMESTAMP)) {
+					// automatically cast toplevel timestamp field to timestamp type
+					viewBuilder.append("CAST(");
+				}
 				viewBuilder.append(parentPath);
 				viewBuilder.append(".`");
 				viewBuilder.append(child.getName());
-				viewBuilder.append("` as `");
+				viewBuilder.append("`");
+				if(topLevel && child.getName().equals(Config.getInstance().EVENT_FIELD_TIMESTAMP)) {
+					viewBuilder.append(" AS timestamp)");
+				}
+				viewBuilder.append(" as `");
 				viewBuilder.append(aliasPrefix);
 				viewBuilder.append(child.getName());
 				viewBuilder.append("`");
+				
 			} else {
 				String newParentPath = parentPath + ".`" + child.getName() + "`";
 				String newAliasPrefix = aliasPrefix + child.getName() + "_";
-				selectComplexTypeColumns(viewBuilder, child, newParentPath, newAliasPrefix);
+				selectComplexTypeColumns(viewBuilder, child, newParentPath, newAliasPrefix, false);
 			}
 		}
 	}

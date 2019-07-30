@@ -91,8 +91,10 @@ public class DwhGenerator {
 		case TEXT:
 			return Optional.of("String");
 		case BIGINT:
+		case INT:
 			return Optional.of("Integer");
 		case DOUBLE:
+		case FLOAT:
 			return Optional.of("Number");
 		case BOOLEAN:
 			return Optional.of("Boolean");
