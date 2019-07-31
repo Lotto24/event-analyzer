@@ -51,7 +51,7 @@ public abstract class JdbcConnection {
 		try {
 			return resultSetToStringSet(query("SHOW DATABASES"));
 		} catch (SQLException e) {
-			log.error("Error when listing Hive databases", e);
+			log.error("Error when listing databases", e);
 			throw new IllegalStateException("Unable to list databases", e);
 		}
 	}

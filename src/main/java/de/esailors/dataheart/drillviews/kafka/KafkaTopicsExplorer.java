@@ -242,7 +242,7 @@ public class KafkaTopicsExplorer {
 		topicsWhitelist = new HashSet<String>();
 //		topicsWhitelist.add("payment_payin_processed");
 //		topicsWhitelist.add("customer_restrictions_changed");
-		topicsWhitelist.add("customer_registration");
+//		topicsWhitelist.add("customer_registration");
 //		topicsWhitelist.add("postident_response_reporting");
 //		topicsWhitelist.add("account_balance_change_events");
 //		topicsWhitelist.add("alinghi_dbg_real_ticket_mapped");

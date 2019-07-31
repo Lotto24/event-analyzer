@@ -19,15 +19,6 @@ public class DrillConnection extends JdbcConnection {
 		super(DRILL_JDBC_DRIVER_CLASS, Config.getInstance().DRILL_JDBC_URL, Config.getInstance().DRILL_JDBC_USER, Config.getInstance().DRILL_JDBC_PASSWORD);
 	}
 	
-	public Set<String> listDatabases() {
-		try {
-			return resultSetToStringSet(query("SHOW DATABASES"));
-		} catch (SQLException e) {
-			log.error("Error when listing Drill databases", e);
-			throw new IllegalStateException("Unable to list databases", e);
-		}
-	}
-	
 	public Set<String> listTablesinDatabase(String database) {
 		try {
 			return resultSetToStringSet(query("SHOW TABLES FROM " + database), 1);

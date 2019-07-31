@@ -83,7 +83,7 @@ public class DrillViewSqlBuilder {
 		Set<Node> children = node.getChildren();
 		for (Node child : children) {
 			String nodeName = child.getName();
-			if (child.hasChildren()) {
+			if (child.hasChildren() && !child.hasArrayType()) {
 				// recursion
 				String newKeyPrefix = keyPrefix + nodeName + "_";
 				String newFieldPrefix = fieldPrefix + "`" + nodeName + "`.";

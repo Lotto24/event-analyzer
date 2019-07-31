@@ -341,7 +341,7 @@ public class HiveViewSqlBuilder {
 	private void whereClause(EventStructure eventStructure, StringBuilder viewBuilder, Optional<Integer> timeLimit) {
 		viewBuilder.append("WHERE ");
 		viewBuilder.append(HBASE_TABLE_ROWKEY_COLUMN);
-		viewBuilder.append(" > ");
+		viewBuilder.append(" >= ");
 		viewBuilder.append("'");
 		viewBuilder.append(eventStructure.getEventType().getName().toUpperCase());
 		rowKeyStart(viewBuilder, timeLimit);
