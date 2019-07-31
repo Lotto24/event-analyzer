@@ -352,7 +352,7 @@ public class GitRepository {
 	}
 
 	public void commitAndPush(String commitMessagePrefix) {
-		String commitMessage = commitMessagePrefix + " DrillViewGenerator commit";
+		String commitMessage = commitMessagePrefix + " EventAnalyzer run";
 		log.debug("Pushing changes to git: " + commitMessage);
 		try {
 			// check if there even is anything to commit
