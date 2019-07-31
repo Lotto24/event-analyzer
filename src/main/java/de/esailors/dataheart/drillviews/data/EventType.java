@@ -12,7 +12,7 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public class EventType implements Comparable<EventType> {
 
@@ -24,6 +24,8 @@ public class EventType implements Comparable<EventType> {
 	private List<Topic> sourceTopics = new ArrayList<>();
 	private Set<Event> events = new HashSet<>();
 
+	private Optional<EventStructure> deserializedEventStructureOption = Optional.empty();
+	
 	// absent if there are no events
 	private Optional<EventStructure> mergedEventStructure;
 
@@ -35,8 +37,10 @@ public class EventType implements Comparable<EventType> {
 	private Set<TimestampType> timestampTypes;
 
 	private List<String> reportMessages = new ArrayList<>();
-	
-	private Optional<Long> drillViewCountOption = Optional.absent();
+
+	private Optional<Long> drillViewCountOption = Optional.empty();
+	private Optional<Long> hiveViewCountOption = Optional.empty();
+
 
 	public EventType(String eventTypeName, Topic sourceTopic, Set<Event> events) {
 		this.name = eventTypeName;
@@ -70,22 +74,23 @@ public class EventType implements Comparable<EventType> {
 			Event event = iterator.next();
 
 			eventStructures.add(new EventStructure(event, this));
-			
+
 			Optional<String> schemaVersionOption = event.readSchemaVersion();
 			schemaVersions.add(schemaVersionOption);
-			
+
 			Optional<TimestampType> timestampTypeOption = event.determineTimestampType();
-			if(!timestampTypeOption.isPresent()) {
-				throw new IllegalStateException("Detected event without a timestamp in (" + this + "), expect all invalid events to be filtered out on Topic level already: " + new String(event.getMessage()));
+			if (!timestampTypeOption.isPresent()) {
+				throw new IllegalStateException("Detected event without a timestamp in (" + this
+						+ "), expect all invalid events to be filtered out on Topic level already: "
+						+ new String(event.getMessage()));
 			}
 			timestampTypes.add(timestampTypeOption.get());
-			
 
 			boolean isAvroMessage = event.isAvroMessage();
 			messagesAreAvro.add(isAvroMessage);
 			if (isAvroMessage) {
-				AvroSchema avroSchema = new AvroSchema(event.getAvroSchemaHash(), event.getSchema(), schemaVersionOption,
-						this);
+				AvroSchema avroSchema = new AvroSchema(event.getAvroSchemaHash(), event.getSchema(),
+						schemaVersionOption, this);
 				avroSchemas.put(event.getAvroSchemaHash(), avroSchema);
 			}
 
@@ -106,20 +111,31 @@ public class EventType implements Comparable<EventType> {
 		if (avroSchemas.size() > 1) {
 			addMessageToReport("Mixed Avro schemas within the same topic: " + this);
 		}
-		if(timestampTypes.size() > 1) {
+		if (timestampTypes.size() > 1) {
 			addMessageToReport("Mixed timestamp types within the same topic: " + this);
 		}
-		if(timestampTypes.contains(TimestampType.SECONDS)) {
+		if (timestampTypes.contains(TimestampType.SECONDS)) {
 			addMessageToReport("Timestamp in seconds instead of milliseconds detected in: " + this);
 		}
 
 	}
 
 	public boolean isConsistent() {
-		if (eventStructures == null || messagesAreAvro == null || avroSchemas == null || schemaVersions == null || timestampTypes == null) {
+		if (eventStructures == null || messagesAreAvro == null || avroSchemas == null || schemaVersions == null
+				|| timestampTypes == null) {
 			throw new IllegalStateException("Can't tell if topic is conistent yet, call markInconsistencies() first");
 		}
-		return messagesAreAvro.size() == 1 && avroSchemas.keySet().size() <= 1 && schemaVersions.size() == 1 && timestampTypes.size() == 1 && !timestampTypes.contains(TimestampType.SECONDS);
+		return messagesAreAvro.size() == 1 && avroSchemas.keySet().size() <= 1 && schemaVersions.size() == 1
+				&& timestampTypes.size() == 1 && !timestampTypes.contains(TimestampType.SECONDS);
+	}
+
+	public void setDeserializedEventStructure(EventStructure deserializedEventStructure) {
+		// for deserialized event structures
+		deserializedEventStructureOption  = Optional.of(deserializedEventStructure);
+	}
+	
+	public Optional<EventStructure> getDeserializedEventStructureOption() {
+		return deserializedEventStructureOption;
 	}
 
 	public void buildMergedEventStructure() {
@@ -131,7 +147,7 @@ public class EventType implements Comparable<EventType> {
 			// could theoretically still build merged event structure from avro schema
 			// potentially, but in practice we did not fetch a schema without an event
 			log.warn("Unable to build merged even structure due to missing events for " + this);
-			mergedEventStructure = Optional.absent();
+			mergedEventStructure = Optional.empty();
 		} else {
 			mergedEventStructure = Optional.of(new EventStructure(this));
 		}
@@ -195,7 +211,7 @@ public class EventType implements Comparable<EventType> {
 	public Map<String, AvroSchema> getAvroSchemas() {
 		return avroSchemas;
 	}
-	
+
 	public Set<TimestampType> getTimestampTypes() {
 		return timestampTypes;
 	}
@@ -234,13 +250,21 @@ public class EventType implements Comparable<EventType> {
 	public String getName() {
 		return name;
 	}
-	
+
 	public Optional<Long> getDrillViewCountOption() {
 		return drillViewCountOption;
 	}
 
 	public void setDrillViewCount(long drillViewCount) {
 		drillViewCountOption = Optional.of(drillViewCount);
+	}
+	
+	public Optional<Long> getHiveViewCountOption() {
+		return hiveViewCountOption;
+	}
+
+	public void setHiveViewCount(long hiveViewCount) {
+		hiveViewCountOption = Optional.of(hiveViewCount);
 	}
 
 	@Override

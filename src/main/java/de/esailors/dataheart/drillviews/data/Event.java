@@ -7,7 +7,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.codehaus.jackson.JsonNode;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import de.esailors.dataheart.drillviews.conf.Config;
 
@@ -36,7 +36,7 @@ public class Event {
 	public Optional<TimestampType> determineTimestampType() {
 		Optional<String> readTimestamp = readTimestamp();
 		if(!readTimestamp.isPresent()) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		if(readTimestamp.get().length() < TIMESTAMP_LENGTH_MILLISECONDS_THRESHOLD) {
 			return Optional.of(TimestampType.SECONDS);
@@ -65,7 +65,7 @@ public class Event {
 		JsonNode jsonNode = getEventJson().get(field);
 		if (jsonNode == null) {
 			log.warn("Field not found for '" + field + "' in: " + this);
-			return Optional.absent();
+			return Optional.empty();
 		}
 		return Optional.of(jsonNode.asText());
 	}

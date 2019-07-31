@@ -3,9 +3,9 @@ package de.esailors.dataheart.drillviews.kafka;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
@@ -49,12 +49,13 @@ public class MessageParser {
 	}
 
 	private void initRegistryClient() {
-		HostAndPort hostAndPort = HostAndPort.fromParts(Config.getInstance().CONSUL_HOST, Config.getInstance().CONSUL_PORT);
+		HostAndPort hostAndPort = HostAndPort.fromParts(Config.getInstance().CONSUL_HOST,
+				Config.getInstance().CONSUL_PORT);
 		registryClient = RegistryClients.caching(RegistryClients.consul(Collections.singletonList(hostAndPort)));
 	}
 
 	private void initSchemaCache() {
-		schemaCache = new HashMap<>();
+		schemaCache = new ConcurrentHashMap<>();
 	}
 
 	public JsonNode parseMessage(byte[] message) throws IOException, UnknownSchemaException {
@@ -71,7 +72,8 @@ public class MessageParser {
 	}
 
 	private GenericRecord decodeAvro(byte[] data, Schema schema) throws IOException {
-		BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(data, Config.getInstance().PROCESSOR_SCHEMA_HASH_LENGTH,
+		BinaryDecoder decoder = DecoderFactory.get().binaryDecoder(data,
+				Config.getInstance().PROCESSOR_SCHEMA_HASH_LENGTH,
 				data.length - Config.getInstance().PROCESSOR_SCHEMA_HASH_LENGTH, null);
 
 		SpecificDatumReader<GenericRecord> reader = new SpecificDatumReader<>(schema);
@@ -91,9 +93,8 @@ public class MessageParser {
 
 		// try fetching from consul directly - ..
 		// why? well, i made a mistake which made it so the registry client failed for a
-		// specific hash
-		// so i implemented the fetching myself and then found my mistake, now i'll
-		// leave this in
+		// specific hash so i implemented the fetching myself and then found my mistake,
+		// now i'll leave this in
 		Optional<Schema> schemaFromConsul = fetchSchemaFromConsul(schemaHash);
 		if (schemaFromConsul.isPresent()) {
 			log.debug("Got schema direclty from Consul");
@@ -113,8 +114,8 @@ public class MessageParser {
 	}
 
 	private Optional<Schema> fetchSchemaFromConsul(String schemaHash) {
-		String consulUrl = "http://" + Config.getInstance().CONSUL_HOST + ":" + Config.getInstance().CONSUL_PORT + "/v1/kv/avro-schemas/"
-				+ schemaHash;
+		String consulUrl = "http://" + Config.getInstance().CONSUL_HOST + ":" + Config.getInstance().CONSUL_PORT
+				+ "/v1/kv/avro-schemas/" + schemaHash;
 		log.debug("Fetching schema from Consul at: " + consulUrl);
 		try {
 			Content response = Request.Get(consulUrl).execute().returnContent();

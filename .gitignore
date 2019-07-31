@@ -8,3 +8,5 @@ analysis_repository
 .idea
 .gradle
 build
+builds
+bin

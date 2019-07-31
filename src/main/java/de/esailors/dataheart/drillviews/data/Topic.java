@@ -10,13 +10,13 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public class Topic implements Comparable<Topic> {
 
 	private static final Logger log = LogManager.getLogger(Topic.class.getName());
 
-	private String topicName;
+	private String name;
 	private int partitionCount = -1;
 
 	private Set<Event> events = new HashSet<>();
@@ -27,7 +27,7 @@ public class Topic implements Comparable<Topic> {
 	private Map<String, Set<Event>> eventTypeNames;
 
 	public Topic(String topicName) {
-		this.topicName = topicName;
+		this.name = topicName;
 	}
 
 	public void markInconsistencies() {
@@ -93,7 +93,7 @@ public class Topic implements Comparable<Topic> {
 	}
 
 	public String getName() {
-		return topicName;
+		return name;
 	}
 
 	public int getPartitionCount() {
@@ -126,12 +126,17 @@ public class Topic implements Comparable<Topic> {
 		}
 		
 	}
+	
+	@Override
+	public String toString() {
+		return "Topic [name=" + name + "]";
+	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((topicName == null) ? 0 : topicName.hashCode());
+		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		return result;
 	}
 
@@ -144,22 +149,17 @@ public class Topic implements Comparable<Topic> {
 		if (getClass() != obj.getClass())
 			return false;
 		Topic other = (Topic) obj;
-		if (topicName == null) {
-			if (other.topicName != null)
+		if (name == null) {
+			if (other.name != null)
 				return false;
-		} else if (!topicName.equals(other.topicName))
+		} else if (!name.equals(other.name))
 			return false;
 		return true;
 	}
 
 	@Override
-	public String toString() {
-		return "Topic '" + topicName + "'";
-	}
-
-	@Override
 	public int compareTo(Topic o) {
-		return topicName.compareTo(o.topicName);
+		return name.compareTo(o.name);
 	}
 
 }

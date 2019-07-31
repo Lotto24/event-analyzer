@@ -3,14 +3,14 @@ package de.esailors.dataheart.drillviews.data;
 import java.util.Collection;
 import java.util.List;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public class EventStructureSource {
 
 	private static final int MERGED_STRUCTURE_NAME_MAX_SOURCE_HASHCODES = 5;
 
 	public enum Type {
-		EVENT, AVRO, MERGE
+		EVENT, AVRO, MERGE, DESERIALIZED
 	}
 
 	private Type type;
@@ -33,21 +33,25 @@ public class EventStructureSource {
 		type = Type.MERGE;
 		this.sourceStructures = sourceStructures;
 	}
+	
+	public EventStructureSource() {
+		type = Type.DESERIALIZED;
+	}
 
 	public Type getType() {
 		return type;
 	}
 
 	public Optional<Event> getSourceEvent() {
-		return Optional.fromNullable(sourceEvent);
+		return Optional.ofNullable(sourceEvent);
 	}
 
 	public Optional<AvroSchema> getSourceSchema() {
-		return Optional.fromNullable(sourceSchema);
+		return Optional.ofNullable(sourceSchema);
 	}
 
 	public Optional<Collection<EventStructure>> getSourceStructures() {
-		return Optional.fromNullable(sourceStructures);
+		return Optional.ofNullable(sourceStructures);
 	}
 
 	@Override
@@ -82,6 +86,10 @@ public class EventStructureSource {
 			}
 			break;
 		}
+		case DESERIALIZED: {
+			break;
+		}
+		default: throw new IllegalStateException("Unexpected EventStructureSource.Type: " + type);
 		}
 		return r;
 	}

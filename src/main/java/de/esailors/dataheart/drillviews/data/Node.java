@@ -1,14 +1,23 @@
 package de.esailors.dataheart.drillviews.data;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import com.google.common.base.Optional;
+import org.apache.avro.Schema.Type;
 
-public class Node {
+import java.util.Optional;
+
+import de.esailors.dataheart.drillviews.util.CollectionUtil;
+import de.esailors.dataheart.drillviews.util.JsonUtil.JsonType;
+
+public class Node implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	// i.e. parterinfo.trackinginfo.url
 	private String id;
@@ -36,23 +45,29 @@ public class Node {
 		}
 	}
 
-	public void addProperty(String name, String property) {
-		if(properties.get(name) == null) {
-			properties.put(name, new HashSet<>());
-		}
-		properties.get(name).add(property);
+	public <E extends Enum<E>> void addProperty(NodePropertyType name, E property) {
+		addProperty(name, property.toString());
 	}
 	
-	public void addPropertySet(String name, Set<String> propertiesToAdd) {
-		if(properties.get(name) == null) {
-			properties.put(name, new HashSet<>());
+	public void addProperty(NodePropertyType name, String property) {
+		if (properties.get(name.toString()) == null) {
+			properties.put(name.toString(), new HashSet<>());
 		}
-		properties.get(name).addAll(propertiesToAdd);
+		properties.get(name.toString()).add(property);
 	}
 
-	public void addProperties(Map<String, Set<String>> propertiesToAdd) {
-		for(String name : propertiesToAdd.keySet()) {
-			addPropertySet(name, propertiesToAdd.get(name));
+	public void addProperties(Node anotherNode) {
+		for (String propertyName : anotherNode.properties.keySet()) {
+			addPropertySet(propertyName, anotherNode.properties.get(propertyName));
+		}
+	}
+
+	private void addPropertySet(String name, Set<String> propertiesToAdd) {
+		if (properties.get(name) == null) {
+			properties.put(name, new HashSet<>());
+		}
+		for (String property : propertiesToAdd) {
+			properties.get(name).add(property);
 		}
 	}
 
@@ -60,13 +75,21 @@ public class Node {
 		return !properties.isEmpty();
 	}
 
-	public Map<String, Set<String>> getProperties() {
-		return properties;
+	public Set<String> getProperty(NodePropertyType name) {
+		return properties.get(name.toString());
+	}
+
+	public List<NodePropertyType> getPropertyKeys() {
+		Set<NodePropertyType> r = new HashSet<>();
+		for (String propertyName : properties.keySet()) {
+			r.add(NodePropertyType.valueOf(propertyName));
+		}
+		return CollectionUtil.toSortedList(r);
 	}
 
 	public Optional<Node> getChildById(String childId) {
 		if (children == null || children.get(childId) == null) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		return Optional.of(children.get(childId));
 	}
@@ -79,6 +102,22 @@ public class Node {
 		children.put(child.getId(), child);
 	}
 
+	public boolean hasArrayType() {
+		Set<String> avroTypes = getProperty(NodePropertyType.AVRO_TYPE);
+		if((avroTypes != null && avroTypes.contains(Type.ARRAY.toString()))) {
+			return true;
+		}
+		Set<String> avroUnionTypes = getProperty(NodePropertyType.AVRO_UNION_TYPE);
+		if((avroUnionTypes != null && avroUnionTypes.contains(Type.ARRAY.toString()))) {
+			return true;
+		}
+		Set<String> jsonTypes = getProperty(NodePropertyType.JSON_TYPE);
+		if(jsonTypes != null && jsonTypes.contains(JsonType.ARRAY.toString())) {
+			return true;
+		}
+		return false;
+	}
+	
 	public String getId() {
 		return id;
 	}
@@ -99,6 +138,10 @@ public class Node {
 		// values() can not have duplicates in our case, as they are mapped by name and
 		// name is part of equals check
 		return new HashSet<>(children.values());
+	}
+
+	public Map<String, Node> getChildMap() {
+		return children;
 	}
 
 	public boolean equalIgnoringId(Node otherNode) {

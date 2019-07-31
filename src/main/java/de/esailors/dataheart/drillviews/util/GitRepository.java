@@ -34,7 +34,7 @@ import org.eclipse.jgit.transport.Transport;
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.eclipse.jgit.util.FS;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
@@ -111,10 +111,12 @@ public class GitRepository {
 
 		if (existingDirectoryRepository.exists() && existingDirectoryRepository.isDirectory()) {
 
-			// see if there are local changes, if yes fail, if not pull remote changes if
-			// necessary
+			// see if local repository is set to incorrect branch and check if there are any
+			// local changes. if yes fail, if not pull remote changes if necessary
 			try {
 				git = Git.open(existingDirectoryRepository);
+
+				checkCorrectBranch();
 				checkStatusIsUnmodified();
 				if (!checkNoUnpushedCommits()) {
 					pullFromRemote();
@@ -130,6 +132,26 @@ public class GitRepository {
 		} else {
 			throw new IllegalStateException("Local git repository path is not empty but also not a repository: "
 					+ Config.getInstance().GIT_LOCAL_REPOSITORY_PATH);
+		}
+	}
+
+	private void checkCorrectBranch() {
+		// make sure local repository has not been checked out with
+		// another branch in an earlier run. otherwise the new branch will not be
+		// respected.
+		List<Ref> branches;
+		try {
+			branches = git.branchList().call();
+		} catch (GitAPIException e) {
+			throw new IllegalStateException("Unable to check for git repository branch", e);
+		}
+		for (Ref branch : branches) {
+			String branchName = branch.getName();
+			String expectedBranchName = "refs/heads/" + Config.getInstance().GIT_BRANCH;
+			if (!expectedBranchName.equals(branchName)) {
+				throw new IllegalStateException(
+						"Local repository contains branch " + branchName + " but config expects " + expectedBranchName);
+			}
 		}
 	}
 
@@ -245,7 +267,6 @@ public class GitRepository {
 		checkStatusIsUnmodified("Modified", status.getModified());
 		checkStatusIsUnmodified("Removed", status.getRemoved());
 		checkStatusIsUnmodified("Untracked", status.getUntracked());
-		checkStatusIsUnmodified("UntrackedFolder", status.getUntrackedFolders());
 
 		// yaya I just found this convenience method later
 		if (!status.isClean()) {
@@ -331,7 +352,7 @@ public class GitRepository {
 	}
 
 	public void commitAndPush(String commitMessagePrefix) {
-		String commitMessage = commitMessagePrefix + " DrillViewGenerator commit";
+		String commitMessage = commitMessagePrefix + " EventAnalyzer run";
 		log.debug("Pushing changes to git: " + commitMessage);
 		try {
 			// check if there even is anything to commit
@@ -414,21 +435,25 @@ public class GitRepository {
 		};
 	}
 
+	public String filePathInRepository(String subPath) {
+		return Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + subPath;
+	}
+
 	public Optional<String> loadFile(String subPath) {
 
 		log.debug("Loading file from local repository: " + subPath);
 
-		File fileToLoad = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + subPath);
+		File fileToLoad = new File(filePathInRepository(subPath));
 		if (!fileToLoad.exists()) {
 			log.debug(
 					"Unable to load file from git repository as file doesn't exist at " + fileToLoad.getAbsolutePath());
-			return Optional.absent();
+			return Optional.empty();
 		}
 
 		if (!fileToLoad.canRead()) {
 			log.debug(
 					"Unable to load file from git repository as file can't be read at " + fileToLoad.getAbsolutePath());
-			return Optional.absent();
+			return Optional.empty();
 		}
 
 		try {
@@ -436,7 +461,7 @@ public class GitRepository {
 		} catch (IOException e) {
 			log.warn("Unable to read file from local git repository even though the file exists at: "
 					+ fileToLoad.getAbsolutePath(), e);
-			return Optional.absent();
+			return Optional.empty();
 		}
 	}
 
@@ -444,7 +469,7 @@ public class GitRepository {
 
 		List<String> r = new ArrayList<>();
 
-		File directory = new File(Config.getInstance().GIT_LOCAL_REPOSITORY_PATH + File.separator + directoryPath);
+		File directory = new File(filePathInRepository(directoryPath));
 		log.debug("Listing files in local git repository at: " + directory.getAbsolutePath());
 		if (!directory.exists() || !directory.isDirectory()) {
 			log.error("Was supposed to list files from non-existing directory: " + directoryPath);

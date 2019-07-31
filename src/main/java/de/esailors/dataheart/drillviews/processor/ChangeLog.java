@@ -31,7 +31,7 @@ public class ChangeLog {
 	}
 
 	public void addWarning(String warning) {
-		log.warn("New Warning: " + warning);
+		log.warn("New ChangeLog Warning: " + warning);
 		warnings.add(warning);
 	}
 	

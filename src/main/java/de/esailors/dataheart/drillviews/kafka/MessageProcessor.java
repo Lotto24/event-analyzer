@@ -15,19 +15,25 @@ public class MessageProcessor {
 
 	private static final Logger log = LogManager.getLogger(MessageProcessor.class.getName());
 
+	private static MessageProcessor instance;
+	
+	public static MessageProcessor getInstance() {
+		if(instance == null) {
+			instance = new MessageProcessor();
+		}
+		return instance;
+	}
+	
 	private EventFactory eventFactory;
 
-	public MessageProcessor() {
+	private MessageProcessor() {
 		this.eventFactory = new EventFactory();
 	}
 
 	public void processRecords(Topic topic, ConsumerRecords<byte[], byte[]> consumedRecords) {
 		if (consumedRecords.count() == 0) {
-			log.warn("Did not receive any event for " + topic);
 			return;
 		}
-		
-		log.info("Received " + consumedRecords.count() + " messages for: " + topic);
 		for (ConsumerRecord<byte[], byte[]> record : consumedRecords) {
 			if(record.value() == null) {
 				log.warn("Reveived record with value: null");

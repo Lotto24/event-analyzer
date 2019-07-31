@@ -2,7 +2,7 @@ package de.esailors.dataheart.drillviews.data;
 
 import org.apache.avro.Schema;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public class AvroSchema {
 

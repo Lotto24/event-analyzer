@@ -1,43 +1,54 @@
-package de.esailors.dataheart.drillviews.processor;
+package de.esailors.dataheart.drillviews.jdbc.drill;
 
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Optional;
+
 import de.esailors.dataheart.drillviews.conf.Config;
 import de.esailors.dataheart.drillviews.data.EventStructure;
+import de.esailors.dataheart.drillviews.data.EventType;
 import de.esailors.dataheart.drillviews.data.Node;
 
-public class CreateViewSqlBuilder {
+public class DrillViewSqlBuilder {
 
-	private static final Logger log = LogManager.getLogger(CreateViewSqlBuilder.class.getName());
+	private static final Logger log = LogManager.getLogger(DrillViewSqlBuilder.class.getName());
 
 	// internal
 	private static final String ROW_TIMESTAMP_ALIAS = "row_timestamp";
 	private static final String SUBSELECT_ALIAS = "e";
 	private static final String JSON_FIELD_ALIAS = "json";
 	private static final int IDENTATION = 4;
+	
+	private DrillMetadata drillViews;
 
-	public CreateViewSqlBuilder() {
+	public DrillViewSqlBuilder(DrillMetadata drillViews) {
+		this.drillViews = drillViews;
 	}
 
-	public String generateDrillViewsFor(String viewName, EventStructure eventStructure) {
+	public String generateDrillViewsFor(EventType eventType, EventStructure eventStructure) {
 
-		log.debug("Generating create view statement from EventStructure from " + eventStructure.toString());
+		log.debug("Generating create view statement for Drill from EventStructure from " + eventStructure.toString());
 
+		String viewName = drillViews.viewNameFor(eventType);
+		
 		StringBuilder viewBuilder = new StringBuilder();
 
-		generateView(Config.getInstance().DRILL_VIEW_ALL_DATABASE, eventStructure, viewName, viewBuilder, null);
-		generateView(Config.getInstance().DRILL_VIEW_DAY_DATABASE, eventStructure, viewName, viewBuilder, "'-1' day");
-		generateView(Config.getInstance().DRILL_VIEW_WEEK_DATABASE, eventStructure, viewName, viewBuilder, "'-7' day");
+		generateDrillView(Config.getInstance().DRILL_VIEW_ALL_DATABASE, eventStructure, viewName, viewBuilder,
+				Optional.empty());
+		generateDrillView(Config.getInstance().DRILL_VIEW_DAY_DATABASE, eventStructure, viewName, viewBuilder,
+				Optional.of("'-1' day"));
+		generateDrillView(Config.getInstance().DRILL_VIEW_WEEK_DATABASE, eventStructure, viewName, viewBuilder,
+				Optional.of("'-7' day"));
 
 		return viewBuilder.toString();
 	}
 
-	private void generateView(String drillDatabase, EventStructure eventStructure, String viewName,
-			StringBuilder viewBuilder, String timeLimit) {
-		generateViewStart(drillDatabase, viewBuilder, viewName);
+	private void generateDrillView(String drillDatabase, EventStructure eventStructure, String viewName,
+			StringBuilder viewBuilder, Optional<String> timeLimit) {
+		generateDrillViewStart(drillDatabase, viewBuilder, viewName);
 
 		String fieldPrefix = SUBSELECT_ALIAS + "." + JSON_FIELD_ALIAS + ".";
 
@@ -45,10 +56,10 @@ public class CreateViewSqlBuilder {
 
 		generateSelectColumns(rootNode, viewBuilder, fieldPrefix, "");
 
-		generateViewEnd(viewBuilder, eventStructure.getEventType().getName().toUpperCase(), timeLimit);
+		generateDrillViewEnd(viewBuilder, eventStructure.getEventType().getName().toUpperCase(), timeLimit);
 	}
 
-	private void generateViewStart(String drillDatabase, StringBuilder viewBuilder, String viewName) {
+	private void generateDrillViewStart(String drillDatabase, StringBuilder viewBuilder, String viewName) {
 		viewBuilder.append("CREATE OR REPLACE VIEW ");
 		viewBuilder.append(drillDatabase);
 		viewBuilder.append(".`");
@@ -72,7 +83,7 @@ public class CreateViewSqlBuilder {
 		Set<Node> children = node.getChildren();
 		for (Node child : children) {
 			String nodeName = child.getName();
-			if (child.hasChildren()) {
+			if (child.hasChildren() && !child.hasArrayType()) {
 				// recursion
 				String newKeyPrefix = keyPrefix + nodeName + "_";
 				String newFieldPrefix = fieldPrefix + "`" + nodeName + "`.";
@@ -91,7 +102,7 @@ public class CreateViewSqlBuilder {
 		}
 	}
 
-	private void generateViewEnd(StringBuilder viewBuilder, String eventType, String timeLimit) {
+	private void generateDrillViewEnd(StringBuilder viewBuilder, String eventType, Optional<String> timeLimit) {
 		viewBuilder.append("\nFROM (\n");
 		viewBuilder.append(ident());
 		viewBuilder.append("SELECT\n");
@@ -124,7 +135,7 @@ public class CreateViewSqlBuilder {
 		viewBuilder.append("CONVERT_FROM(row_key, 'UTF8') BETWEEN '");
 		viewBuilder.append(eventType);
 		viewBuilder.append("-");
-		generateRowKeyStart(viewBuilder, timeLimit);
+		generateDrillRowKeyStart(viewBuilder, timeLimit);
 		viewBuilder.append(" AND '");
 		viewBuilder.append(eventType);
 		viewBuilder.append("-9'\n");
@@ -133,12 +144,12 @@ public class CreateViewSqlBuilder {
 		viewBuilder.append(";\n");
 	}
 
-	private void generateRowKeyStart(StringBuilder viewBuilder, String timeLimit) {
+	private void generateDrillRowKeyStart(StringBuilder viewBuilder, Optional<String> timeLimit) {
 		String rowKeyStart;
-		if (timeLimit == null) {
+		if (timeLimit == null || !timeLimit.isPresent()) {
 			rowKeyStart = "0'";
 		} else {
-			rowKeyStart = "' || UNIX_TIMESTAMP(TO_CHAR(DATE_ADD(now(), interval " + timeLimit
+			rowKeyStart = "' || UNIX_TIMESTAMP(TO_CHAR(DATE_ADD(now(), interval " + timeLimit.get()
 					+ "),'yyyy-MM-dd HH:mm:ss'))";
 		}
 

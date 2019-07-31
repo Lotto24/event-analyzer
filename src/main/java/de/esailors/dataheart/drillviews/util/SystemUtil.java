@@ -9,7 +9,7 @@ import java.net.UnknownHostException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public class SystemUtil {
 
@@ -22,7 +22,7 @@ public class SystemUtil {
 			return Optional.of(hostName);
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
-			return Optional.absent();
+			return Optional.empty();
 		}
 	}
 
@@ -32,7 +32,7 @@ public class SystemUtil {
 		if (systemUser != null && !systemUser.isEmpty()) {
 			return Optional.of(systemUser);
 		} else {
-			return Optional.absent();
+			return Optional.empty();
 		}
 	}
 	
@@ -42,14 +42,14 @@ public class SystemUtil {
 		if (workingDirectory != null && !workingDirectory.isEmpty()) {
 			return Optional.of(workingDirectory);
 		} else {
-			return Optional.absent();
+			return Optional.empty();
 		}
 	}
 
 	public static void executeCommand(String command) {
 		// inspired by https://alvinalexander.com/java/edu/pj/pj010016
 
-		log.info("Executing system command: " + command);
+		log.debug("Executing system command: " + command);
 		
 		String s = null;
 		try {

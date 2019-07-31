@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 public class EventStructureMerger {
 
@@ -34,10 +34,14 @@ public class EventStructureMerger {
 		}
 
 		Tree mergedTree = new Tree(treeName);
-		
-		mergedTree.getRootNode().addProperty("SOURCE", "MERGE");
-		for(EventStructure sourceStructure : sourceStructures) {
-			mergedTree.getRootNode().addProperty("SOURCE_STRUCTURE", sourceStructure.toString());
+
+		mergedTree.getRootNode().addProperty(NodePropertyType.SOURCE, "MERGE");
+		for (EventStructure sourceStructure : sourceStructures) {
+			// need to exclude deserialized sources, otherwise each run will produce a new
+			// structure even if nothing changes
+			if (!sourceStructure.getSource().getType().equals(EventStructureSource.Type.DESERIALIZED)) {
+				mergedTree.getRootNode().addProperty(NodePropertyType.SOURCE_STRUCTURE, sourceStructure.toString());
+			}
 		}
 
 		boolean markOptionality = false;
@@ -60,7 +64,7 @@ public class EventStructureMerger {
 	}
 
 	private void mergeNodeInto(Node sourceNode, Node mergedNode, boolean isRootNode, boolean markOptionality) {
-		mergedNode.addProperties(sourceNode.getProperties());
+		mergedNode.addProperties(sourceNode);
 		if (sourceNode.isOptional()) {
 			mergedNode.setOptional(true);
 		}

@@ -2,6 +2,11 @@ package de.esailors.dataheart.drillviews.data;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
+import java.util.Optional;
+
+import de.esailors.dataheart.drillviews.data.EventStructureSource.Type;
 
 public class EventStructure {
 
@@ -31,10 +36,26 @@ public class EventStructure {
 				sourceEventStructures.add(avroSchema.getEventStructure());
 			}
 		}
+		Optional<EventStructure> deserializedEventStructureOption = eventType.getDeserializedEventStructureOption();
+		if (deserializedEventStructureOption.isPresent()) {
+			sourceEventStructures.add(deserializedEventStructureOption.get());
+		}
 		this.source = new EventStructureSource(sourceEventStructures);
 		this.eventType = eventType;
 		this.eventStructureTree = EventStructureMerger.getInstance().mergeEventStructures(eventType,
 				sourceEventStructures);
+	}
+
+	public EventStructure(EventType eventType, Tree deserializedTree) {
+		this.source = new EventStructureSource();
+		this.eventType = eventType;
+		this.eventStructureTree = deserializedTree;
+	}
+
+	public Set<String> getSourceStructureNames() {
+		// read source structures from root node properties to not miss structures from
+		// deserialized older sources
+		return getEventStructureTree().getRootNode().getProperty(NodePropertyType.SOURCE_STRUCTURE);
 	}
 
 	public EventType getEventType() {
@@ -51,7 +72,26 @@ public class EventStructure {
 
 	@Override
 	public String toString() {
-		return source.toString() + "_" + hashCode();
+		Type sourceType = source.getType();
+		switch (sourceType) {
+		case MERGE: {
+			return sourceType.toString() + "_" + eventType.getName();
+		}
+		case AVRO: {
+			Optional<AvroSchema> sourceSchemaOption = source.getSourceSchema();
+			if (!sourceSchemaOption.isPresent()) {
+				throw new IllegalStateException("Expect EventStructure of type AVRO to have a sourceSchema present");
+			}
+			AvroSchema sourceSchema = sourceSchemaOption.get();
+			String schemaVersion = sourceSchema.getSchemaVersion().isPresent() ? sourceSchema.getSchemaVersion().get()
+					: "?";
+			return sourceType.toString() + "_" + eventType.getName() + "_" + schemaVersion + "_"
+					+ sourceSchema.getSchemaHash();
+		}
+		default: {
+			return source.toString() + "_" + hashCode();
+		}
+		}
 	}
 
 	@Override
