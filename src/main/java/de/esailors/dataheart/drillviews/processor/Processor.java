@@ -322,7 +322,8 @@ public class Processor {
 		try {
 			drillConnection.executeSqlStatements(viewFromCurrentRun);
 		} catch (SQLException e) {
-			throw new IllegalStateException("Error while executing create view SQL statement on Drill", e);
+			log.error("Error while executing create view SQL statement on Drill", e);
+			changeLog.addWarning("Error while executing create view SQL statement on Drill for " + eventType.getName());
 		}
 
 		// write drill views to disk
@@ -379,9 +380,8 @@ public class Processor {
 		try {
 			hiveConnection.executeSqlStatements(viewFromCurrentRun);
 		} catch (SQLException e) {
-			// TODO either treat properly, log and add to changeset or throw Exception
-			// log.error("Error while executing create view SQL statement on Hive", e);
-			throw new IllegalStateException("Error while executing create view SQL statement on Hive", e);
+			log.error("Error while executing create view SQL statement on Hive", e);
+			changeLog.addWarning("Error while executing create view SQL statement on Hive for " + eventType.getName());
 		}
 
 		// write hive views to disk

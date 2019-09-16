@@ -97,28 +97,29 @@ public class HiveViewSqlBuilder {
 		Map<String, Node> childMap = node.getChildMap();
 		for (String childPath : CollectionUtil.toSortedList(childMap.keySet())) {
 			Node child = childMap.get(childPath);
+			String hiveColumnName = hiveComplexTypeGenerator.hiveColumnNameFor(child);
 			if (child.hasArrayType() || !child.hasChildren()) {
 				viewBuilder.append(",\n");
 				viewBuilder.append(ident());
-				if(topLevel && child.getName().equals(Config.getInstance().EVENT_FIELD_TIMESTAMP)) {
+				if(topLevel && hiveColumnName.equals(Config.getInstance().EVENT_FIELD_TIMESTAMP)) {
 					// automatically cast toplevel timestamp field to timestamp type
 					viewBuilder.append("CAST(");
 				}
 				viewBuilder.append(parentPath);
 				viewBuilder.append(".`");
-				viewBuilder.append(child.getName());
+				viewBuilder.append(hiveColumnName);
 				viewBuilder.append("`");
-				if(topLevel && child.getName().equals(Config.getInstance().EVENT_FIELD_TIMESTAMP)) {
+				if(topLevel && hiveColumnName.equals(Config.getInstance().EVENT_FIELD_TIMESTAMP)) {
 					viewBuilder.append(" AS timestamp)");
 				}
 				viewBuilder.append(" as `");
 				viewBuilder.append(aliasPrefix);
-				viewBuilder.append(child.getName());
+				viewBuilder.append(hiveColumnName);
 				viewBuilder.append("`");
 				
 			} else {
-				String newParentPath = parentPath + ".`" + child.getName() + "`";
-				String newAliasPrefix = aliasPrefix + child.getName() + "_";
+				String newParentPath = parentPath + ".`" + hiveColumnName + "`";
+				String newAliasPrefix = aliasPrefix + hiveColumnName + "_";
 				selectComplexTypeColumns(viewBuilder, child, newParentPath, newAliasPrefix, false);
 			}
 		}
