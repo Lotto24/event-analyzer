@@ -39,7 +39,7 @@ public class HiveComplexTypeGenerator {
 				} else {
 					r.append(",");
 				}
-				r.append(child.getName());
+				r.append(hiveColumnNameFor(child));
 				r.append(":");
 				generateComplexTypeFor(child, r);
 			}
@@ -76,6 +76,12 @@ public class HiveComplexTypeGenerator {
 		if (node.hasArrayType()) {
 			r.append(">");
 		}
+	}
+
+	public String hiveColumnNameFor(Node node) {
+		// hive only allows for alphanumeric characters and '_', ' ', '.' and '$', so we
+		// remove all other characters and ignore them
+		return node.getName().replaceAll("[^a-zA-Z0-9\\.\\_\\$ ]", "");
 	}
 
 	public String hiveTypeFor(PrimitiveType primitiveType) {
