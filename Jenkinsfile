@@ -90,7 +90,7 @@ pipeline {
               echo "Just uploading the new SNAPSHOT version"
               sh """
               git remote set-url origin git@srv-git-01-hh1.alinghi.tipp24.net:data-engineering/event-analyzer.git
-              ./gradlew clean build uploadArchive --no-daemo
+              ./gradlew clean build uploadArchive --no-daemon
               """
             }
           }
