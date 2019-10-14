@@ -10,6 +10,7 @@ pipeline {
     docker {
       label 'light'
       image 'devservices01.office.tipp24.de:5000/wasp/builder-java8:1.1'
+      args '-e GRADLE_USER_HOME=/cara-jenkins-workspace/.gradle'
     }
   }
 
@@ -36,7 +37,7 @@ pipeline {
       steps {
         echo "Running on node $env.NODE_NAME in $env.WORKSPACE"
         sh """
-           ./gradlew clean shadowJar
+           ./gradlew clean shadowJar --no-daemon
            """
       }
     }
@@ -59,7 +60,7 @@ pipeline {
                     git fetch origin
                     git checkout master
                     git reset --hard origin/master
-                    ./gradlew clean release -Prelease.useAutomaticVersion=true -Pgradle.release.useAutomaticVersion=true
+                    ./gradlew clean release --no-daemon -Prelease.useAutomaticVersion=true -Pgradle.release.useAutomaticVersion=true -Pnexus_user=$NEXUS_USER -Pnexus_passwd=$NEXUS_PASSWORD
                     """
               }
             }
@@ -87,12 +88,10 @@ pipeline {
             echo "Uploading Snapshot with changes made by ${latest_commit_user}"
             if (latest_commit_user != 'builder-java8') {
               echo "Just uploading the new SNAPSHOT version"
-              withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'nexus-release-user', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASSWORD']]) {
-                sh """
-                git remote set-url origin git@srv-git-01-hh1.alinghi.tipp24.net:data-engineering/event-analyzer.git
-                ./gradlew clean build uploadArchive
-                """
-              }
+              sh """
+              git remote set-url origin git@srv-git-01-hh1.alinghi.tipp24.net:data-engineering/event-analyzer.git
+              ./gradlew clean build uploadArchive --no-daemo
+              """
             }
           }
         }
