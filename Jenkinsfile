@@ -10,7 +10,7 @@ pipeline {
     docker {
       label 'light'
       image 'devservices01.office.tipp24.de:5000/wasp/builder-java8:1.1'
-      args '-e GRADLE_USER_HOME=/cara-jenkins-workspace/.gradle'
+      args '--net=host -e GRADLE_USER_HOME=/cara-jenkins-workspace/.gradle'
     }
   }
 
